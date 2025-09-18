@@ -1,0 +1,13 @@
+asgiref==3.9.1
+click==8.3.0
+colorama==0.4.6
+Django==5.2.6
+h11==0.16.0
+mysql-connector-python==9.4.0
+mysqlclient==2.2.7
+python-decouple==3.8
+python-dotenv==1.1.1
+sqlparse==0.5.3
+tzdata==2025.2
+uvicorn==0.35.0
+whitenoise==6.11.0

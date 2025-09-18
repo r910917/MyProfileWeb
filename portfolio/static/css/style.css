@@ -1,3 +1,54 @@
+/* 手機版調整 */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .card {
+    margin: 10px 0;
+    padding: 15px;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 10px;
+  }
+
+  h1, h2, h3, p {
+    text-align: center;
+  }
+
+  .navbar-nav {
+    text-align: center;
+  }
+
+  .progress-bar {
+    height: 18px;
+  }
+
+}
+
+
+
+#mainNav {
+  transition: background-color 0.4s, box-shadow 0.4s;
+  background-color: rgba(0, 0, 0, 0.2); /* 半透明黑 */
+  backdrop-filter: blur(6px); /* 毛玻璃效果 */
+}
+
+#mainNav.navbar-scrolled {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-scrolled {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
 html, body {
   height: 100%;
   margin: 0;
@@ -138,7 +189,24 @@ h1 {
 /* -----------------------------------------------------------*/
 
 .about-photo {
+  display: block;
+  margin: 0 auto 20px auto; 
+  max-width: 180px; 
+  height: auto;
+  border-radius: 50%;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+@media (min-width: 992px) {
+  .about-photo {
+    max-width: 250px;
+  }
+}
+
+@media (min-width: 992px) {
+  .about-photo {
+    margin-right: 20px;
+  }
 }
 
 .about-photo:hover {
@@ -146,27 +214,33 @@ h1 {
   box-shadow: 0 6px 20px rgba(0,0,0,0.25);
 }
 
+/* 每個區塊 (技能/學歷/興趣) 外框 */
 .about-section {
-  background: #ffffffcc;
-  border-radius: 10px;
+  background: #ffffffee;
+  border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
+/* 進度條樣式 */
 .progress {
+  position: relative;
   height: 20px;
   border-radius: 10px;
   background-color: #e9ecef;
   overflow: hidden;
+  margin-bottom: 15px;
 }
 
 .progress-bar {
   font-weight: bold;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   border-radius: 10px;
   transition: width 1.5s ease-in-out;
   color: #fff;
+  text-align: left;
+  padding-left: 8px;
   background-size: 40px 40px;
   background-image: linear-gradient(
     45deg,
@@ -180,15 +254,18 @@ h1 {
   );
   animation: progress-stripes 1s linear infinite;
 }
+
+/* 修正 label 永遠在 progress bar 內，不會跑去圖片 */
 .progress-label {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #fff;
+  color: #110de7;
 }
+
 
 .bg-mysql .progress-label {
   color: #222;

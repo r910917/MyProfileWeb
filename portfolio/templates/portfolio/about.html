@@ -2,118 +2,115 @@
 {% block title %}關於我{% endblock %}
 {% load static %}
 {% block content %}
-<div class="container my-5 section-box">
-  <h2 class="text-center mb-4">關於我</h2>
-  
-  <div class="row align-items-center">
-    <!-- 左邊照片 -->
-    <div class="col-md-4 text-center mb-4 mb-md-0">
-      <img src="{% static 'images/IMG_2746.JPG' %}" alt="我的照片" 
-           class="img-fluid rounded-circle shadow about-photo" style="max-width: 250px;">
-    </div>
 
-    <!-- 右邊文字 -->
+<div class="container my-5 section-box">
+  <h2 class="text-center mb-5">關於我</h2>
+
+  <div class="row align-items-center">
+  <div class="col-md-4 text-center mb-4 mb-md-0">
+    <img src="{% static 'images/IMG_2746.JPG' %}" alt="我的照片" 
+         class="img-fluid rounded-circle shadow about-photo">
+  </div>
+
+    <!-- 右邊：自我介紹、學歷、技能、興趣 -->
     <div class="col-md-8">
-      <h4>嗨！我是煜彥 👋</h4>
+      <h4 class="mb-3">嗨！我是煜彥 👋</h4>
       <p>
         具備一定的程式開發能力，但仍持續努力學習的我，另一方面也正追逐著成為飛行員的夢想。  
         2025 年，我自 <strong>南台科技大學資訊管理系</strong> 畢業，如今踏入社會，努力活出屬於自己的人生。
       </p>
-      <div class="container my-5 section-box">
-  <h2 class="text-center mb-4">學歷與經歷</h2>
-  <div class="timeline">
 
-    <!-- 2025 -->
-    <div class="timeline-item left">
-      <div class="timeline-content">
-        <i class="bi bi-award-fill fs-2 text-warning"></i>
-        <h5>2025 🎓 畢業</h5>
-        <p>南台科技大學 資訊管理系</p>
+      <!-- 學歷與經歷 -->
+      <div class="card shadow-sm p-4 mb-4">
+        <h5 class="text-center mb-4">🎓 學歷與經歷</h5>
+
+        <div class="mb-3">
+          <i class="bi bi-award-fill text-warning fs-5"></i>
+          <strong>2025 畢業</strong>  
+          <p class="mb-1">南台科技大學 資訊管理系</p>
+        </div>
+
+        <div class="mb-3">
+          <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+          <strong>2021 ~ 2025 大學在學</strong>  
+          <p class="mb-1">南台科技大學 資訊管理系</p>
+          <ul>
+            <li>🌙 皇家可口股份有限公司 - 暑期工讀（大夜班）</li>
+            <li>🏛️ 聯奇開發股份有限公司 - 樹谷生活科學館工讀</li>
+            <li>🍔 和德昌股份有限公司 - 麥當勞服務員兼職</li>
+            <li>🎮 Minecraft 自創伺服器 經營與管理</li>
+          </ul>
+        </div>
+
+        <div class="mb-3">
+          <i class="bi bi-book-half text-success fs-5"></i>
+          <strong>2018 ~ 2021 高職</strong>  
+          <p class="mb-1">台南高級商業職業學校 - 資料處理科</p>
+          <ul>
+            <li>📄 房仲業務文書處理助理</li>
+            <li>🛵 FoodPanda 外送員</li>
+          </ul>
+        </div>
       </div>
-    </div>
 
-    <!-- 2021-2025 大學 -->
-    <div class="timeline-item right">
-      <div class="timeline-content">
-        <i class="bi bi-mortarboard-fill fs-2 text-primary"></i>
-        <h5>2021 ~ 2025 大學在學</h5>
-        <p>南台科技大學 資訊管理系</p>
-        <ul>
-          <li>🌙 皇家可口股份有限公司 - 暑期工讀（大夜班）</li>
-          <li>🏛️ 聯奇開發股份有限公司 - 樹谷生活科學館工讀</li>
-          <li>🍔 和德昌股份有限公司 - 麥當勞服務員兼職</li>
-          <li>🎮 Minecraft 自創伺服器 經營與管理</li>
-        </ul>
+      <!-- 技能補充 -->
+      <div class="card shadow-sm p-4 mb-4">
+        <h5 class="mb-3">💻 技能補充</h5>
+
+        {% for skill, percent, color in skills %}
+        <p class="mb-1">{{ skill }}</p>
+        <div class="progress mb-3">
+          <div class="progress-bar {{ color }}" role="progressbar" data-width="{{ percent }}" style="width: 0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+        {% endfor %}
+
+        <p class="mb-1">Python</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-success" role="progressbar" data-width="50" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+
+        <p class="mb-1">C#</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-info" role="progressbar" data-width="80" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+
+        <p class="mb-1">Django</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-primary" role="progressbar" data-width="50" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+
+        <p class="mb-1">MySQL</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-warning" role="progressbar" data-width="80" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+
+        <p class="mb-1">Java</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-danger" role="progressbar" data-width="40" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
+
+        <p class="mb-1">VB</p>
+        <div class="progress mb-3">
+          <div class="progress-bar bg-secondary" role="progressbar" data-width="75" style="width:0%">
+            <span class="progress-label">0%</span>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- 2018-2021 高中 -->
-    <div class="timeline-item left">
-      <div class="timeline-content">
-        <i class="bi bi-book-half fs-2 text-success"></i>
-        <h5>2018 ~ 2021 高職</h5>
-        <p>台南高級商業職業學校 - 資料處理科</p>
-        <ul>
-          <li>📄 房仲業務文書處理助理</li>
-          <li>🛵 FoodPanda 外送員</li>
-        </ul>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-      <div class="about-section">
-  <h5>💻 技能補充</h5>
-
-  <p class="mb-1">Python</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-python" role="progressbar" data-width="50%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-<p class="mb-1">C#</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-csharp" role="progressbar" data-width="80%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-<p class="mb-1">Django</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-django" role="progressbar" data-width="50%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-<p class="mb-1">MySQL</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-mysql" role="progressbar" data-width="80%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-<p class="mb-1">Java</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-java" role="progressbar" data-width="40%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-<p class="mb-1">VB</p>
-<div class="progress mb-3">
-  <div class="progress-bar bg-vb" role="progressbar" data-width="75%" style="width: 0%">
-    <span class="progress-label">0%</span>
-  </div>
-</div>
-
-
-</div>
-
-
-      <div class="about-section">
+      <!-- 目標與興趣 -->
+      <div class="card shadow-sm p-4">
         <h5>🌟 目標與興趣</h5>
         <p>
           除了程式開發，我也熱愛航空領域，並積極準備飛行員相關訓練。  

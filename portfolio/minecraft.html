@@ -1,0 +1,166 @@
+{% extends "portfolio/base.html" %}
+{% block title %}Minecraft 玩家查詢{% endblock %}
+
+{% block content %}
+<div class="container my-5 section-box">
+  <h2 class="text-center mb-4">Minecraft 玩家資料查詢</h2>
+
+  <!-- 查詢玩家 -->
+  <div class="input-group mb-3">
+    <input type="text" id="playerId" class="form-control" placeholder="輸入 Minecraft ID 或 UUID">
+    <button class="btn btn-primary" id="searchBtn">查詢</button>
+  </div>
+
+  <!-- 查排行榜 -->
+  <div class="text-center mb-3">
+    <div class="btn-group">
+      <button class="btn btn-outline-success rank-btn" data-type="money">💰 金幣排行</button>
+      <button class="btn btn-outline-primary rank-btn" data-type="level">📈 等級排行</button>
+      <button class="btn btn-outline-warning rank-btn" data-type="guild">🏰 公會排行</button>
+      <button class="btn btn-outline-dark rank-btn" data-type="playtime">⏱ 遊玩時間排行</button>
+    </div>
+  </div>
+
+  <!-- 搜尋框-->
+  <div class="input-group mb-3" id="rankSearchBox" style="display:none;">
+    <span class="input-group-text">搜尋玩家</span>
+    <input type="text" id="rankSearchInput" class="form-control" placeholder="輸入玩家名稱或UUID">
+    <button class="btn btn-outline-secondary" id="closeRankBtn">收合排行榜</button>
+  </div>
+
+  <!-- 查詢結果 -->
+  <div id="results"></div>
+</div>
+
+<style>
+.fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.highlight {
+  animation: blink 1s linear 2;
+}
+@keyframes blink {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: #fff3cd; }
+}
+</style>
+
+<script>
+// 玩家查詢
+document.getElementById("searchBtn").addEventListener("click", () => {
+  const playerId = document.getElementById("playerId").value;
+  fetch(`/minecraft/search/?player_id=${playerId}`)
+    .then(res => res.json())
+    .then(data => {
+      let html = "<div class='fade-in'>";
+      if (data.mmocore.length > 0) {
+        const d = data.mmocore[0];
+        html += `<h4 class="mt-4">MMOcore</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.uuid}</td></tr>
+          <tr><th>職業</th><td>${d.class}</td></tr>
+          <tr><th>等級</th><td>${d.level}</td></tr>
+          <tr><th>主等級</th><td>${d.mainlevel_level}</td></tr>
+        </table>`;
+      }
+      if (data.playerdata.length > 0) {
+        const d = data.playerdata[0];
+        html += `<h4 class="mt-4">經濟系統</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.player_uuid}</td></tr>
+          <tr><th>玩家名稱</th><td>${d.player_name}</td></tr>
+          <tr><th>金幣</th><td>${d.money}</td></tr>
+        </table>`;
+      }
+      if (data.guilds.length > 0) {
+        const d = data.guilds[0];
+        html += `<h4 class="mt-4">公會系統</h4>
+        <table class="table table-bordered">
+          <tr><th>公會名稱</th><td>${d.gname}</td></tr>
+          <tr><th>等級</th><td>${d.glevel}</td></tr>
+          <tr><th>資金</th><td>${d.gmoney}</td></tr>
+        </table>`;
+      }
+      if (data.cmi.length > 0) {
+        const d = data.cmi[0];
+        html += `<h4 class="mt-4">CMI 系統</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.player_uuid}</td></tr>
+          <tr><th>玩家名稱</th><td>${d.username}</td></tr>
+          <tr><th>總遊玩時間</th><td>${d.TotalPlayTime}</td></tr>
+          <tr><th>餘額</th><td>${d.Balance}</td></tr>
+          <tr><th>飛行能量</th><td>${d.FlightCharge}</td></tr>
+          <tr><th>顯示名稱</th><td>${d.DisplayName}</td></tr>
+        </table>`;
+      }
+      html += "</div>";
+      document.getElementById("results").innerHTML = html || "<p class='text-danger'>找不到該玩家資料</p>";
+    });
+});
+
+// 排行榜查詢
+document.querySelectorAll(".rank-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const type = btn.getAttribute("data-type");
+    fetch(`/minecraft/rank/?type=${type}`)
+      .then(res => res.json())
+      .then(data => {
+        let html = `<h3 class="mt-4">排行榜 - ${btn.textContent}</h3>`;
+        html += "<table class='table table-striped fade-in' id='rankTable'><thead><tr>";
+
+        if (type === "money") {
+          html += "<th>#</th><th>玩家</th><th>金幣</th></tr></thead><tbody>";
+          data.rows.forEach((row, i) => {
+            html += `<tr><td>${i+1}</td><td>${row.player_name}</td><td>${row.money}</td></tr>`;
+          });
+        } else if (type === "level") {
+          html += "<th>#</th><th>UUID</th><th>職業</th><th>主等級</th></tr></thead><tbody>";
+          data.rows.forEach((row, i) => {
+            html += `<tr><td>${i+1}</td><td>${row.uuid}</td><td>${row.class}</td><td>${row.mainlevel_level}</td></tr>`;
+          });
+        } else if (type === "guild") {
+          html += "<th>#</th><th>公會名稱</th><th>等級</th><th>資金</th></tr></thead><tbody>";
+          data.rows.forEach((row, i) => {
+            html += `<tr><td>${i+1}</td><td>${row.gname}</td><td>${row.glevel}</td><td>${row.gmoney}</td></tr>`;
+          });
+        } else if (type === "playtime") {
+          html += "<th>#</th><th>玩家</th><th>遊玩時間</th><th>餘額</th></tr></thead><tbody>";
+          data.rows.forEach((row, i) => {
+            html += `<tr><td>${i+1}</td><td>${row.username}</td><td>${row.TotalPlayTime}</td><td>${row.Balance}</td></tr>`;
+          });
+        }
+
+        html += "</tbody></table>";
+        document.getElementById("results").innerHTML = html;
+        document.getElementById("rankSearchBox").style.display = "flex";
+      });
+  });
+});
+
+document.getElementById("rankSearchInput").addEventListener("input", function() {
+  const filter = this.value.toLowerCase();
+  const rows = document.querySelectorAll("#rankTable tbody tr");
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    if (text.includes(filter)) {
+      row.style.display = "";
+      row.classList.add("highlight");
+      setTimeout(() => row.classList.remove("highlight"), 2000);
+    } else {
+      row.style.display = "none";
+    }
+  });
+});
+
+// 收合排行榜
+document.getElementById("closeRankBtn").addEventListener("click", () => {
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("rankSearchBox").style.display = "none";
+  document.getElementById("rankSearchInput").value = "";
+});
+</script>
+{% endblock %}

@@ -1,0 +1,300 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* 固定 footer 在底部 */
+footer {
+  margin-top: auto;
+}
+
+/* 頁面淡入淡出 */
+body {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  font-family: 'Noto Sans TC', sans-serif;
+}
+
+body.fade-in {
+  opacity: 1;
+}
+
+body.fade-out {
+  opacity: 0;
+}
+
+
+
+/* 首頁 h1 */
+h1 {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* 區塊容器背景 */
+.section-box {
+  background: rgba(255, 255, 255, 0.534);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 載入時淡入 + 上浮 */
+.hero-text {
+  font-size: 25px;
+  line-height: 1.8;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+.hero-text.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-text:hover {
+  color: #ff758c;
+  animation: glow 5s infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    color: #130d0e;
+    text-shadow: 0 0 5px #ff758c, 0 0 10px #ff758c;
+  }
+  to {
+    color: #00eaff;
+    text-shadow: 0 0 5px #030202, 0 0 10px #070a0a;
+  }
+}
+
+/* 技能卡片 */
+.skill-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.skill-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+/* -----------------------------------------------------------*/
+
+/* 精選作品*/
+.project-card {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.project-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.project-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.project-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.project-card i {
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.project-card:hover i {
+  transform: scale(1.2) translateY(-5px);
+  animation: bounce 0.6s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* -----------------------------------------------------------*/
+
+.about-photo {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.about-photo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+
+.about-section {
+  background: #ffffffcc;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.progress {
+  height: 20px;
+  border-radius: 10px;
+  background-color: #e9ecef;
+  overflow: hidden;
+}
+
+.progress-bar {
+  font-weight: bold;
+  font-size: 0.85rem;
+  border-radius: 10px;
+  transition: width 1.5s ease-in-out;
+  color: #fff;
+  background-size: 40px 40px;
+  background-image: linear-gradient(
+    45deg,
+    rgba(255,255,255,0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255,255,255,0.2) 50%,
+    rgba(255,255,255,0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  animation: progress-stripes 1s linear infinite;
+}
+.progress-label {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.bg-mysql .progress-label {
+  color: #222;
+}
+
+@keyframes progress-stripes {
+  from { background-position: 0 0; }
+  to   { background-position: 40px 0; }
+}
+
+.bg-python {
+  background-color: #4caf50;
+  background-image: linear-gradient(90deg, #4caf50, #81c784);
+}
+
+.bg-csharp {
+  background-color: #17a2b8;
+  background-image: linear-gradient(90deg, #17a2b8, #6bd5e1);
+}
+
+.bg-django {
+  background-color: #007bff;
+  background-image: linear-gradient(90deg, #007bff, #5dade2);
+}
+
+.bg-mysql {
+  background-color: #f1c40f;
+  background-image: linear-gradient(90deg, #f1c40f, #f39c12);
+  color: #222;
+}
+
+.bg-java {
+  background-color: #e74c3c;
+  background-image: linear-gradient(90deg, #e74c3c, #ff7675);
+}
+
+.bg-vb {
+  background-color: #6c5ce7;
+  background-image: linear-gradient(90deg, #6c5ce7, #a29bfe);
+}
+
+
+
+/* -----------------------------------------------------------*/
+
+/*作品及*/
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.card img {
+  height: 200px;
+  object-fit: cover;
+}
+
+
+
+
+/* -----------------------------------------------------------*/
+
+/* 送出按鈕 */
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* 回到頂部按鈕 */
+#back-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  display: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+  z-index: 999;
+}
+
+/* 載入動畫消失 */
+#loading.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+
+
+/* 漸變背景 */
+body {
+  background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
+  background-size: 400% 400%;
+  animation: gradientBG 50s ease infinite;
+  min-height: 100vh;
+  position: relative;
+  z-index: 0;
+}
+
+/* 背景漸變動畫 */
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

@@ -1,0 +1,55 @@
+{% extends "portfolio/base.html" %}
+{% block title %}聯絡我{% endblock %}
+
+{% block content %}
+<div class="container my-5 section-box fade-in">
+  <h2 class="text-center mb-4">聯絡我</h2>
+
+  <!-- 聯絡表單 -->
+  <form method="POST" action="{% url 'contact' %}">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="name" class="form-label">姓名</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" name="email" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="message" class="form-label">訊息</label>
+      <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">送出</button>
+  </form>
+
+  <!-- 回饋訊息 -->
+  {% if success %}
+  <div class="alert alert-success mt-3 fade-in">✅ 已成功送出！</div>
+  {% elif error %}
+  <div class="alert alert-danger mt-3 fade-in">❌ 送出失敗，請稍後再試。</div>
+  {% endif %}
+
+  <hr class="my-5">
+
+  <!-- 社群連結 -->
+  <div class="text-center">
+    <h4 class="mb-3">也可以透過以下方式聯絡我</h4>
+    <p>
+      <a href="mailto:r0983516925@gmail.com" class="btn btn-outline-dark mx-2"><i class="bi bi-envelope-fill"></i> Email</a>
+      <a href="https://github.com/r910917" target="_blank" class="btn btn-outline-dark mx-2"><i class="bi bi-github"></i> GitHub</a>
+    </p>
+  </div>
+</div>
+
+<style>
+.fade-in { animation: fadeIn 0.6s ease-in-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}

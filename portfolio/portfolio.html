@@ -1,0 +1,144 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+
+{% block title %}作品集{% endblock %}
+
+{% block content %}
+<div class="container my-5 section-box">
+  <h2 class="text-center mb-4">作品集</h2>
+
+  <!-- 篩選按鈕 -->
+  <div class="text-center mb-4">
+    <button class="btn btn-outline-dark mx-1 filter-btn" data-filter="all">全部</button>
+    <button class="btn btn-outline-primary mx-1 filter-btn" data-filter="web">Web / 系統</button>
+    <button class="btn btn-outline-success mx-1 filter-btn" data-filter="db">資料庫 / 工具</button>
+    <button class="btn btn-outline-warning mx-1 filter-btn" data-filter="game">遊戲 / 互動</button>
+    <button class="btn btn-outline-info mx-1 filter-btn" data-filter="bot">機器人</button>
+  </div>
+
+  <!-- 作品卡片 -->
+  <div class="row g-4 portfolio-container">
+
+    <!-- iParking -->
+    <div class="col-md-4 portfolio-item game db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-car-front-fill" style="font-size: 3rem; color: #0d6efd;"></i></div>
+          <h5 class="card-title">iParking</h5>
+          <p class="card-text">整合 Python、C#、Arduino、YOLOv8、MySQL 的智慧停車場專案。</p>
+          <a href="https://github.com/r910917/iParking" target="_blank" class="btn btn-outline-primary mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- GoogleSheet StockLog -->
+    <div class="col-md-4 portfolio-item web db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-file-earmark-spreadsheet-fill" style="font-size: 3rem; color: #198754;"></i></div>
+          <h5 class="card-title">GoogleSheet StockLog</h5>
+          <p class="card-text">以 Google Sheets 打造的記錄系統，追蹤股票與庫存。使用Apps Script進行絕大部分處理。</p>
+          <a href="https://github.com/r910917/GoogleSheet_StockLog" target="_blank" class="btn btn-outline-success mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CustomerSystem -->
+    <div class="col-md-4 portfolio-item web db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-people-fill" style="font-size: 3rem; color: #ffc107;"></i></div>
+          <h5 class="card-title">CustomerSystem</h5>
+          <p class="card-text">CRM 客戶管理系統，提供交易紀錄與資料庫操作功能。由.NET Multi-platform App UI製作，並使用MySQL進行資料儲存。</p>
+          <a href="https://github.com/r910917/CustomerSystem" target="_blank" class="btn btn-outline-warning mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PPERP -->
+    <div class="col-md-4 portfolio-item web db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-kanban-fill" style="font-size: 3rem; color: #0dcaf0;"></i></div>
+          <h5 class="card-title">PPERP</h5>
+          <p class="card-text">自製 ERP 系統，整合資料庫操作與管理功能。C#撰寫而成並使用MySQL進行資料儲存。</p>
+          <a href="https://github.com/r910917/PPERP" target="_blank" class="btn btn-outline-info mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- MangoQuest Tool -->
+    <div class="col-md-4 portfolio-item db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-database-fill-gear" style="font-size: 3rem; color: #6f42c1;"></i></div>
+          <h5 class="card-title">MangoQuest Tool</h5>
+          <p class="card-text">插件資料庫查詢與更新工具，支援快速操作。C#撰寫而成並使用MySQL作為資料樞紐。</p>
+          <a href="https://github.com/r910917/MangoQuest_ViewDataAndupdate_Tool" target="_blank" class="btn btn-outline-dark mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSEP_SCRATCH -->
+    <div class="col-md-4 portfolio-item game db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-cpu-fill" style="font-size: 3rem; color: #fd7e14;"></i></div>
+          <h5 class="card-title">OSEP_SCRATCH</h5>
+          <p class="card-text">Scratch 搭配機板，控制移動與技能，並連結 MySQL。SCRATCH製作</p>
+          <a href="https://github.com/r910917/OSEP_SCRATCH" target="_blank" class="btn btn-outline-danger mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bingo Game -->
+    <div class="col-md-4 portfolio-item game">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill" style="font-size: 3rem; color: #20c997;"></i></div>
+          <h5 class="card-title">Bingo 遊戲</h5>
+          <p class="card-text">高中專題作品，設計賓果遊戲程式。初版由VB撰寫而後C#改寫。</p>
+          <a href="https://github.com/r910917/high_school_Final_results" target="_blank" class="btn btn-outline-success mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discord Bot -->
+    <div class="col-md-4 portfolio-item bot">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-robot" style="font-size: 3rem; color: #6610f2;"></i></div>
+          <h5 class="card-title">Discord 匿名發言機器人</h5>
+          <p class="card-text">一個能讓使用者匿名聊天的 Discord Bot。Python製作</p>
+          <a href="https://github.com/r910917/DiscordAnonymous" target="_blank" class="btn btn-outline-secondary mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- SyncData -->
+    <div class="col-md-4 portfolio-item web db">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-arrow-left-right" style="font-size: 3rem; color: #198754;"></i></div>
+          <h5 class="card-title">SyncData</h5>
+          <p class="card-text">利用 FZ 進行兩台主機間的資料同步工具。Python製作</p>
+          <a href="https://github.com/r910917/SyncData" target="_blank" class="btn btn-outline-success mt-auto">查看 GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minecraft Server -->
+    <div class="col-md-4 portfolio-item game">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="mb-3"><i class="bi bi-controller" style="font-size: 3rem; color: #6f42c1;"></i></div>
+          <h5 class="card-title">Minecraft 自創伺服器</h5>
+          <p class="card-text">大型 RPG 伺服器，涵蓋副本、經濟系統、插件開發與社群經營。由網路上眾多插件資源製作部分插件自行使用JAVA寫成。</p>
+          <a href="{% url 'minecraft' %}" target="_self" class="btn btn-outline-dark mt-auto">查看玩家資料</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -86,11 +86,11 @@ def minecraft_search(request):
 
     # playerdata
     playerdata_sql = """
-        SELECT player_uuid, player_name, money
-        FROM mpdb_economy
-        WHERE player_name = %s
+        SELECT UID, player, balance
+        FROM xconomy
+        WHERE player = %s
     """
-    playerdata_data = query_db("playerdata", playerdata_sql, (player_id,))
+    playerdata_data = query_db("eco", playerdata_sql, (player_id,))
 
     # guilds
     guild_sql = """
@@ -119,17 +119,17 @@ def minecraft_search(request):
     })
 
 def minecraft_rank(request):
-    rank_type = request.GET.get("type", "money")  # 預設查金幣排行
+    rank_type = request.GET.get("type", "money")  # 查金幣排行
     rows = []
 
     if rank_type == "money":  # 金幣排行
         sql = """
-            SELECT player_name, money
-            FROM mpdb_economy
-            ORDER BY money DESC
+            SELECT player, balance
+            FROM xconomy
+            ORDER BY balance DESC
             LIMIT 50
         """
-        rows = query_db("playerdata", sql)
+        rows = query_db("eco", sql)
 
     elif rank_type == "level":  # 等級排行
         sql = """

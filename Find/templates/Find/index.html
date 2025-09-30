@@ -1702,6 +1702,105 @@ function replaceLists(data) {
 
 </script>
 
+<script>
+  // 取得指定卡片的「展開狀態與卷軸」
+  function snapshotCardState(li) {
+    if (!li) return null;
+    const panel = li.querySelector('.details');
+    if (!panel) return null;
+    const isOpen = panel.classList.contains('open');
+    const pending = panel.querySelector('.pending-scroll');
+    const accepted = panel.querySelector('.accepted-scroll');
+    return {
+      open: isOpen,
+      scrollP: pending ? pending.scrollTop : 0,
+      scrollA: accepted ? accepted.scrollTop : 0
+    };
+  }
+
+  // 把狀態還原回新的卡片
+  function restoreCardState(li, state) {
+    if (!li || !state) return;
+    const panel = li.querySelector('.details');
+    const arrow = li.querySelector('.arrow');
+    if (state.open && panel) {
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden','false');
+      if (arrow) {
+        arrow.classList.add('open');
+        arrow.setAttribute('aria-expanded','true');
+      }
+    }
+    const pending = li.querySelector('.pending-scroll');
+    const accepted = li.querySelector('.accepted-scroll');
+    if (pending) pending.scrollTop = state.scrollP || 0;
+    if (accepted) accepted.scrollTop = state.scrollA || 0;
+  }
+
+  // 單一卡片更新：用新 html 替換 li[data-driver="{id}"]
+  function patchDriverCard(driverId, driverHTML, active = true) {
+    const list = document.getElementById('driver-list');
+    if (!list) return;
+
+    const oldLi = list.querySelector(`li[data-driver="${driverId}"]`);
+
+    // 若卡片不存在且 active=true，就 append；若 active=false 並不存在就算了
+    if (!oldLi) {
+      if (!active) return;
+      const tmp = document.createElement('div');
+      tmp.innerHTML = driverHTML.trim();
+      const newLi = tmp.firstElementChild;
+      if (newLi) list.appendChild(newLi);
+      return;
+    }
+
+    // 若這張卡片被下架（active=false）→ 直接移除
+    if (!active) {
+      oldLi.remove();
+      return;
+    }
+
+    // 記錄展開與卷軸狀態
+    const state = snapshotCardState(oldLi);
+
+    // 用新 html 替換整張卡片
+    const tmp = document.createElement('div');
+    tmp.innerHTML = driverHTML.trim();
+    const newLi = tmp.firstElementChild;
+    if (!newLi) return;
+
+    oldLi.replaceWith(newLi);
+
+    // 還原展開/卷軸
+    restoreCardState(newLi, state);
+  }
+
+  // ---- WebSocket 收訊處理 ----
+  socket.onmessage = function (event) {
+    try {
+      const data = JSON.parse(event.data);
+
+      // 只更新單一卡片
+      if (data.type === 'driver_partial') {
+        patchDriverCard(data.driver_id, data.driver_html, data.active);
+        return;
+      }
+
+      // 你原本的其他事件（像 join_result / 全量 passengers_html 等）照舊
+      if (data.type === "update") {
+        if (data.passengers_html) {
+          const plist = document.getElementById("passenger-list");
+          if (plist) plist.innerHTML = data.passengers_html;
+        }
+        // 建議：drivers_html 之後就不要再用全量重繪了
+        // if (data.drivers_html) { ... }
+      }
+    } catch (err) {
+      console.error("⚠️ 解析訊息失敗", err, event.data);
+    }
+  };
+</script>
+
 
 
 </body>

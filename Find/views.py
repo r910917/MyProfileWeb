@@ -17,6 +17,124 @@ from channels.layers import get_channel_layer
 from .models import DriverTrip, PassengerRequest
 from django.utils import timezone
 
+def create_driver(request):
+    # ... validate & save
+    driver = DriverTrip.objects.using("find_db").create(...)
+    broadcast_driver_card(driver.id)  # or broadcast_full_lists()
+    return redirect("find_index")
+def broadcast_full_lists():
+    """
+    Re-render both lists (drivers + passengers) and broadcast once.
+    """
+    # build drivers queryset with pending/accepted prefetch
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False)
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True)
+
+    drivers = (
+        DriverTrip.objects.using("find_db")
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+        )
+    )
+
+    passengers = PassengerRequest.objects.using("find_db").filter(
+        is_matched=False, driver__isnull=True
+    ).order_by("-id")
+
+    drivers_html    = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.update",
+            "drivers_html": drivers_html,
+            "passengers_html": passengers_html,
+        },
+    )
+
+def driver_cards_qs(*, only_active=True):
+    """
+    回傳已帶好 passengers 的 DriverTrip QuerySet：
+    - d.pending_list：未媒合乘客（待確認）
+    - d.accepted_list：已媒合乘客（已接受）
+    """
+    pending_qs  = (PassengerRequest.objects.using("find_db")
+                   .filter(is_matched=False)
+                   .order_by("-id"))
+    accepted_qs = (PassengerRequest.objects.using("find_db")
+                   .filter(is_matched=True)
+                   .order_by("-id"))
+
+    base = DriverTrip.objects.using("find_db")
+    if only_active:
+        base = base.filter(is_active=True)
+
+    return (base
+            .prefetch_related(
+                Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
+                Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
+            ))
+# ---- 共用：取單一司機，並帶 pending/accepted 兩個清單 ----
+def fetch_driver_with_lists(driver_id: int):
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("id")
+    d = (
+        DriverTrip.objects.using("find_db")
+        .filter(id=driver_id)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+        )
+        .first()
+    )
+    if not d:
+        return None, [], []
+    # 確保都有屬性且是 list（就算空也給空 list）
+    pending_list  = list(getattr(d, "pending",  []))
+    accepted_list = list(getattr(d, "accepted", []))
+    return d, pending_list, accepted_list
+
+def _driver_for_card(driver_id: int):
+    # split pending / accepted to two lists for template
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False)
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True)
+    return (
+        DriverTrip.objects.using("find_db")
+        .filter(id=driver_id)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+        )
+        .first()
+    )
+
+def broadcast_driver_card(driver_id: int):
+    channel_layer = get_channel_layer()
+
+    driver = (driver_cards_qs(only_active=False)
+              .filter(id=driver_id)
+              .first())
+    if not driver:
+        # 可回傳移除卡片的訊息（如果被下架/刪除）
+        async_to_sync(channel_layer.group_send)("find_group", {
+            "type": "send.partial",
+            "driver_id": driver_id,
+            "html": "",              # 或帶一個刪除指令型態
+            "remove": True,
+        })
+        return
+
+    html = render_to_string("Find/_driver_card.html", {"d": driver})
+    async_to_sync(channel_layer.group_send)("find_group", {
+        "type": "send.partial",
+        "driver_id": driver_id,
+        "html": html,
+    })
+
 
 def _broadcast_lists():
     """
@@ -155,6 +273,10 @@ def pax_update(request, pid: int):
     p.note = request.POST.get("note", p.note).strip()
 
     p.save(using="find_db")
+    driver_id = p.driver_id
+    transaction.on_commit(lambda: broadcast_driver_card(driver_id) if driver_id else _broadcast_lists())
+    if p.driver_id:
+        broadcast_driver_card(p.driver_id)
     return JsonResponse({"ok": True})
 
 @require_POST
@@ -179,9 +301,18 @@ def pax_delete(request, pid: int):
         except DriverTrip.DoesNotExist:
             pass
 
+    driver_id = p.driver_id  # 廣播用
+    transaction.on_commit(lambda: broadcast_driver_card(driver_id))
+    if driver_id:
+        broadcast_driver_card(driver_id)
     p.delete(using="find_db")
     return JsonResponse({"ok": True})
 
+@require_POST
+def driver_delete(request, driver_id: int):
+    DriverTrip.objects.using("find_db").filter(id=driver_id).delete()
+    broadcast_driver_card(driver_id, remove=True)   # 讓客戶端把 <li> 移除
+    return JsonResponse({"ok": True})
 
 
 def build_driver_cards():
@@ -270,6 +401,7 @@ def driver_manage(request, driver_id: int):
 
             driver.save(using="find_db")
             saved_msg = "✅ 已更新司機資料"
+            transaction.on_commit(lambda: broadcast_driver_card(driver.id))
 
         # ============ B) 接受乘客（把 `driver` 指給乘客並設 is_matched=True） ============
         elif form_type == "accept_passengers":
@@ -307,6 +439,7 @@ def driver_manage(request, driver_id: int):
                             break
 
                 d.save(using="find_db")
+                transaction.on_commit(lambda: broadcast_driver_card(driver.id))
 
             matched_msg = "✅ 已成功媒合：" + "、".join(accepted_names) if accepted_names else "⚠️ 沒有可媒合的乘客或座位不足"
 
@@ -327,6 +460,7 @@ def driver_manage(request, driver_id: int):
                   .get(id=driver.id))
         attach_passenger_lists(driver)
 
+
     return render(request, "Find/driver_manage.html", {
         "driver": driver,
         "pending": driver.pending,    # ✅ 模板可直接用
@@ -340,15 +474,14 @@ def driver_manage(request, driver_id: int):
 # 首頁
 # -------------------
 def index(request):
-    drivers = build_driver_cards()
+    drivers = driver_cards_qs(only_active=True)
+    # 只顯示沒有指定司機且未媒合的乘客（你的左上「找人資訊」）
     passengers = (PassengerRequest.objects.using("find_db")
-                  .filter(is_matched=False, driver__isnull=True))  # ✅ 只顯示「尚未指定司機」的找人需求
+                  .filter(is_matched=False, driver__isnull=True).order_by("-id"))  # ✅ 只顯示「尚未指定司機」的找人需求
     return render(request, "Find/index.html", {
         "drivers": drivers,
         "passengers": passengers,
     })
-
-
 
 # -------------------
 # 找人（乘客需求）
@@ -539,7 +672,7 @@ def join_driver(request, driver_id: int):
             "passengers_html": passengers_html,
         },
     )
-
+    broadcast_driver_card(driver_id)
     # 可回到首頁或回傳 JSON 讓前端 toast 與關閉 modal
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
         return JsonResponse({"ok": True})

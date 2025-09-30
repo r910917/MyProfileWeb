@@ -13,7 +13,7 @@
     {% for p in passengers %}
       <li>
         <input type="checkbox" name="confirm_passengers" value="{{ p.id }}">
-        {{ p.passenger_name }} - 需要 {{ p.seats_needed }} 人 - 聯絡方式：{{ p.contact }}
+        {{ p.passenger_name }} - 共需 {{ p.seats_needed }} 人搭乘 - 聯絡方式：{{ p.contact }}
       </li>
     {% empty %}
       <li>目前沒有候選乘客</li>

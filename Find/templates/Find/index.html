@@ -3,151 +3,219 @@
 <head>
   <meta charset="UTF-8">
   <title>🌐 花蓮光復救災交通媒合</title>
-  <style>
-    body {
-      font-family: "Microsoft JhengHei", sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(to right, #eaf8ff, #f7fff7);
-      color: #222;
-    }
+<style>
+  body {
+    font-family: "Microsoft JhengHei", sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to right, #eaf8ff, #f7fff7);
+    color: #222;
+  }
 
-    h1 {
-      text-align: center;
-      padding: 20px;
-      color: #005c4b;
-    }
+  /* 頁面標題 */
+  h1 {
+    text-align: center;
+    padding: 20px;
+    color: #005c4b;
+  }
 
-    .buttons {
-      text-align: center;
-      margin: 10px 0 20px;
-    }
+  /* 小標題 */
+  h2 {
+    color: #00695c;
+    margin: 20px;
+    font-size: 20px;
+  }
 
-    .btn-main {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      margin: 0 5px;
-      color: white;
-      font-weight: bold;
-      transition: transform 0.2s, background 0.3s;
-    }
-    .btn-driver {
-      background: #007bff;
-    }
-    .btn-driver:hover {
-      background: #0056b3;
-      transform: scale(1.05);
-    }
-    .btn-passenger {
-      background: #dc3545;
-    }
-    .btn-passenger:hover {
-      background: #a71d2a;
-      transform: scale(1.05);
-    }
+  /* 按鈕群組 */
+  .buttons {
+    text-align: center;
+    margin: 20px 0;
+  }
 
-    h2 {
-      color: #00695c;
-      margin-left: 20px;
-    }
+  /* 主功能按鈕 */
+  .btn-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 24px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    margin: 0 6px;
+    color: #fff;
+    font-weight: bold;
+    transition: transform 0.2s, background 0.3s;
+  }
 
-    .card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #fff;
-      margin: 10px 20px;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      animation: fadeInUp 0.4s ease-in-out;
-    }
+  .btn-driver {
+    background: #007bff;
+  }
+  .btn-driver:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+  }
 
-    .card::before {
-      content: "";
-      display: block;
-      width: 6px;
-      height: 100%;
-      border-radius: 6px 0 0 6px;
-      margin-right: 10px;
-    }
+  .btn-passenger {
+    background: #dc3545;
+  }
+  .btn-passenger:hover {
+    background: #a71d2a;
+    transform: scale(1.05);
+  }
 
-    .driver-card::before {
-      background: #2196f3;
-    }
-    .passenger-card::before {
-      background: #f44336;
-    }
+  /* 卡片 */
+  .card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    margin: 10px 20px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    animation: fadeInUp 0.4s ease-in-out;
+    position: relative;
+    flex-wrap: wrap; /* ✅避免小螢幕爆版 */
+  }
 
-    .actions button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      color: white;
-      background: #007bff;
-      margin-left: 5px;
-      transition: background 0.3s;
-    }
-    .actions button:hover {
-      background: #0056b3;
-    }
+  .card::before {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 100%;
+    border-radius: 6px 0 0 6px;
+    margin-right: 10px;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
 
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-    }
-    .modal-content {
-      background: white;
-      margin: 15% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 400px;
-    }
-    .close {
-      float: right;
-      font-size: 20px;
-      cursor: pointer;
-    }
+  .driver-card::before {
+    background: #2196f3;
+  }
 
-    /* 動畫 */
-    @keyframes fadeInUp {
-      from {opacity: 0; transform: translateY(15px);}
-      to {opacity: 1; transform: translateY(0);}
-    }
+  .passenger-card::before {
+    background: #f44336;
+  }
 
-    /* 回到頂端按鈕 */
-    #backToTop {
-      position: fixed;
-      bottom: 20px; right: 20px;
-      background: #00897b;
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      padding: 14px;
-      font-size: 20px;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      z-index: 1200;
-      transition: transform 0.2s, background 0.3s;
-    }
-    #backToTop:hover {
-      background: #00695c;
-      transform: scale(1.08);
-    }
-  </style>
+  /* 操作按鈕 */
+  .actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #fff;
+    background: #007bff;
+    margin-left: 6px;
+    transition: background 0.3s;
+  }
+
+  .actions button:hover {
+    background: #0056b3;
+  }
+
+  /* 展開詳細資訊 */
+  .details {
+    display: none;
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-top: 1px solid #ddd;
+    border-radius: 0 0 8px 8px;
+  }
+
+  .details h4 {
+    margin: 10px 0 5px;
+    font-size: 15px;
+    color: #333;
+  }
+
+  .details p {
+    margin: 3px 0;
+    font-size: 14px;
+  }
+
+  .details ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .arrow {
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 14px;
+    color: #555;
+    transition: transform 0.3s;
+  }
+
+  .arrow.open {
+    transform: rotate(90deg); /* ▶ 變成 ▼ */
+  }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+  }
+
+  .modal-content {
+    background: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 450px;
+  }
+
+  .close {
+    float: right;
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  /* 動畫 */
+  @keyframes fadeInUp {
+    from {opacity: 0; transform: translateY(15px);}
+    to {opacity: 1; transform: translateY(0);}
+  }
+
+  /* 回到頂端按鈕 */
+  #backToTop {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #00897b;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 14px;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1200;
+    transition: transform 0.2s, background 0.3s;
+  }
+
+  #backToTop:hover {
+    background: #00695c;
+    transform: scale(1.08);
+  }
+</style>
+
 </head>
 <body>
   <h1>🌐 花蓮光復救災交通媒合</h1>
@@ -161,7 +229,7 @@
     </a>
   </div>
 
-  <h2>找車需求（乘客需要司機）</h2>
+  <h2>找人資訊（司機提供座位）</h2>
   <ul id="passenger-list">
     {% for p in passengers %}
       {% if not p.is_matched %}
@@ -179,59 +247,211 @@
     {% endfor %}
   </ul>
 
-  <h2>找人資訊（司機提供座位）</h2>
-  <ul id="driver-list">
-    {% for d in drivers %}
-      {% if d.is_active %}
-        <li class="card driver-card">
-          <span><b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }} / {{ d.seats_total }}
-            ({{ d.departure }} → {{ d.destination }}, {{ d.date }})</span>
-          <div class="actions">
-            <button onclick="openDriverModal('{{ d.id }}')">管理</button>
-          </div>
-        </li>
-      {% endif %}
-    {% empty %}
-      <li class="card driver-card">目前沒有車輛</li>
-    {% endfor %}
-  </ul>
+<h2>找車需求（乘客需要司機）</h2>
+<ul id="driver-list"></ul>
+
 
   <!-- 回到頂端 -->
   <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆</button>
 
-  <script>
-    // WebSocket 自動更新
-    const socket = new WebSocket("ws://" + window.location.host + "/ws/find/");
+<script>
+  // WebSocket 自動更新
+  const socket = new WebSocket("ws://" + window.location.host + "/ws/find/");
 
-    socket.onopen = function() {
-      console.log("✅ WebSocket 連線成功");
-    };
+  socket.onopen = function() {
+    console.log("✅ WebSocket 連線成功");
+  };
 
-    socket.onmessage = function(event) {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("📩 收到資料：", data);
+  socket.onmessage = function(event) {
+    try {
+      const data = JSON.parse(event.data);
+      console.log("📩 收到資料：", data);
 
-        if (data.type === "update") {
-          if (data.passengers_html) {
-            document.getElementById("passenger-list").innerHTML = data.passengers_html;
-          }
-          if (data.drivers_html) {
-            document.getElementById("driver-list").innerHTML = data.drivers_html;
-          }
+      if (data.type === "update") {
+        if (data.passengers_html) {
+          document.getElementById("passenger-list").innerHTML = data.passengers_html;
         }
-      } catch (err) {
-        console.error("⚠️ 解析訊息失敗", err, event.data);
+        if (data.drivers_html) {
+          document.getElementById("driver-list").innerHTML = data.drivers_html;
+        }
       }
-    };
 
-    socket.onclose = function() {
-      console.log("❌ WebSocket 已關閉");
-    };
+      // 加入提示訊息
+      if (data.type === "join_result") {
+        if (data.success) {
+          showToast("✅ 成功加入乘客行程！", "success");
+        } else {
+          showToast("⚠️ 加入失敗：" + (data.message || "沒有可用的司機"), "error");
+        }
+      }
+    } catch (err) {
+      console.error("⚠️ 解析訊息失敗", err, event.data);
+    }
+  };
 
-    socket.onerror = function(error) {
-      console.error("⚠️ WebSocket 發生錯誤", error);
-    };
-  </script>
+  socket.onclose = function() {
+    console.log("❌ WebSocket 已關閉");
+  };
+
+  socket.onerror = function(error) {
+    console.error("⚠️ WebSocket 發生錯誤", error);
+  };
+
+  // 🔹 管理司機按鈕事件
+  function manageDriver(driverId) {
+    console.log("📤 傳送管理事件，driverId:", driverId);
+    socket.send(JSON.stringify({
+      action: "driver_manage",
+      driver_id: driverId
+    }));
+  }
+
+  // 打開管理 Modal
+  function openDriverModal(driverId, seats, isActive) {
+    document.getElementById("driverId").value = driverId;
+    document.getElementById("driverSeats").value = seats;
+    document.getElementById("driverActive").value = isActive === "True" ? "true" : "false";
+
+    document.getElementById("driverModal").style.display = "block";
+  }
+
+  // 關閉管理 Modal
+  function closeDriverModal() {
+    document.getElementById("driverModal").style.display = "none";
+  }
+
+  // 儲存修改 → 發送 WebSocket
+  function saveDriverChanges() {
+    const driverId = document.getElementById("driverId").value;
+    const seats = document.getElementById("driverSeats").value;
+    const isActive = document.getElementById("driverActive").value;
+
+    console.log("📤 儲存司機修改:", driverId, seats, isActive);
+
+    socket.send(JSON.stringify({
+      action: "driver_update",
+      driver_id: driverId,
+      seats_total: seats,
+      is_active: isActive === "true"
+    }));
+
+    closeDriverModal();
+  }
+
+  // 點擊「參加」按鈕
+  function openJoinDriverModal(driverId) {
+    document.getElementById("joinModal").style.display = "block";
+    document.getElementById("joinForm").action = `/find/driver/${driverId}/join/`;
+  }
+
+  function openJoinModal(driverId) {
+    document.getElementById("joinModal").style.display = "block";
+    document.getElementById("joinForm").action = `/find/driver/${driverId}/join/`;
+  }
+
+  function showToast(message, type = "success") {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.style.minWidth = "200px";
+    toast.style.marginTop = "10px";
+    toast.style.padding = "12px 18px";
+    toast.style.borderRadius = "6px";
+    toast.style.color = "#fff";
+    toast.style.fontWeight = "bold";
+    toast.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+    toast.style.opacity = "0.95";
+    toast.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+
+    if (type === "success") {
+      toast.style.background = "#28a745";
+    } else if (type === "error") {
+      toast.style.background = "#dc3545";
+    } else {
+      toast.style.background = "#6c757d";
+    }
+
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-20px)";
+      setTimeout(() => container.removeChild(toast), 300);
+    }, 3000);
+  }
+
+  // ✅ 改良版：展開/收合詳細資訊 + 小箭頭切換
+  function toggleDetails(id) {
+  const details = document.getElementById("details-" + id);
+  const arrow = document.querySelector(`#details-${id}`).parentNode.querySelector(".arrow");
+
+  if (details.classList.contains("hidden")) {
+    details.classList.remove("hidden");
+    arrow.classList.add("open");   // 🔹箭頭加上旋轉
+  } else {
+    details.classList.add("hidden");
+    arrow.classList.remove("open"); // 🔹箭頭恢復
+  }
+}
+</script>
+
+
+
+<!-- 管理司機 Modal -->
+<div id="driverModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeDriverModal()">&times;</span>
+    <h3>🚗 管理司機</h3>
+    
+    <input type="hidden" id="driverId">
+
+    <label>座位數：</label>
+    <input type="number" id="driverSeats" min="1" value="4" style="width:100%; margin-bottom:10px;"><br>
+
+    <label>是否啟用：</label>
+    <select id="driverActive" style="width:100%; margin-bottom:10px;">
+      <option value="true">啟用</option>
+      <option value="false">停用</option>
+    </select>
+
+    <button onclick="saveDriverChanges()">💾 儲存</button>
+  </div>
+</div>
+
+<!-- Toast 容器 -->
+<div id="toast-container" style="
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+"></div>
+
+<!-- Modal -->
+<div id="joinModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="document.getElementById('joinModal').style.display='none'">&times;</span>
+    <h2>參加行程</h2>
+    <form id="joinForm" method="POST">
+      {% csrf_token %}
+      <label>姓名：</label>
+      <input type="text" name="passenger_name" required><br>
+
+      <label>需要人數：</label>
+      <input type="number" name="seats_needed" value="1" min="1" max="10"><br>
+
+      <label>出發地：</label>
+      <input type="text" name="departure" required><br>
+
+      <label>目的地：</label>
+      <input type="text" name="destination" required><br>
+
+      <label>日期：</label>
+      <input type="date" name="date" required><br>
+
+      <button type="submit">送出</button>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

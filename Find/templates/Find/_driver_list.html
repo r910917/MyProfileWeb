@@ -1,11 +1,52 @@
 {% for d in drivers %}
-  <li class="card driver-card">
-    <span><b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }} / {{ d.seats_total }}
-      ({{ d.departure }} → {{ d.destination }}, {{ d.date }})</span>
-    <div class="actions">
-      <button onclick="openDriverModal('{{ d.id }}')">管理</button>
-    </div>
-  </li>
+  {% if d.is_active %}
+    <li class="card driver-card">
+      <!-- 預設顯示重要資訊 -->
+      <div class="card-header">
+        <span>
+          <b>{{ d.driver_name }}</b> - 座位 {{ d.seats_filled }}/{{ d.seats_total }}
+          ({{ d.departure }} → {{ d.destination }}, {{ d.date }})
+        </span>
+        <div class="actions">
+          <button onclick="openDriverModal('{{ d.id }}','{{ d.seats_total }}','{{ d.is_active }}')">管理</button>
+          <button onclick="openJoinModal('{{ d.id }}')">參加</button>
+          <span class="arrow" onclick="toggleDetails('{{ d.id }}')">▶</span>
+        </div>
+      </div>
+
+      <!-- 展開區塊 -->
+      <div id="details-{{ d.id }}" class="details hidden">
+        <h4>🚗 司機資訊</h4>
+        <p><b>暱稱：</b>{{ d.driver_name }}</p>
+        <p><b>性別：</b>{{ d.get_gender_display }}</p>
+        <p><b>Email：</b>{{ d.email|default:"未提供" }}</p>
+        <p><b>聯絡方式：</b>{{ d.contact }}</p>
+        <p><b>出發日期：</b>{{ d.date }}</p>
+        <p><b>回程日期：</b>{{ d.return_date|default:"未定" }}</p>
+        <p><b>順路接送意願：</b>
+          {% if d.flexible_pickup == "YES" %}順路可載
+          {% elif d.flexible_pickup == "NO" %}不順路也OK
+          {% else %}視情況
+          {% endif %}
+        </p>
+        <p><b>備註：</b>{{ d.note|default:"無" }}</p>
+
+        <h4>🧍 已登記乘客</h4>
+        {% if d.passengers.exists %}
+          <ul>
+            {% for p in d.passengers.all %}
+              <li>
+                {{ p.passenger_name }} ({{ p.get_gender_display }})
+                - 出發地：{{ p.departure }} / 人數：{{ p.seats_needed }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>目前沒有乘客</p>
+        {% endif %}
+      </div>
+    </li>
+  {% endif %}
 {% empty %}
   <li class="card driver-card">目前沒有車輛</li>
 {% endfor %}

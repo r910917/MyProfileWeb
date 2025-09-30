@@ -1,13 +1,196 @@
-<h2>新增出車資訊</h2>
-<form method="POST">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>🚗 新增出車資訊</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      background: linear-gradient(to right, #f0f9ff, #fefefe);
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #005c4b;
+      margin-bottom: 25px;
+      font-size: 26px;
+    }
+
+    form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 25px 30px;
+      border-radius: 16px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    fieldset {
+      border: none;
+      margin-bottom: 20px;
+      padding: 0;
+    }
+
+    legend {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      color: #444;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      font-size: 15px;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 8px rgba(0,123,255,0.3);
+      outline: none;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(45deg, #007bff, #00b894);
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+
+    button:hover {
+      background: linear-gradient(45deg, #0056b3, #009e77);
+      transform: scale(1.02);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 顯示必填欄位的紅色星號 */
+    .required::after {
+      content: " *";
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h2>🚗 新增出車資訊</h2>
+
+  <form method="POST">
   {% csrf_token %}
-  姓名: <input type="text" name="name" required><br>
-  聯絡方式: <input type="text" name="contact" required><br>
-  管理密碼: <input type="password" name="password" placeholder="建議使用 4 碼"><br>
-  總座位: <input type="number" name="seats_total" min="1" required><br>
-  出發地: <input type="text" name="departure" required><br>
-  目的地: <input type="text" name="destination" required><br>
-  日期: <input type="date" name="date" required><br>
-  備註: <textarea name="note"></textarea><br>
-  <button type="submit">送出</button>
+  
+  <label for="nickname">暱稱</label>
+  <input type="text" name="name" id="nickname" required>
+
+  <label>性別:</label>
+  <select name="gender" required>
+    <option value="M">男生</option>
+    <option value="F">女生</option>
+    <option value="X" selected>不方便透漏</option>
+  </select><br>
+
+  <label for="email">Email</label>
+  <input type="email" name="email" id="email" placeholder="可留空白，填寫此欄僅供傳送乘客加入通知">
+
+  <label for="contact">聯絡方式</label>
+  <input type="text" name="contact" id="contact" placeholder="LINE ID, IG, Phone Number" required>
+
+  <label for="password">管理密碼</label>
+  <input type="password" name="password" id="password" placeholder="建議使用 4 碼,預設0000,方便修改資料及乘客資訊" value="0000">
+
+  <label for="flexible_pickup">順路接送意願</label>
+  <select name="flexible_pickup" id="flexible_pickup" required>
+    <option value="YES">順路可載</option>
+    <option value="NO">不順路也OK</option>
+    <option value="MAYBE" selected>視情況</option>
+  </select>
+
+  <label for="seats_total">總座位</label>
+  <input type="number" name="seats_total" id="seats_total" min="1" placeholder="剩餘座位" required>
+
+  <label for="departure">出發地</label>
+  <select name="departure" id="departure" onchange="checkCustomDeparture(this)" required>
+    <option value="">請選擇縣市</option>
+    <option value="自填">自填</option>
+    <option value="台北市">台北市</option>
+    <option value="新北市">新北市</option>
+    <option value="基隆市">基隆市</option>
+    <option value="桃園市">桃園市</option>
+    <option value="新竹市">新竹市</option>
+    <option value="新竹縣">新竹縣</option>
+    <option value="苗栗縣">苗栗縣</option>
+    <option value="台中市">台中市</option>
+    <option value="彰化縣">彰化縣</option>
+    <option value="南投縣">南投縣</option>
+    <option value="雲林縣">雲林縣</option>
+    <option value="嘉義市">嘉義市</option>
+    <option value="嘉義縣">嘉義縣</option>
+    <option value="台南市">台南市</option>
+    <option value="高雄市">高雄市</option>
+    <option value="屏東縣">屏東縣</option>
+    <option value="宜蘭縣">宜蘭縣</option>
+    <option value="花蓮縣">花蓮縣</option>
+    <option value="台東縣">台東縣</option>
+    <option value="澎湖縣">澎湖縣</option>
+    <option value="金門縣">金門縣</option>
+    <option value="連江縣">連江縣</option>
+  </select>
+  <input type="text" id="customDeparture" name="custom_departure" style="display:none;" placeholder="輸入自訂出發地">
+
+  <label for="destination">目的地</label>
+  <input type="text" name="destination" id="destination" placeholder="可留空">
+
+  <label for="date">出發日期</label>
+  <input type="date" name="date" id="date" required>
+
+  <label for="return_date">回程日期 (可留空)</label>
+  <input type="date" name="return_date" id="return_date">
+
+  <label for="note">備註</label>
+  <textarea name="note" id="note"></textarea>
+
+  <button type="submit">✅ 送出</button>
 </form>
+
+
+  <script>
+    function checkCustomDeparture(select) {
+      const customInput = document.getElementById("customDeparture");
+      if (select.value === "自填") {
+        customInput.style.display = "block";
+        customInput.required = true;
+      } else {
+        customInput.style.display = "none";
+        customInput.required = false;
+      }
+    }
+  </script>
+</body>
+</html>

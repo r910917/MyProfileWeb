@@ -49,23 +49,44 @@ def find_people(request):
 
 
 # -------------------
-# 找車（司機出車）
+# # ✅ 司機新增出車
 # -------------------
 def find_car(request):
     if request.method == "POST":
-        password = request.POST.get("password") or "0000"
+        name = request.POST.get("name")
+        contact = request.POST.get("contact")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        gender = request.POST.get("gender")
+        seats_total = int(request.POST.get("seats_total"))
+        
+        # 出發地處理：先選單，若有輸入自訂的，覆蓋掉
+        departure = request.POST.get("departure")
+        departure_custom = request.POST.get("departure_custom")
+        if departure_custom:
+            departure = departure_custom
+
+        destination = request.POST.get("destination")
+        date = request.POST.get("date")
+        return_date = request.POST.get("return_date") or None
+        flexible_pickup = request.POST.get("flexible_pickup")
+        note = request.POST.get("note")
+
         DriverTrip.objects.using("find_db").create(
-            driver_name=request.POST["name"],
-            contact=request.POST["contact"],
+            driver_name=name,
+            contact=contact,
+            email=email,
             password=password,
-            seats_total=int(request.POST["seats_total"]),
-            departure=request.POST["departure"],
-            destination=request.POST["destination"],
-            date=request.POST["date"],
-            note=request.POST.get("note", ""),
-            seats_filled=0
+            gender=gender,
+            seats_total=seats_total,
+            departure=departure,
+            destination=destination,
+            date=date,
+            return_date=return_date,
+            flexible_pickup=flexible_pickup,
+            note=note,
         )
-        return redirect("find_index")
+        return redirect("find_index")  # ✅ 送出後回首頁
 
     return render(request, "Find/find_car.html")
 
@@ -174,23 +195,33 @@ def driver_manage(request, driver_id):
 # -------------------
 # 乘客加入司機 (從 match_driver 頁面)
 # -------------------
-def join_passenger(request, passenger_id):
-    passenger = PassengerRequest.objects.using("find_db").get(id=passenger_id)
+def join_driver(request, driver_id):
+    driver = get_object_or_404(DriverTrip, id=driver_id)
 
     if request.method == "POST":
-        driver_id = request.POST.get("driver_id")
-        driver = DriverTrip.objects.using("find_db").get(id=driver_id)
+        passenger_name = request.POST.get("passenger_name")
+        seats_needed = int(request.POST.get("seats_needed", 1))
+        departure = request.POST.get("departure")
+        destination = request.POST.get("destination")
+        date = request.POST.get("date")
 
-        if driver.seats_filled + passenger.seats_needed <= driver.seats_total:
-            driver.seats_filled += passenger.seats_needed
-            if driver.seats_filled >= driver.seats_total:
-                driver.is_active = False
-            driver.save(using="find_db")
+        PassengerRequest.objects.create(
+            passenger_name=passenger_name,
+            seats_needed=seats_needed,
+            departure=departure,
+            destination=destination,
+            date=date,
+            is_matched=False,
+        )
 
-            passenger.is_matched = True
-            passenger.save(using="find_db")
+        # 更新司機 trip 的座位
+        driver.seats_filled += seats_needed
+        driver.save()
 
-        return redirect("find_index")
+        return redirect("find_car")  # 回到清單頁面
+    
+    # 如果 GET 就回傳 join form
+    return render(request, "Find/join_driver.html", {"driver": driver})
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer

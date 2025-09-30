@@ -48,10 +48,10 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "daphne",       # ✅ 如果你用 uvicorn 可跳過，但建議加
     'django.contrib.staticfiles',
     'mysite',
     'portfolio',
-    "daphne",       # ✅ 如果你用 uvicorn 可跳過，但建議加
     "channels",     # ✅ 必加
     "Find.apps.FindConfig",         # 你的 app
 ]

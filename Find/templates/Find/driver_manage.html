@@ -1,26 +1,190 @@
-<h2>司機管理：{{ driver.driver_name }}</h2>
-<p>路線：{{ driver.departure }} → {{ driver.destination }}</p>
-<p>座位狀態：{{ driver.seats_filled }} / {{ driver.seats_total }}</p>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>司機管理</title>
+  <style>
+    body { font-family: "Microsoft JhengHei", sans-serif; background:#f7fbff; margin:0; padding:20px; }
+    h2 { color:#005c4b; margin: 10px 0 6px; }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    .section { background:#fff; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.06); padding:16px 18px; margin:16px 0; }
+    label { display:block; font-weight:bold; margin:10px 0 6px; }
+    input, select, textarea {
+      width:100%; padding:10px; border-radius:8px; border:1px solid #d7dde5; background:#fcfdff;
+    }
+    .row { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
+    .row-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+    .actions { display:flex; gap:10px; margin-top:12px; }
+    button {
+      padding:10px 16px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:bold;
+      background:#007bff;
+    }
+    button.secondary { background:#28a745; }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; margin-left:8px; }
+    .pill.on { background:#e3f7ec; color:#1f7a3b; border:1px solid #a7e2bf; }
+    .pill.off{ background:#fdeeee; color:#a63f3f; border:1px solid #f3b6b6; }
+    .note { font-size: 12px; color:#666; }
+    .msg { margin:8px 0; padding:10px 12px; border-radius:8px; font-weight:bold; }
+    .msg.ok { background:#e8f8ef; color:#206b3a; }
+    .msg.warn { background:#fff7e6; color:#9a6b00; }
+    .msg.err { background:#ffefef; color:#9a2a2a; }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
+    .table th { background:#f6f9fc; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>司機管理：{{ driver.driver_name }}
+      {% if driver.is_active %}
+        <span class="pill on">上架中</span>
+      {% else %}
+        <span class="pill off">未上架</span>
+      {% endif %}
+    </h2>
+    <p class="note">路線：{{ driver.departure }} → {{ driver.destination }}　｜　座位：{{ driver.seats_filled }} / {{ driver.seats_total }}</p>
 
-<form method="POST">
-  {% csrf_token %}
-  <p>請勾選要接受的乘客：</p>
-  <ul>
-    {% for p in passengers %}
-      <li>
-        <input type="checkbox" name="confirm_passengers" value="{{ p.id }}">
-        {{ p.passenger_name }} - 需要 {{ p.seats_needed }} 人 - 聯絡：{{ p.contact }}
-      </li>
-    {% empty %}
-      <li>目前沒有候選乘客</li>
-    {% endfor %}
-  </ul>
-  <button type="submit">確認媒合</button>
-</form>
+    {% if saved_msg %}<div class="msg ok">{{ saved_msg }}</div>{% endif %}
+    {% if matched_msg %}<div class="msg ok">{{ matched_msg }}</div>{% endif %}
+    {% if full_msg %}<div class="msg warn">{{ full_msg }}</div>{% endif %}
 
-<a href="{% url 'find_index' %}">回首頁</a>
-<script>
-  // 自動聚焦到第一個輸入框
-  document.addEventListener("DOMContentLoaded", function() {
-    document.querySelector("input[name='confirm_passengers']").focus();
-  });
+    <!-- 上半：編輯司機 -->
+    <div class="section">
+      <h3>🛠️ 編輯司機資料</h3>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="form" value="update_driver">
+        <div class="row">
+          <div>
+            <label>暱稱</label>
+            <input type="text" name="driver_name" value="{{ driver.driver_name }}" required>
+          </div>
+          <div>
+            <label>性別</label>
+            <select name="gender">
+              <option value="M" {% if driver.gender == "M" %}selected{% endif %}>男生</option>
+              <option value="F" {% if driver.gender == "F" %}selected{% endif %}>女生</option>
+              <option value="X" {% if driver.gender == "X" %}selected{% endif %}>不方便透漏</option>
+            </select>
+          </div>
+          <div>
+            <label>Email（可留空）</label>
+            <input type="email" name="email" value="{{ driver.email|default_if_none:'' }}">
+          </div>
+          <div>
+            <label>聯絡方式</label>
+            <input type="text" name="contact" value="{{ driver.contact }}" placeholder="LINE ID / IG / Phone Number" required>
+          </div>
+          <div>
+            <label>管理密碼（留空則不變更）</label>
+            <input type="password" name="password" placeholder="留空不修改">
+          </div>
+          <div>
+            <label>總座位</label>
+            <input type="number" name="seats_total" min="1" value="{{ driver.seats_total }}" required>
+          </div>
+        </div>
+
+        <div class="row-3" style="margin-top:10px;">
+          <div>
+            <label>出發地</label>
+            <input type="text" name="departure" value="{{ driver.departure }}" required>
+          </div>
+          <div>
+            <label>目的地</label>
+            <input type="text" name="destination" value="{{ driver.destination }}" required>
+          </div>
+          <div>
+            <label>出發日期</label>
+            <input type="date" name="date" value="{{ driver.date|date:'Y-m-d' }}" required>
+          </div>
+          <div>
+            <label>回程日期（可留空）</label>
+            <input type="date" name="return_date" value="{{ driver.return_date|date:'Y-m-d' }}">
+          </div>
+          <div>
+            <label>順路接送意願</label>
+            <select name="flexible_pickup">
+              <option value="YES" {% if driver.flexible_pickup == "YES" %}selected{% endif %}>順路可載</option>
+              <option value="NO"  {% if driver.flexible_pickup == "NO"  %}selected{% endif %}>不順路也OK</option>
+              <option value="MAYBE" {% if driver.flexible_pickup == "MAYBE" %}selected{% endif %}>視情況</option>
+            </select>
+          </div>
+          <div>
+            <label>是否上架</label>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %}>
+              <label for="is_active" style="margin:0;font-weight:normal;">上架（座位滿會自動下架）</label>
+            </div>
+          </div>
+        </div>
+
+        <label style="margin-top:12px;">備註</label>
+        <textarea name="note" rows="3" placeholder="補充說明">{{ driver.note }}</textarea>
+
+        <div class="actions">
+          <button type="submit">💾 儲存</button>
+          <a href="{% url 'find_index' %}" style="text-decoration:none;">
+            <button type="button" class="secondary">🏠 回首頁</button>
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- 下半：候選乘客 -->
+    <div class="section">
+      <h3>🧍 候選乘客（同路線同日期・尚未媒合）</h3>
+      {% if candidates %}
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="form" value="accept_passengers">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:40px;"></th>
+                <th>暱稱 / 性別</th>
+                <th>Email（隱藏不顯示）</th>
+                <th>聯絡方式</th>
+                <th>人數</th>
+                <th>願付費用</th>
+                <th>出發地</th>
+                <th>目的地</th>
+                <th>是否一起回程</th>
+                <th>備註</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in candidates %}
+                <tr>
+                  <td>
+                    <input type="checkbox" name="accept_ids" value="{{ p.id }}">
+                  </td>
+                  <td>{{ p.passenger_name }}（{{ p.get_gender_display }}）</td>
+                  <td>系統用</td>
+                  <td>{{ p.contact }}</td>
+                  <td>{{ p.seats_needed }}</td>
+                  <td>
+                    {% if p.willing_to_pay %}{{ p.willing_to_pay }}{% else %}-{% endif %}
+                  </td>
+                  <td>{{ p.departure }}</td>
+                  <td>{{ p.destination }}</td>
+                  <td>
+                    {% if p.return_date %}是{% else %}否 / 未定{% endif %}
+                  </td>
+                  <td>{{ p.note|default:"—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="actions">
+            <button type="submit" class="secondary">✅ 接受勾選乘客</button>
+          </div>
+        </form>
+      {% else %}
+        <p class="note">目前沒有候選乘客。</p>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

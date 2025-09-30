@@ -1,52 +1,109 @@
+{# templates/Find/_driver_list.html #}
 {% for d in drivers %}
   {% if d.is_active %}
-    <li class="card driver-card">
-      <!-- 預設顯示重要資訊 -->
-      <div class="card-header">
-        <span>
-          <b>{{ d.driver_name }}</b> - 座位 {{ d.seats_filled }}/{{ d.seats_total }}
-          ({{ d.departure }} → {{ d.destination }}, {{ d.date }})
-        </span>
-        <div class="actions">
-          <button onclick="openDriverModal('{{ d.id }}','{{ d.seats_total }}','{{ d.is_active }}')">管理</button>
-          <button onclick="openJoinModal('{{ d.id }}')">參加</button>
-          <span class="arrow" onclick="toggleDetails('{{ d.id }}')">▶</span>
+    <li class="card driver-card" data-driver="{{ d.id }}">
+      <div class="driver-grid">
+        <!-- 左：暱稱 - 座位（置中） -->
+        <div class="col-left">
+          <div class="name-seat">
+            <b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }}/{{ d.seats_total }}
+          </div>
         </div>
-      </div>
 
-      <!-- 展開區塊 -->
-      <div id="details-{{ d.id }}" class="details hidden">
-        <h4>🚗 司機資訊</h4>
-        <p><b>暱稱：</b>{{ d.driver_name }}</p>
-        <p><b>性別：</b>{{ d.get_gender_display }}</p>
-        <p><b>Email：</b>{{ d.email|default:"未提供" }}</p>
-        <p><b>聯絡方式：</b>{{ d.contact }}</p>
-        <p><b>出發日期：</b>{{ d.date }}</p>
-        <p><b>回程日期：</b>{{ d.return_date|default:"未定" }}</p>
-        <p><b>順路接送意願：</b>
-          {% if d.flexible_pickup == "YES" %}順路可載
-          {% elif d.flexible_pickup == "NO" %}不順路也OK
-          {% else %}視情況
-          {% endif %}
-        </p>
-        <p><b>備註：</b>{{ d.note|default:"無" }}</p>
+        <!-- 中：三行資訊 -->
+        <div class="col-middle">
+          <div class="line line1">{{ d.departure }} → {{ d.destination }}</div>
+          <div class="line line2">
+            出發：{{ d.date }}　|　回程：{{ d.return_date|default:"未定" }}
+          </div>
+          <div class="line line3">
+            順路接送：
+            {% if d.flexible_pickup == "YES" %}順路可載
+            {% elif d.flexible_pickup == "NO" %}不順路也OK
+            {% else %}視情況{% endif %}
+          </div>
+        </div>
 
-        <h4>🧍 已登記乘客</h4>
-        {% if d.passengers.exists %}
-          <ul>
-            {% for p in d.passengers.all %}
-              <li>
-                {{ p.passenger_name }} ({{ p.get_gender_display }})
-                - 出發地：{{ p.departure }} / 人數：{{ p.seats_needed }}
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p>目前沒有乘客</p>
-        {% endif %}
-      </div>
-    </li>
-  {% endif %}
-{% empty %}
-  <li class="card driver-card">目前沒有車輛</li>
-{% endfor %}
+        <!-- 右：按鈕與箭頭 -->
+        <div class="col-actions">
+          <button type="button" class="btn-manage"
+                  data-action="manage" data-id="{{ d.id }}"
+                  onclick="window.__handleAction(event)">
+            管理
+          </button>
+
+          <button type="button" class="btn-join"
+                  data-action="join" data-id="{{ d.id }}"
+                  onclick="window.__handleAction(event)">
+            參加
+          </button>
+
+          <button type="button" id="arrow-{{ d.id }}" class="arrow"
+                  data-action="toggle" data-id="{{ d.id }}"
+                  aria-controls="details-{{ d.id }}" aria-expanded="false"
+                  title="展開/收合"
+                  onclick="window.__handleAction(event)">▶</button>
+        </div>
+
+        <!-- 詳細區塊 -->
+        <div id="details-{{ d.id }}" class="details" aria-hidden="true">
+  <h4>🚗 司機資訊</h4>
+  <p><b>暱稱：</b>{{ d.driver_name }}</p>
+  <p><b>性別：</b>{{ d.get_gender_display }}</p>
+  <p><b>Email：</b>{{ d.email|default:"未提供" }}</p>
+  <p><b>聯絡方式：</b>{{ d.contact }}</p>
+  <p><b>出發日期：</b>{{ d.date }}</p>
+  <p><b>回程日期：</b>{{ d.return_date|default:"未定" }}</p>
+  <p><b>順路接送意願：</b>
+    {% if d.flexible_pickup == "YES" %}順路可載
+    {% elif d.flexible_pickup == "NO" %}不順路也OK
+    {% else %}視情況{% endif %}
+  </p>
+  <p><b>備註：</b>{{ d.note|default:"無" }}</p>
+
+  {# --- 已登記乘客（分待確認 / 已接受） --- #}
+{% with items=d.passengers.all %}
+
+  <h4>🧍 待確認乘客</h4>
+  <ul class="pax-list">
+    {% for p in items %}
+      {% if not p.is_matched %}
+        <li class="pax-item pax-pending">
+          <span class="pax-name">{{ p.passenger_name }}</span>
+          <span class="pax-meta">
+            {{ p.get_gender_display }}・出發：{{ p.departure }}・人數：{{ p.seats_needed }}
+          </span>
+          <span class="pax-actions">
+            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+          </span>
+        </li>
+      {% endif %}
+    {% empty %}
+      <li class="pax-empty">目前沒有任何乘客</li>
+    {% endfor %}
+  </ul>
+
+  <h4>✅ 已接受乘客</h4>
+  <ul class="pax-list">
+    {% for p in items %}
+      {% if p.is_matched %}
+        <li class="pax-item pax-accepted">
+          <span class="check">✔</span>
+          <span class="pax-name">{{ p.passenger_name }}</span>
+          <span class="pax-meta">
+            {{ p.get_gender_display }}・出發：{{ p.departure }}・人數：{{ p.seats_needed }}
+          </span>
+          <span class="pax-actions">
+            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+          </span>
+        </li>
+      {% endif %}
+    {% empty %}
+      <li class="pax-empty">尚無已接受乘客</li>
+    {% endfor %}
+  </ul>
+
+{% endwith %}
+        </div>

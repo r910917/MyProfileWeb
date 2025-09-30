@@ -10,8 +10,12 @@ urlpatterns = [
     path("passenger/<int:passenger_id>/edit/", views.edit_passenger, name="edit_passenger"),
     path("passenger/<int:passenger_id>/manage/", views.passenger_manage, name="passenger_manage"),
     path("driver/<int:driver_id>/join/", views.join_driver, name="join_driver"),
+    # Find/urls.py
+    path("passenger/<int:pk>/update/", views.passenger_update, name="pax_update"),
+    path("passenger/<int:pk>/delete/", views.passenger_delete, name="pax_delete"),
 
-    # 司機
+    # 司機管理頁
     path("driver/<int:driver_id>/manage/", views.driver_manage, name="driver_manage"),
-    path("driver/<int:driver_id>/edit/", views.edit_driver, name="edit_driver"),
+    # 密碼驗證（AJAX）
+    path("driver/<int:driver_id>/manage/auth/", views.driver_manage_auth, name="driver_manage_auth"),
 ]

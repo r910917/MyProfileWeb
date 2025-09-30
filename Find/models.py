@@ -32,6 +32,7 @@ class DriverTrip(models.Model):
     )
     note = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    pass
 
     @property
     def seats_left(self):
@@ -64,6 +65,14 @@ class PassengerRequest(models.Model):
     return_date = models.DateField(blank=True, null=True)  # ✅ 回程日期，可空
     note = models.TextField(blank=True)
     is_matched = models.BooleanField(default=False)
+    driver = models.ForeignKey(
+        DriverTrip,
+        related_name="passengers",
+        null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    # 可選：如果你之後要真的存「是否一起回程」
+    together_return = models.BooleanField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.passenger_name} - {self.departure} → {self.destination}"

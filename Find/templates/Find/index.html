@@ -5,429 +5,511 @@
   <title>🌐 花蓮光復救災交通媒合</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
-  
-  
-  body {
-    font-family: "Microsoft JhengHei", sans-serif;
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(to right, #eaf8ff, #f7fff7);
-    color: #222;
-  }
-
-  /* 頁面標題 */
-  h1 {
-    text-align: center;
-    padding: 20px;
-    color: #005c4b;
-  }
-
-  /* 小標題 */
-  h2 {
-    color: #00695c;
-    margin: 20px;
-    font-size: 20px;
-  }
-
-  /* 按鈕群組 */
-  .buttons {
-    text-align: center;
-    margin: 20px 0;
-  }
-
-  /* 主功能按鈕 */
-  .btn-main {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 12px 24px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    margin: 0 6px;
-    color: #fff;
-    font-weight: bold;
-    transition: transform 0.2s, background 0.3s;
-  }
-
-  .btn-driver {
-    background: #007bff;
-  }
-  .btn-driver:hover {
-    background: #0056b3;
-    transform: scale(1.05);
-  }
-
-  .btn-passenger {
-    background: #dc3545;
-  }
-  .btn-passenger:hover {
-    background: #a71d2a;
-    transform: scale(1.05);
-  }
-
-  /* 卡片 */
-  .card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #fff;
-    margin: 10px 20px;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    animation: fadeInUp 0.4s ease-in-out;
-    position: relative;
-    flex-wrap: wrap; /* ✅避免小螢幕爆版 */
-  }
-
-  .card::before {
-    content: "";
-    display: block;
-    width: 6px;
-    height: 100%;
-    border-radius: 6px 0 0 6px;
-    margin-right: 10px;
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
-
-  .driver-card::before {
-    background: #2196f3;
-  }
-
-  .passenger-card::before {
-    background: #f44336;
-  }
-
-.pax-list { margin: 6px 0 10px; padding-left: 0; list-style: none; }
-.pax-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 6px 12px;
-  align-items: center;
-  padding: 8px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  background: #fff;
+/* ==========================================================================
+   全站基礎：字體、背景、主標題/小標題
+   ========================================================================== */
+body{
+  font-family:"Microsoft JhengHei",sans-serif;
+  margin:0; padding:0;
+  background:linear-gradient(to right,#eaf8ff,#f7fff7);
+  color:#222;
 }
-.pax-item .check { color: #16a34a; font-weight: 700; }
-.pax-pending { background: #fff; }
-.pax-accepted { background: #ecfdf5; border-color: #a7f3d0; } /* 綠底 */
-.pax-name { font-weight: 700; }
-.pax-meta { color: #4b5563; font-size: 13px; }
-.pax-actions { display: flex; gap: 6px; }
-.btn-mini {
-  border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer;
-  background: #e5e7eb; color: #111827; font-size: 12px; font-weight: 700;
+h1{ text-align:center; padding:20px; color:#005c4b; }
+h2{ color:#00695c; margin:20px; font-size:20px; }
+
+/* ==========================================================================
+   首頁兩顆主功能按鈕
+   ========================================================================== */
+.buttons{ text-align:center; margin:20px 0; }
+.btn-main{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:12px 24px; font-size:16px; border-radius:8px;
+  border:none; cursor:pointer; margin:0 6px; color:#fff; font-weight:bold;
+  transition:transform .2s, background .3s;
 }
-.btn-mini:hover { background: #d1d5db; }
-.btn-mini.danger { background: #f87171; color: #fff; }
-.btn-mini.danger:hover { background: #ef4444; }
-.pax-empty { color: #6b7280; padding: 4px 2px; }
+.btn-driver{ background:#007bff; }
+.btn-driver:hover{ background:#0056b3; transform:scale(1.05); }
+.btn-passenger{ background:#dc3545; }
+.btn-passenger:hover{ background:#a71d2a; transform:scale(1.05); }
 
-
-/* 版面：左(暱稱座位) / 中(三行) / 右(按鈕與箭頭) */
-.driver-grid {
-  display: grid;
-  grid-template-columns: 220px 1fr 200px;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
+/* ==========================================================================
+   卡片（Driver/Passenger 列表）＋ 左側色條
+   ========================================================================== */
+/* 更貼左、較薄的卡片 */
+.card{
+  display:flex;
+  align-items:left;
+  justify-content:space-between;
+  background:#fff;
+  margin:3px;                 /* 取消奇怪的負邊距，左右不縮進 */
+  padding:8px 12px 8px 24px;    /* 上下變薄、左邊多一點空間給色條 */
+  border-radius:8px;            /* 比 1px 好看許多 */
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+  position:relative;
+  flex-wrap:wrap;
+  animation:fadeInUp .3s ease-out;
 }
 
-/* 左欄：置中顯示暱稱-座位 */
-.col-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  height: 100%;
-}
-.name-seat {
-  font-size: 16px;
-  color: #222;
-}
-
-/* 中欄：三行 */
-.col-middle .line { display: block; margin: 3px 0; }
-.col-middle .line1 { font-size: 16px; color: #222; }
-.col-middle .line2,
-.col-middle .line3 { font-size: 14px; color: #444; }
-
-/* 右欄：按鈕與箭頭靠右對齊 */
-.col-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+/* 讓色條微微突出到卡片外，視覺上更靠左，但不需要負邊距 */
+.card::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;       /* 等同於 height:100% + 更穩定 */
+  left:10px;      /* 向左突出 8px，達到「貼左」效果 */
+  width:6px;
+  border-radius:6px 0 0 6px;
 }
 
-/* 詳細展開鋪滿整列 */
-.details { grid-column: 1 / -1; }
+.driver-card::before{ background:#2196f3; }
+.passenger-card::before{ background:#f44336; }
 
-/* 你原本的樣式（保留）：箭頭旋轉 + 絲滑展開 + 按鈕色系 */
-.arrow { cursor: pointer; margin-left: 12px; font-size: 16px; color: #333;
-  background: transparent; border: 0; transition: transform .25s ease; }
-.arrow.open { transform: rotate(90deg); }
-
-.details { max-height: 0; overflow: hidden; padding: 0 10px;
-  background: #f9f9f9; border-top: 1px solid #e6e6e6; border-radius: 0 0 8px 8px;
-  transition: max-height .35s ease, padding .25s ease; }
-.details.open { max-height: 650px; padding: 10px; }
-
-.btn-manage { background: #007bff; color: #fff; border: 0; border-radius: 6px; padding: 6px 12px; }
-.btn-manage:hover { background: #0056b3; }
-.btn-join { background: #28a745; color: #fff; border: 0; border-radius: 6px; padding: 6px 12px; }
-.btn-join:hover { background: #1e7e34; }
-
-/* 響應式：窄螢幕改成上下堆疊 */
-@media (max-width: 720px) {
-  .driver-grid { grid-template-columns: 1fr; }
-  .col-actions { justify-content: flex-start; }
+/* 1) 取消 UL 預設縮排：卡片不要被推到右側 */
+#driver-list,
+#passenger-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;        /* ← 這行是重點 */
 }
 
-  /* Modal */
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-  }
-
-  .modal-content {
-    background: #fff;
-    margin: 10% auto;
-    padding: 20px;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 450px;
-  }
-
-  .close {
-    float: right;
-    font-size: 20px;
-    cursor: pointer;
-  }
-
-  /* 動畫 */
-  @keyframes fadeInUp {
-    from {opacity: 0; transform: translateY(15px);}
-    to {opacity: 1; transform: translateY(0);}
-  }
-
-  /* 回到頂端按鈕 */
-  #backToTop {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #00897b;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    padding: 14px;
-    font-size: 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 1200;
-    transition: transform 0.2s, background 0.3s;
-  }
-
-  #backToTop:hover {
-    background: #00695c;
-    transform: scale(1.08);
-  }
-
-/* ===== Join Modal：結構與滾動 ===== */
-.modal{
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,.55);
-  display: none;
-}
-.modal .modal-content{
-  display: flex; flex-direction: column;
-  width: min(520px, 94vw);
-  max-height: min(92svh, 640px);
-  margin: 6svh auto;
-  background: #fff; border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-}
-.modal-header, .modal-footer{
-  flex: 0 0 auto;
-  padding: 14px 16px;
-  border-bottom: 1px solid #eee;
-}
-.modal-footer{ border-top: 1px solid #eee; border-bottom: 0; display: flex; justify-content: flex-end; gap: 8px; }
-.modal-body{
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding: 14px 16px;
-}
-.close{ background: transparent; border: 0; font-size: 20px; cursor: pointer; }
-
-/* 背景頁在 modal 開啟時不要捲動（可選） */
-.body-modal-open{ overflow: hidden; }
-
-/* ===== Join Modal 美化（單欄） ===== */
-
-/* ===== Join Modal：緊湊美化（只套用在 #joinModal） ===== */
-#joinModal .modal-content{
-  width: min(520px, 94vw);
-  max-height: min(88svh, 620px);        /* 再矮一點，避免頂住 */
-  margin: 4svh auto;                     /* 上下留白縮小 */
-  border-radius: 14px;
-  overflow: hidden;                       /* 圓角更乾淨 */
-  box-shadow: 0 14px 34px rgba(0,0,0,.25);
-  background: #fff;
-  display: flex; flex-direction: column;
+/* 如果有其它容器對 ul/li 做了 padding-left，也一併歸零 */
+#driver-list > li,
+#passenger-list > li {
+  margin-left: 0;
 }
 
-/* Header 更薄、置中、黏在頂端（滾動時固定） */
-#joinModal .modal-header{
-  position: sticky; top: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 44px;
-  padding: 8px 16px;                      /* ✅ 這裡縮小高度 */
-  background: #fff;
-  border-bottom: 1px solid #eee;
+/* ==========================================================================
+   司機卡片三欄排版（左：暱稱座位 / 中：三行 / 右：操作與箭頭）
+   ========================================================================== */
+.driver-grid{
+  display:grid; grid-template-columns:minmax(140px,200px) 1fr auto;
+  column-gap:10px; align-items:center; width:100%;
 }
-#joinModal .modal-header .title{
-  font-size: 16px; font-weight: 700; color: #111827;
-  display: inline-flex; align-items: center; gap: 8px;
-}
-#joinModal .modal-header .title .emoji{ font-size: 18px; line-height: 1; }
+/* 左欄：暱稱 - 座位 */
+.col-left{ display:flex; align-items:center; justify-content:flex-start; height:100%; font-size:15px; }
+.name-seat{ font-size:15px; color:#222; margin:0; }
+/* 中欄：三行資訊 */
+.col-middle .line{ display:block; margin:2px 0; }
+.col-middle .line1{ font-size:16px; color:#222; }
+.col-middle .line2, .col-middle .line3{ font-size:14px; color:#444; }
+/* 右欄：操作按鈕＋箭頭 */
+.col-actions{ display:flex; align-items:center; justify-content:flex-end; gap:6px; }
 
-/* 關閉鈕放右上角、較小、不突兀 */
-#joinModal .modal-header .close{
-  position: absolute; right: 10px; top: 8px;
-  width: 28px; height: 28px; border-radius: 6px;
-  display: inline-grid; place-items: center;
-  font-size: 18px; color: #6b7280; border: 0; background: transparent;
-  cursor: pointer;
-}
-#joinModal .modal-header .close:hover{ background: #f3f4f6; color: #111827; }
+/* 展開區塊鋪滿整列 */
+.details{ grid-column:1 / -1; }
 
-/* Body 變成可捲動區域 */
-#joinModal .modal-body{
-  flex: 1 1 auto; overflow-y: auto;
-  padding: 12px 16px;                     /* 比原本再薄一點 */
+/* ==========================================================================
+   展開/收合：箭頭旋轉、絲滑開合；管理/參加按鈕色系
+   ========================================================================== */
+.arrow{
+  cursor:pointer; margin-left:6px; min-width:36px; min-height:36px;
+  font-size:16px; color:#333; background:transparent; border:0;
+  transition:transform .25s ease;
 }
+.arrow.open{ transform:rotate(90deg); }
 
-/* Footer 黏在底部，按鈕更圓、對齊 */
-#joinModal .modal-footer{
-  position: sticky; bottom: 0; z-index: 2;
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding: 10px 16px;
-  background: #fff; border-top: 1px solid #eee;
+.details{
+  margin-top:0px; max-height:0; overflow:hidden; padding:0px 0px;
+  background: transparent; border:0 #e6e6e6;
+  transition:max-height 1.2s ease, padding 1s ease;
 }
-#joinModal .btn-cancel, 
-#joinModal .btn-submit{
-  border-radius: 10px; padding: 10px 18px; font-weight: 700;
-}
-
-/* 表單欄位：行距微調、標籤更緊湊 */
-/* 讓每個欄位走『上方標籤、下方輸入框』的直向排版 */
-#joinModal .join-field {
-  display: flex;
-  flex-direction: column;   /* 直向排列：第一行 label、第二行輸入框 */
-  gap: 6px;                 /* 標籤與輸入框的垂直間距 */
-  margin: 12px 0;
+/* 展開時再加回外觀 */
+.details.open {
+  margin-top: 8px;
+  max-height: 650px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-top: 1px solid #e6e6e6;
+  border-radius: 6px;
 }
 
-/* 標籤佔滿一行 */
-#joinModal .join-field label {
-  display: block;
-  font-weight: 600;
-  color: #1f2937;
-  line-height: 1.2;
+.btn-manage{ background:#007bff; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.btn-manage:hover{ background:#0056b3; }
+.btn-join{ background:#28a745; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.btn-join:hover{ background:#1e7e34; }
+
+/* =============================================================================
+   A. 乘客清單（待確認 / 已接受）卡片樣式
+   ========================================================================== */
+
+/* 清單容器（舊 two-col 保留，某些頁面可能仍在用） */
+.pax-section{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:16px;
+  align-items:start;
+}
+@media (max-width: 860px){
+  .pax-section{ grid-template-columns: 1fr; }
 }
 
-/* 輸入框佔滿下一行 */
-#joinModal .join-field input,
-#joinModal .join-field select,
-#joinModal .join-field textarea {
-  width: 50%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 14px;
-  line-height: 1.25;
-  transition: border-color .2s, box-shadow .2s;
+.pax-list{ list-style:none; padding:0; margin:8px 0 0; }
+.pax-item{
+  box-sizing:border-box;
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  padding:12px 14px;
+  margin:8px 0;
 }
 
-#joinModal .join-field input:focus,
-#joinModal .join-field select:focus,
-#joinModal .join-field textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+/* 每筆：左文字（兩行） + 右按鈕 */
+.pax-2col{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  align-items:center;
 }
-
-/* 可選：備註拉高一點比較好打 */
-#joinModal textarea[name="note"] {
-  min-height: 96px;
+.pax-left{ min-width:0; }
+.pax-title{
+  font-weight:700;
+  font-size:15px;
+  color:#111827;
+  line-height:1.25;
 }
-
-/* 行動裝置維持同樣的「一行標籤 + 一行輸入框」 */
-@media (max-width: 640px) {
-  #joinModal .join-field { margin: 10px 0; gap: 6px; }
+.pax-sub{
+  margin-top:2px;
+  font-size:13px;
+  color:#4b5563;
+  line-height:1.3;
 }
+.pax-actions{ display:inline-flex; gap:8px; white-space:nowrap; }
 
-/* 小螢幕：再壓縮 header/邊距 */
+.btn-mini{
+  border:0; border-radius:8px; padding:6px 10px; background:#e5e7eb; cursor:pointer;
+}
+.btn-mini:hover{ background:#d1d5db; }
+.btn-mini.danger{ background:#fecaca; color:#7f1d1d; }
+.btn-mini.danger:hover{ background:#fca5a5; }
+
+/* 已接受：綠色底提示 */
+.pax-item.pax-accepted{ background:#f0fdf4; border:1px solid #bbf7d0; }
+.pax-item.pax-accepted .pax-title .check{
+  display:inline-block; margin-right:6px; color:#16a34a; font-weight:800;
+}
+.pax-item.pax-accepted .btn-mini{ background:#e7f5ec; }
+.pax-item.pax-accepted .btn-mini:hover{ background:#d9f0e4; }
+
+/* 手機按鈕落到下方 */
 @media (max-width: 640px){
-  #joinModal .modal-content{ max-height: min(92svh, 640px); margin: 3svh auto; }
-  #joinModal .modal-header{ min-height: 40px; padding: 6px 14px; }
-  #joinModal .modal-header .title{ font-size: 15px; }
-  #joinModal .modal-body{ padding: 10px 14px; }
-  #joinModal .modal-footer{ padding: 8px 14px; }
+  .pax-2col{ grid-template-columns:1fr; row-gap:8px; align-items:start; }
+  .pax-actions{ justify-content:flex-start; }
+}
+
+/* 自訂卷軸（淡淡的） */
+.pax-scroll::-webkit-scrollbar,
+.pending-scroll::-webkit-scrollbar{ width:8px; }
+.pax-scroll::-webkit-scrollbar-thumb,
+.pending-scroll::-webkit-scrollbar-thumb{ background:#d5d9e0; border-radius:6px; }
+.pax-scroll::-webkit-scrollbar-track,
+.pending-scroll::-webkit-scrollbar-track{ background:transparent; }
+
+
+/* =============================================================================
+   B. 詳細區塊：三欄（桌機）= 左：司機資訊 / 中：待確認 / 右：已接受
+   ========================================================================== */
+
+/* 你的 details 開闔動畫（保留） */
+.details{
+  margin-top:8px; max-height:0; overflow:hidden; padding:8px 10px;
+  background:#f9f9f9; border-top:1px solid #e6e6e6; border-radius:6px;
+  transition:max-height .35s ease, padding .25s ease;
+}
+.details.open{ max-height:1200px; padding:10px; }
+
+/* 三欄容器（桌機） */
+.details-grid3{
+  /* 可調高度：三欄同高，內容超出則各自出現卷軸 */
+  --panel-h: 340px;
+
+  display:grid;
+  grid-template-columns: minmax(420px, 2fr) minmax(320px, 1fr) minmax(320px, 1fr);
+  gap:16px;
+  align-items:stretch;  /* 三欄拉齊 */
+}
+
+/* 欄位內盒：給三欄統一高度與卷軸用 */
+.details-col{
+  height: var(--panel-h);
+  min-height: 0;          /* 重要：讓 grid 內元素可以正確 overflow */
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  overflow:auto;
+  padding:14px 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+
+/* 中、右欄標題 */
+.pax-panel-title{
+  margin:0 0 10px;
+  font-weight:800;
+  font-size:15px;
+  color:#0f172a;
+  display:flex; align-items:center; gap:6px;
+}
+
+/* 中、右欄列表容器（等高卷軸） */
+.pax-scroll{
+  height: calc(var(--panel-h) - 38px); /* 扣掉標題區高度(約) */
+  overflow:auto;
+  padding-right:6px;
+}
+
+/* RWD：≤980px 回單欄，不要固定高度與卷軸 */
+@media (max-width: 980px){
+  .details-grid3{ grid-template-columns:1fr; }
+  .details-col{ height:auto; overflow:visible; }
+  .pax-scroll{ height:auto; overflow:visible; padding-right:0; }
 }
 
 
-/* 手機 RWD */
+/* =============================================================================
+   C. 司機資訊（左欄）排版優化
+   ========================================================================== */
+
+/* 左欄內的視覺：標題列 */
+.driver-info__title{
+  display:flex; align-items:center; gap:8px;
+  font-weight:800; color:#0f172a;
+  margin:2px 0 12px;
+}
+.driver-info__title .emoji{ font-size:18px; }
+
+/* key-value 版面：整齊對齊成兩欄（標籤 / 內容） */
+.driver-kv{
+  display:grid;
+  grid-template-columns: 92px 1fr;
+  row-gap:8px;
+  column-gap:10px;
+}
+.driver-kv .k{
+  color:#475569;
+  font-weight:600;
+  text-align:right;
+}
+.driver-kv .v{
+  color:#111827;
+  word-break:break-word;
+}
+
+/* 小分隔線群組：讓資訊區塊更乾淨 */
+.driver-info__group{
+  display:grid; gap:8px;
+  padding-bottom:8px;
+  border-bottom:1px dashed #e5e7eb;
+  margin-bottom:10px;
+}
+.driver-info__group:last-child{ border-bottom:0; padding-bottom:0; margin-bottom:0; }
+
+/* 次要文字（例如「未提供」、「未定」） */
+.text-muted{ color:#6b7280; }
+
+/* RWD：手機時改成單欄 */
 @media (max-width: 640px){
-  .modal .modal-content{ width:94vw; margin: 4svh auto; }
-  .join-field{ margin:10px 0; }
-  .btn-submit, .btn-cancel{ min-height:44px; font-size:16px; }
+  .driver-kv{ grid-template-columns: 86px 1fr; }
 }
 
-/* 其它既有樣式一併保留 */
-.arrow{ transition: transform .25s ease; }
+
+/* =============================================================================
+   D. 你現有的箭頭/卡片/按鈕（如需，保留）
+   ========================================================================== */
+
+.arrow{ cursor:pointer; margin-left:6px; min-width:36px; min-height:36px;
+  font-size:16px; color:#333; background:transparent; border:0;
+  transition: transform .25s ease;
+}
 .arrow.open{ transform: rotate(90deg); }
 
-/* 你原本的 RWD 小調整（保留） */
-@media (max-width: 1024px){ .card{ padding:14px 12px; margin:10px 12px; } .btn-main{ padding:10px 16px; font-size:15px; } }
-@media (max-width: 768px){
+.btn-manage{ background:#007bff; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.btn-manage:hover{ background:#0056b3; }
+.btn-join{ background:#28a745; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.btn-join:hover{ background:#1e7e34; }
+
+/* ==========================================================================
+   Modal：通用（遮罩/容器/關閉鈕/區塊）
+   ========================================================================== */
+.modal{
+  position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.55);
+  display:none;
+}
+.modal .modal-content{
+  display:flex; flex-direction:column;
+  width:min(520px,94vw); max-height:min(92svh,640px);
+  margin:6svh auto; background:#fff; border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.modal-header, .modal-footer{
+  flex:0 0 auto; padding:14px 16px; border-bottom:1px solid #eee;
+}
+.modal-footer{ border-top:1px solid #eee; border-bottom:0; display:flex; justify-content:flex-end; gap:8px; }
+.modal-body{ flex:1 1 auto; overflow-y:auto; padding:14px 16px; }
+.close{ background:transparent; border:0; font-size:20px; cursor:pointer; }
+/* 背景頁在 modal 開啟時不要捲動（可選） */
+.body-modal-open{ overflow:hidden; }
+
+/* ==========================================================================
+   Join Modal：外觀微調（高度較矮、Header/Body/Footer 黏貼）
+   ========================================================================== */
+#joinModal .modal-content{
+  width:min(520px,94vw);
+  max-height:min(88svh,620px);
+  margin:4svh auto;
+  border-radius:14px; overflow:hidden;
+  box-shadow:0 14px 34px rgba(0,0,0,.25);
+  background:#fff; display:flex; flex-direction:column;
+}
+/* Header（置中、較薄、sticky） */
+#joinModal .modal-header{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; justify-content:center;
+  min-height:44px; padding:8px 16px; background:#fff; border-bottom:1px solid #eee;
+}
+#joinModal .modal-header .title{
+  font-size:16px; font-weight:700; color:#111827;
+  display:inline-flex; align-items:center; gap:8px;
+}
+#joinModal .modal-header .title .emoji{ font-size:18px; line-height:1; }
+/* 右上角關閉 */
+#joinModal .modal-header .close{
+  position:absolute; right:10px; top:8px;
+  width:28px; height:28px; border-radius:6px;
+  display:inline-grid; place-items:center;
+  font-size:18px; color:#6b7280; background:transparent;
+}
+#joinModal .modal-header .close:hover{ background:#f3f4f6; color:#111827; }
+/* Body 滾動 */
+#joinModal .modal-body{ flex:1 1 auto; overflow-y:auto; padding:12px 16px; }
+/* Footer 黏底 */
+#joinModal .modal-footer{
+  position:sticky; bottom:0; z-index:2;
+  display:flex; justify-content:flex-end; gap:8px;
+  padding:10px 16px; background:#fff; border-top:1px solid #eee;
+}
+#joinModal .btn-cancel, #joinModal .btn-submit{
+  border-radius:10px; padding:10px 18px; font-weight:700;
+}
+
+/* ==========================================================================
+   Join Modal：表單欄位（上方標籤、下方輸入框）
+   ========================================================================== */
+#joinModal .join-field{
+  display:flex; flex-direction:column; gap:6px; margin:12px 0;
+}
+#joinModal .join-field label{
+  display:block; font-weight:600; color:#1f2937; line-height:1.2;
+}
+#joinModal .join-field input,
+#joinModal .join-field select,
+#joinModal .join-field textarea{
+  width:50%;
+  padding:10px 12px; border:1px solid #d1d5db; border-radius:8px;
+  background:#fff; font-size:14px; line-height:1.25;
+  transition:border-color .2s, box-shadow .2s;
+}
+#joinModal .join-field input:focus,
+#joinModal .join-field select:focus,
+#joinModal .join-field textarea:focus{
+  outline:none; border-color:#3b82f6;
+  box-shadow:0 0 0 3px rgba(59,130,246,.15);
+}
+/* 備註較高 */
+#joinModal textarea[name="note"]{ min-height:96px; }
+
+/* ==========================================================================
+   返回頂端按鈕
+   ========================================================================== */
+#backToTop{
+  position:fixed; bottom:20px; right:20px;
+  background:#00897b; color:#fff; border:none; border-radius:50%;
+  padding:14px; font-size:20px; cursor:pointer;
+  box-shadow:0 4px 8px rgba(0,0,0,.2);
+  z-index:1200; transition:transform .2s, background .3s;
+}
+#backToTop:hover{ background:#00695c; transform:scale(1.08); }
+
+/* ==========================================================================
+   動畫
+   ========================================================================== */
+@keyframes fadeInUp{
+  from{ opacity:0; transform:translateY(15px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* ==========================================================================
+   RWD 斷點調整
+   ========================================================================== */
+/* ≤1024px：卡片與主按鈕微調 */
+@media (max-width:1024px){
+  .card{ padding:8px 12px 8px 24px; margin:3px; }
+  .btn-main{ padding:10px 16px; font-size:15px; }
+}
+/* ≤768px：字級、小標題、主按鈕等 */
+@media (max-width:768px){
   body{ font-size:15px; }
   h1{ font-size:22px; }
   h2{ font-size:18px; margin:14px; }
   .buttons{ padding:0 12px; }
   .btn-main{ width:auto; min-width:44%; }
-  #toast-container{ top: env(safe-area-inset-top,16px); right:12px; left:12px; }
+  #toast-container{ top:env(safe-area-inset-top,16px); right:12px; left:24px; }
 }
-@media (max-width: 640px){
+/* ≤640px：主按鈕滿版、司機卡片三欄改單欄、Modal 更緊湊、Join 表單維持直向 */
+@media (max-width:640px){
+  /* 主按鈕改單欄滿版 */
   .buttons{ display:grid; grid-template-columns:1fr; gap:10px; padding:0 12px; }
   .btn-main{ width:100%; }
+
+  /* 司機卡片：三欄→單欄 */
   .driver-grid{ display:grid; grid-template-columns:1fr; grid-row-gap:8px; }
   .col-left, .col-middle, .col-actions{ width:100%; }
   .col-left .name-seat{ font-size:16px; margin-bottom:6px; text-align:left; }
   .col-middle .line{ display:block; margin:4px 0; font-size:14px; }
-  .col-actions{ display:grid; grid-template-columns:1fr 1fr auto; align-items:center; gap:8px; }
+
+  .col-actions{
+    display:grid; grid-template-columns:1fr 1fr auto; align-items:center; gap:8px;
+  }
   .btn-manage, .btn-join{ width:100%; min-height:44px; font-size:15px; }
   .arrow{ font-size:18px; min-width:44px; min-height:44px; display:inline-grid; place-items:center; }
-  .details{ padding:8px 10px; }
-  .details.open{ padding:10px 12px; }
-  .details h4{ font-size:15px; margin:8px 0 4px; }
-  .details p, .details li{ font-size:14px; }
+  .details{
+  margin-top:0px; max-height:0; overflow:hidden; padding:0px 0px;
+  background: transparent; border:0 #e6e6e6;
+  transition:max-height 1.2s ease, padding 1s ease;
+  }
+  /* 展開時再加回外觀 */
+  .details.open {
+    margin-top: 8px;
+    max-height: 1200px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-top: 1px solid #e6e6e6;
+    border-radius: 6px;
+  }
+  .details h4{ font-size:15px; margin:6px 0 4px; }
+  .details p, .details li{ font-size:14px; margin:2px 0; }
+
+  /* 乘客卡片：主列單欄、操作靠右 */
+  .pax-row{ grid-template-columns:1fr; }
+  .pax-actions{ justify-content:flex-end; }
+
+  /* 通用 modal 寬度 */
+  .modal .modal-content{ width:94vw; margin:4svh auto; }
+
+  /* Join 表單欄位間距與按鈕高度 */
+  #joinModal .join-field{ margin:10px 0; gap:6px; }
+  .btn-submit, .btn-cancel{ min-height:44px; font-size:16px; }
+
+  /* JoinModal 再壓縮 header/邊距 */
+  #joinModal .modal-content{ max-height:min(92svh,640px); margin:3svh auto; }
+  #joinModal .modal-header{ min-height:40px; padding:6px 14px; }
+  #joinModal .modal-header .title{ font-size:15px; }
+  #joinModal .modal-body{ padding:10px 14px; }
+  #joinModal .modal-footer{ padding:8px 14px; }
+
+  /* 返回頂端位置 */
   #backToTop{ right:12px; bottom:16px; }
 }
-@media (max-width: 400px){
+/* ≤400px：字級調整、按鈕與箭頭更小 */
+@media (max-width:400px){
   body{ font-size:14px; }
   h1{ font-size:20px; }
   h2{ font-size:16px; margin:10px; }
@@ -437,6 +519,153 @@
   .btn-manage, .btn-join{ font-size:14px; padding:8px 10px; }
   .arrow{ font-size:16px; min-width:40px; min-height:40px; }
 }
+/* ============================================================================
+   Pax Edit Modal 美化（只影響 #paxEditModal）
+   ========================================================================== */
+
+/* 背景：半透明＋輕微模糊 */
+#paxEditModal.modal{
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(15, 23, 42, .45);
+  backdrop-filter: blur(2px);
+  display: none; /* 用 JS 控制 show/hide */
+}
+
+/* 容器：置中、圓角、陰影、flex 直向 */
+#paxEditModal .modal-content{
+  width: min(560px, 94vw);
+  max-height: min(88svh, 680px);
+  margin: 5svh auto;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, .25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header / Footer 黏住頂底，內容區可捲動 */
+#paxEditModal .modal-header,
+#paxEditModal .modal-footer{
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #eef2f7;
+}
+#paxEditModal .modal-footer{
+  border-top: 1px solid #eef2f7;
+  border-bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 標題與關閉鈕 */
+#paxEditModal .modal-header{
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+}
+#paxEditModal .modal-header .title{
+  font-weight: 800; color: #0f172a; font-size: 16px;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+#paxEditModal .modal-header .close{
+  position: absolute; right: 10px; top: 8px;
+  width: 32px; height: 32px;
+  border: 0; border-radius: 8px;
+  display: inline-grid; place-items: center;
+  font-size: 18px; line-height: 1; color: #6b7280;
+  background: transparent; cursor: pointer;
+  transition: color .15s ease;
+}
+#paxEditModal .modal-header .close:hover{
+  background: #f3f4f6; color: #111827;
+}
+
+/* 內容可捲動 + 內距 */
+#paxEditModal .modal-body{
+  flex: 1 1 auto; overflow: auto;
+  padding: 14px 16px;
+}
+
+/* 表單：桌機兩欄、手機單欄 */
+#paxEditModal #paxEditForm{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+@media (max-width: 640px){
+  #paxEditModal #paxEditForm{ grid-template-columns: 1fr; }
+}
+
+/* 單欄欄位（原本的 .join-field）統一視覺 */
+#paxEditModal .join-field{
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* 讓較長的欄位（備註）自動佔兩欄 */
+#paxEditModal textarea{ grid-column: 1 / -1; }
+
+/* Label */
+#paxEditModal .join-field > label{
+  font-weight: 600; color: #1f2937; line-height: 1.2;
+}
+
+/* Input / Select / Textarea 一致化 */
+#paxEditModal .join-field input,
+#paxEditModal .join-field select,
+#paxEditModal .join-field textarea{
+  width: 50%;
+  padding: 10px 12px;
+  border: 1px solid #d7dde6;
+  border-radius: 10px;
+  font-size: 14px; line-height: 1.25;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+/* Focus ring */
+#paxEditModal .join-field input:focus,
+#paxEditModal .join-field select:focus,
+#paxEditModal .join-field textarea:focus{
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+}
+
+/* placeholder 淡一點 */
+#paxEditModal ::placeholder{ color: #9ca3af; }
+
+/* number 小箭頭隱藏（一致高度） */
+#paxEditModal input[type="number"]::-webkit-inner-spin-button,
+#paxEditModal input[type="number"]::-webkit-outer-spin-button{
+  -webkit-appearance: none; margin: 0;
+}
+#paxEditModal input[type="number"]{ -moz-appearance: textfield; }
+
+/* 按鈕 */
+#paxEditModal .btn-cancel,
+#paxEditModal .btn-submit{
+  border: 0; border-radius: 10px;
+  padding: 10px 16px; font-weight: 700; cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease;
+}
+#paxEditModal .btn-cancel{ background: #eef2f7; color: #111827; }
+#paxEditModal .btn-cancel:hover{ background: #e5eaf2; }
+#paxEditModal .btn-submit{ background: #2563eb; color: #fff; }
+#paxEditModal .btn-submit:hover{ background: #1e4fd6; }
+#paxEditModal .btn-cancel:active,
+#paxEditModal .btn-submit:active{ transform: translateY(1px); }
+
+/* 小螢幕微調 */
+@media (max-width: 640px){
+  #paxEditModal .modal-content{
+    width: 94vw; max-height: min(92svh, 700px); margin: 4svh auto;
+  }
+  #paxEditModal .modal-body{ padding: 12px 14px; }
+  #paxEditModal .modal-footer{ padding: 10px 14px; }
+}
+
+
 </style>
 
 </head>
@@ -550,6 +779,41 @@ socket.onmessage = function (event) {
     console.error("⚠️ 解析訊息失敗", err, event.data);
   }
 };
+// 記住目前展開的 driver ids（#details-<id> 有 .open 的）
+function snapshotOpenDrivers() {
+  return Array.from(document.querySelectorAll('#driver-list .details.open'))
+    .map(el => el.id.replace('details-', ''));
+}
+
+// 把展開狀態（以及箭頭/ARIA）還原回去
+function restoreOpenDrivers(openIds) {
+  openIds.forEach(id => {
+    const details = document.getElementById('details-' + id);
+    const arrow   = document.getElementById('arrow-' + id);
+    if (details) {
+      details.classList.add('open');
+      details.setAttribute('aria-hidden', 'false');
+    }
+    if (arrow) {
+      arrow.classList.add('open');
+      arrow.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+// 包一個安全替換 #driver-list 的函式
+function replaceDriverListSafely(newHtml) {
+  const list = document.getElementById('driver-list');
+  if (!list) return;
+
+  const openIds = snapshotOpenDrivers(); // 1) 記住展開的卡片
+  const y       = window.scrollY;        // 2)（可選）記住捲動位置
+
+  list.innerHTML = newHtml;              // 3) 換 HTML
+
+  restoreOpenDrivers(openIds);           // 4) 還原展開
+  window.scrollTo(0, y);                 // 5)（可選）還原捲動位置
+}
 
 /* ---------- 事件委派：管理 / 參加 / 展開 ---------- */
 document.addEventListener("click", function (e) {
@@ -612,43 +876,6 @@ window.manageDriver = function (driverId) {
     }, 0);
   }
 
-  // 上車地點：下拉/自填 → 同步到隱藏欄位 name="departure"
-function updateJoinPickup() {
-  const sel    = document.getElementById("join-pickup-select");
-  const custom = document.getElementById("join-pickup-custom");
-  const hidden = document.getElementById("join-pickup");
-  if (!sel || !custom || !hidden) return;
-
-  if (sel.value === "自填") {
-    custom.style.display = "block";
-    custom.required = true;
-    hidden.value = custom.value.trim();
-  } else {
-    custom.style.display = "none";
-    custom.required = false;
-    hidden.value = sel.value;     // 直接寫入選到的縣市
-  }
-}
-
-// 事件綁定（頁面載入一次就好）
-document.getElementById("join-pickup-select")?.addEventListener("change", updateJoinPickup);
-document.getElementById("join-pickup-custom")?.addEventListener("input", updateJoinPickup);
-
-// 打開參加視窗時初始化一次（確保 hidden 有值）
-const _origOpenJoinModal = window.openJoinModal;
-window.openJoinModal = function(driverId) {
-  // 如果你已有 openJoinModal，保留原行為
-  if (typeof _origOpenJoinModal === "function") {
-    _origOpenJoinModal(driverId);
-  } else {
-    // 沒有的話，至少把 modal 打開 & 設定 action
-    document.getElementById("joinModal").style.display = "block";
-    document.getElementById("joinForm").action = `/find/driver/${driverId}/join/`;
-  }
-  // 初始化上車地點狀態
-  setTimeout(updateJoinPickup, 0);
-};
-
   function closeJoinModal(){
     document.getElementById('joinModal').style.display = 'none';
     document.body.classList.remove('body-modal-open');
@@ -706,6 +933,7 @@ window.openJoinModal = function(driverId) {
 
 
 </script>
+
 <script>
 /* ====== 工具 ====== */
 function getCookie(name) {
@@ -804,59 +1032,6 @@ window.closeDriverAuth = function () {
 
 /* 首次載入時綁一次（如果 script 在 body 尾端，這一步就能綁上） */
 document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
-
-
-document.addEventListener("click", async (e) => {
-  // 編輯
-  const editBtn = e.target.closest("[data-pax-edit]");
-  if (editBtn) {
-    const paxId = editBtn.dataset.id;
-    const password = prompt("請輸入乘客管理密碼（用於編輯）");
-    if (!password) return;
-
-    // 這裡示範最小可行：只改「暱稱 / 人數 / 備註」三項
-    const passenger_name = prompt("新的暱稱（留空不變）") || "";
-    const seats_needed   = prompt("上車人數（留空不變）") || "";
-    const note           = prompt("備註（留空不變）") || "";
-
-    const body = new URLSearchParams({ password, passenger_name, seats_needed, note });
-    const res = await fetch(`/find/passenger/${paxId}/update/`, {
-      method: "POST",
-      headers: { "X-CSRFToken": getCSRF(), "X-Requested-With": "XMLHttpRequest" },
-      body
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.ok && data.ok) {
-      showToast("已更新乘客資料", "success");
-    } else {
-      showToast(data.error || "編輯失敗", "error");
-    }
-    return;
-  }
-
-  // 刪除
-  const delBtn = e.target.closest("[data-pax-del]");
-  if (delBtn) {
-    const paxId = delBtn.dataset.id;
-    const password = prompt("請輸入乘客管理密碼以刪除／取消");
-    if (!password) return;
-
-    const body = new URLSearchParams({ password });
-    const res = await fetch(`/find/passenger/${paxId}/delete/`, {
-      method: "POST",
-      headers: { "X-CSRFToken": getCSRF(), "X-Requested-With": "XMLHttpRequest" },
-      body
-    });
-    const data = await res.json().catch(()=>({}));
-    if (res.ok && data.ok) {
-      showToast("已刪除/取消", "success");
-    } else {
-      showToast(data.error || "刪除失敗", "error");
-    }
-    return;
-  }
-});
-
 </script>
 
 
@@ -961,15 +1136,10 @@ document.addEventListener("click", async (e) => {
             <option value="連江縣">連江縣</option>
           </select>
 
-          <!-- 自填時才顯示 -->
-          <input
-            type="text"
-            id="join-pickup-custom"
-            placeholder="輸入自訂上車地點"
-            style="display:none;"
-          >
+          <!-- 自填（選「其他」才顯示；無 name） -->
+          <input type="text" id="join-pickup-custom" placeholder="輸入自訂上車地點" style="display:none;">
 
-          <!-- 真正提交給後端的欄位（name=departure） -->
+          <!-- 真正提交用（有 name） -->
           <input type="hidden" id="join-pickup" name="departure">
         </div>
 
@@ -981,11 +1151,17 @@ document.addEventListener("click", async (e) => {
 
         <div class="join-field">
           <label>是否一起回程？</label>
-          <select name="together_return">
+          <select name="together_return" id="join-together">
             <option value="" selected>未指定</option>
             <option value="true">是</option>
             <option value="false">否</option>
           </select>
+        </div>
+
+                <!-- 回程日期（可留空） -->
+        <div class="join-field" id="returnField" style="display:none;">
+          <label for="join-return">回程日期（可留空）</label>
+          <input type="date" id="join-return" name="return_date" placeholder="可留空">
         </div>
 
         <div class="join-field">
@@ -1007,21 +1183,514 @@ document.addEventListener("click", async (e) => {
   </div>
 </div>
 
-
-<!-- 乘客取消 Modal -->
-<div id="cancelModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span class="close" onclick="document.getElementById('cancelModal').style.display='none'">&times;</span>
-    <h3>🔐 取消參加</h3>
-    <form id="cancelForm" method="POST" action="">
-      {% csrf_token %}
-      <input type="hidden" id="cancelPassengerId" name="passenger_id" value="">
-      <label>管理密碼</label>
-      <input type="password" id="cancelPassword" name="password" required>
-      <button type="submit" style="margin-top:10px;">🗑️ 確認取消</button>
-    </form>
+<!-- 乘客編輯授權 Modal -->
+<div id="paxAuthModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="title">🔐 編輯授權</span>
+      <button class="close" onclick="closePaxAuth()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="paxAuthForm" method="POST">
+        {% csrf_token %}
+        <input type="hidden" id="paxAuthId" name="id">
+        <div class="join-field">
+          <label>管理密碼</label>
+          <input type="password" id="paxAuthPassword" name="password" placeholder="請輸入乘客管理密碼" required>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePaxAuth()">取消</button>
+      <button class="btn-submit" onclick="submitPaxAuth()">確認</button>
+    </div>
   </div>
 </div>
+<!-- 乘客編輯 Modal -->
+<div id="paxEditModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="title">✏️ 編輯乘客</span>
+      <button class="close" onclick="closePaxEdit()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="paxEditForm">
+        {% csrf_token %}
+        <input type="hidden" id="paxEditId" name="id">
+
+        <div class="join-field">
+          <label>暱稱</label>
+          <input type="text" id="paxName" name="passenger_name" required>
+        </div>
+
+        <div class="join-field">
+          <label>性別</label>
+          <select id="paxGender" name="gender">
+            <option value="X">不方便透漏</option>
+            <option value="M">男生</option>
+            <option value="F">女生</option>
+          </select>
+        </div>
+
+        <div class="join-field">
+          <label>Email（不公開）</label>
+          <input type="email" id="paxEmail" name="email" placeholder="可空白">
+        </div>
+
+        <div class="join-field">
+          <label>聯絡方式</label>
+          <input type="text" id="paxContact" name="contact" placeholder="LINE / IG / Phone">
+        </div>
+
+        <div class="join-field">
+          <label>上車人數</label>
+          <input type="number" id="paxSeats" name="seats_needed" min="1" value="1">
+        </div>
+
+        <div class="join-field">
+          <label>願付金額（可空）</label>
+          <input type="text" id="paxPay" name="willing_to_pay" placeholder="例如 300">
+        </div>
+
+        <div class="join-field">
+          <label>上車地點</label>
+          <input type="text" id="paxDeparture" name="departure">
+        </div>
+
+        <div class="join-field">
+          <label>目的地</label>
+          <input type="text" id="paxDestination" name="destination">
+        </div>
+
+        <div class="join-field">
+          <label>出發日期</label>
+          <input type="date" id="paxDate" name="date">
+        </div>
+
+        <div class="join-field">
+          <label>回程日期（可留空）</label>
+          <input type="date" id="paxReturn" name="return_date">
+        </div>
+
+        <div class="join-field">
+          <label>是否一起回程</label>
+          <select id="paxTogether" name="together_return">
+            <option value="">未指定</option>
+            <option value="true">是</option>
+            <option value="false">否</option>
+          </select>
+        </div>
+
+        <div class="join-field">
+          <label>備註</label>
+          <textarea id="paxNote" name="note" rows="3"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePaxEdit()">取消</button>
+      <button class="btn-submit" onclick="submitPaxEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 乘客刪除 Modal（簡單確認） -->
+<div id="paxDelModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="title">🗑 刪除乘客</span>
+      <button class="close" onclick="closePaxDel()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>確定要刪除這位乘客嗎？此動作無法復原。</p>
+      <input type="hidden" id="paxDelId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePaxDel()">取消</button>
+      <button class="btn-submit" style="background:#e11d48" onclick="confirmPaxDel()">刪除</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // 這兩個會在 openJoinModal 時被設定
+let currentDriverDate = "";
+let currentDriverReturn = "";
+
+// 快取元素
+const togetherSel  = document.getElementById("join-together");
+const departInput  = document.getElementById("join-date");
+const returnWrap   = document.getElementById("returnField");
+const returnInput  = document.getElementById("join-return");
+// 切換「是否一起回程？」時的行為
+function handleTogetherChange() {
+  const v = togetherSel ? togetherSel.value : "";
+
+  // 同步最小回程日：不可早於出發日或司機出發日
+  if (returnInput) {
+    // 以出發日為優先，其次用司機的出發日（備援）
+    const minBase = (departInput && departInput.value) || currentDriverDate || "";
+    returnInput.min = minBase;
+  }
+
+  if (v === "false") {
+    // 否：手動選擇 → 顯示、可編輯
+    if (returnWrap) returnWrap.style.display = "block";
+    if (returnInput) {
+      returnInput.readOnly = false; // 不要 disabled，避免不送值
+      if (!returnInput.value && returnInput.min) {
+        returnInput.value = returnInput.min; // 幫個忙帶出發日當起點
+      }
+    }
+  } else if (v === "true") {
+    // 是：跟司機 → 將司機回程日期帶入，欄位唯讀（有值才顯示）
+    const hasReturn = !!currentDriverReturn;
+    if (returnWrap) returnWrap.style.display = hasReturn ? "block" : "none";
+
+    if (returnInput) {
+      returnInput.readOnly = true;
+      returnInput.value = hasReturn ? currentDriverReturn : "";
+    }
+  } else {
+    // 未指定：隱藏 & 清空
+    if (returnWrap) returnWrap.style.display = "none";
+    if (returnInput) {
+      returnInput.readOnly = false;
+      returnInput.value = "";
+    }
+  }
+}
+
+// 出發日變更時，更新回程最小日
+if (departInput) {
+  departInput.addEventListener("change", () => {
+    if (returnInput) {
+      const minBase = departInput.value || currentDriverDate || "";
+      returnInput.min = minBase;
+      if (returnInput.value && minBase && returnInput.value < minBase) {
+        returnInput.value = ""; // 無效就清掉
+      }
+    }
+  });
+}
+
+// 打開 Join Modal（事件委派那邊呼叫時要把 data 傳進來）
+function openJoinModal(driverId, driverDate = "", driverReturn = "") {
+  currentDriverDate = driverDate || "";
+  currentDriverReturn = driverReturn || "";
+
+  // 將出發日預設到司機出發日（若你想預設）
+  if (departInput && currentDriverDate) {
+    departInput.value = currentDriverDate;
+  }
+
+  // 重置 together 回選單 → 未指定
+  if (togetherSel) togetherSel.value = "";
+
+  // 回程欄位重置
+  if (returnInput) {
+    returnInput.value = "";
+    returnInput.readOnly = false;
+  }
+  if (returnWrap) returnWrap.style.display = "none";
+
+  // 把最小日先設好
+  if (returnInput) {
+    returnInput.min = (departInput && departInput.value) || currentDriverDate || "";
+  }
+
+  // 你的開啟 modal 既有程式（保持）
+  const joinModal = document.getElementById("joinModal");
+  const joinForm  = document.getElementById("joinForm");
+  if (joinForm) joinForm.action = `/find/driver/${driverId}/join/`;
+  if (joinModal) joinModal.style.display = "block";
+}
+
+// 綁定 select 事件
+if (togetherSel) {
+  togetherSel.addEventListener("change", handleTogetherChange);
+}
+
+// 事件委派的 join 分支，記得把 data-date / data-return 傳進來
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+
+  const action   = btn.dataset.action;
+  const driverId = btn.dataset.id;
+
+  if (action === "join") {
+    e.preventDefault();
+    const dDate   = btn.dataset.date   || ""; // 司機出發日 YYYY-MM-DD
+    const dReturn = btn.dataset.return || ""; // 司機回程日（可能空）
+    openJoinModal(driverId, dDate, dReturn);
+  }
+});
+
+(function () {
+  
+
+  if (!departInput || !returnInput) return;
+
+  function syncReturnMin() {
+    // 回程最早不得早於出發
+    returnInput.min = departInput.value || "";
+    if (returnInput.value && departInput.value && returnInput.value < departInput.value) {
+      returnInput.value = "";
+    }
+  }
+
+  // 打開 modal 時可呼叫一次，確保狀態乾淨
+  window.resetReturnDate = function () {
+    if (returnInput) returnInput.value = "";
+    syncReturnMin();
+  };
+
+  departInput.addEventListener("change", syncReturnMin);
+})();
+</script>
+
+<script>
+(function () {
+  // 這兩個會在 openJoinModal 時被設定
+  const sel    = document.getElementById("join-pickup-select");
+  const custom = document.getElementById("join-pickup-custom");
+  const hidden = document.getElementById("join-pickup"); // name="departure"
+
+  if (!sel || !custom || !hidden) return;
+
+  function syncHidden() {
+    if (sel.value === "其他") {
+      hidden.value = (custom.value || "").trim();
+    } else {
+      hidden.value = sel.value || "";
+    }
+  }
+
+  sel.addEventListener("change", () => {
+    if (sel.value === "其他") {
+      custom.style.display = "block";
+      custom.focus();
+    } else {
+      custom.style.display = "none";
+      custom.value = "";
+    }
+    syncHidden();
+  });
+
+  custom.addEventListener("input", syncHidden);
+
+  // 保險：送出前再次同步一次
+  const joinForm = document.getElementById("joinForm");
+  if (joinForm) {
+    joinForm.addEventListener("submit", () => {
+      syncHidden();
+    });
+  }
+
+  // 每次打開 Modal 也重置一下（你的 openJoinModal 裡面呼叫）
+  window.resetPickupField = function () {
+    sel.value = "";
+    custom.value = "";
+    custom.style.display = "none";
+    hidden.value = "";
+  };
+})();
+</script>
+
+<script>
+// ===== 共用小工具 =====
+function getCSRF(){
+  const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+}
+function toast(msg, type="info"){
+  if (typeof showToast === "function") showToast(msg, type);
+  else alert(msg);
+}
+
+// ===== 狀態：下一步動作（'edit' | 'delete'）=====
+let __paxNextAction = null;
+
+// ===== 密碼 Modal =====
+function openPaxAuth(pid){
+  document.getElementById("paxAuthId").value = pid;
+  document.getElementById("paxAuthPassword").value = "";
+  document.getElementById("paxAuthModal").style.display = "block";
+  setTimeout(()=>document.getElementById("paxAuthPassword").focus(), 0);
+}
+function closePaxAuth(){ document.getElementById("paxAuthModal").style.display = "none"; }
+
+// ===== 編輯 Modal =====
+function openPaxEdit(){ document.getElementById("paxEditModal").style.display = "block"; }
+function closePaxEdit(){ document.getElementById("paxEditModal").style.display = "none"; }
+
+// ===== 事件委派：編輯 / 刪除 =====
+document.addEventListener("click", function(e){
+  // 編輯
+  const editBtn = e.target.closest("[data-pax-edit]");
+  if (editBtn){
+    e.preventDefault();
+    __paxNextAction = "edit";
+    openPaxAuth(editBtn.dataset.id);
+    return;
+  }
+  // 刪除
+  const delBtn = e.target.closest("[data-pax-del]");
+  if (delBtn){
+    e.preventDefault();
+    __paxNextAction = "delete";
+    openPaxAuth(delBtn.dataset.id);
+    return;
+  }
+});
+
+// ===== 送密碼 → 驗證 → 依 nextAction 執行 =====
+async function submitPaxAuth(){
+  const pid = document.getElementById("paxAuthId").value;
+  const pwd = document.getElementById("paxAuthPassword").value;
+  if(!pid || !pwd){ toast("請輸入密碼", "error"); return; }
+
+  try{
+    const res = await fetch(`/find/pax/${pid}/auth/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCSRF(),
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: new URLSearchParams({ password: pwd })
+    });
+    let data = {};
+    try{ data = await res.json(); }catch(_){}
+    if(!res.ok || !data.ok){ toast(data.error || "驗證失敗", "error"); return; }
+
+    closePaxAuth();
+
+    if (__paxNextAction === "delete"){
+      // 走刪除流程
+      await doPaxDelete(pid);
+      return;
+    }
+
+    // 走編輯流程：抓資料打開 Modal
+    const res2 = await fetch(`/find/pax/${pid}/get/`, {
+      headers: { "X-Requested-With":"XMLHttpRequest" }
+    });
+    const data2 = await res2.json();
+    if(!res2.ok || !data2.ok){ toast(data2.error || "讀取資料失敗", "error"); return; }
+
+    const p = data2.p;
+    document.getElementById("paxEditId").value = p.id;
+    document.getElementById("paxName").value = p.passenger_name || "";
+    document.getElementById("paxGender").value = p.gender || "X";
+    document.getElementById("paxEmail").value = p.email || "";
+    document.getElementById("paxContact").value = p.contact || "";
+    document.getElementById("paxSeats").value = p.seats_needed || 1;
+    document.getElementById("paxPay").value = p.willing_to_pay || "";
+    document.getElementById("paxDeparture").value = p.departure || "";
+    document.getElementById("paxDestination").value = p.destination || "";
+    document.getElementById("paxDate").value = p.date || "";
+    document.getElementById("paxReturn").value = p.return_date || "";
+    document.getElementById("paxTogether").value = p.together_return || "";
+    document.getElementById("paxNote").value = p.note || "";
+
+    openPaxEdit();
+  }catch(err){
+    console.error(err);
+    toast("伺服器錯誤，稍後再試", "error");
+  }finally{
+    __paxNextAction = null;
+  }
+}
+
+// ===== 儲存編輯 =====
+async function submitPaxEdit(){
+  const form = document.getElementById("paxEditForm");
+  const pid  = document.getElementById("paxEditId").value;
+  const body = new URLSearchParams(new FormData(form));
+
+  try{
+    const res = await fetch(`/find/pax/${pid}/update/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCSRF(),
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      toast(data.error || "更新失敗", "error");
+      return;
+    }
+    toast("✅ 已更新乘客資料", "success");
+    closePaxEdit();
+    // 這裡可觸發你既有 WebSocket 即時刷新；或暫時用重整
+    // location.reload();
+  }catch(err){
+    console.error(err);
+    toast("伺服器錯誤，稍後再試", "error");
+  }
+}
+
+// ===== 刪除（已授權） =====
+async function doPaxDelete(pid){
+  if (!confirm("確定要刪除這位乘客嗎？此動作無法復原。")) return;
+
+  try{
+        const res = await fetch(`/find/pax/${pid}/delete/`, {   // ← 注意最後的斜線
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCSRF(),
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: new URLSearchParams()
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      toast(data.error || "刪除失敗", "error");
+      return;
+    }
+    toast("🗑️ 已刪除乘客", "success");
+    // 這裡建議觸發你目前的 WS 重新渲染；或先用重整
+    // location.reload();
+  }catch(err){
+    console.error(err);
+    toast("伺服器錯誤，稍後再試", "error");
+  }
+}
+</script>
+
+<script>
+  (function () {
+    const togetherSel = document.getElementById('paxTogether');
+    const returnInput = document.getElementById('paxReturn');
+
+    function syncReturnState() {
+      const val = togetherSel.value;
+      if (val === 'true') {
+        returnInput.value = '';
+        returnInput.disabled = true;
+        returnInput.placeholder = '與司機回程日期相同';
+        returnInput.classList.add('is-disabled');
+      } else {
+        returnInput.disabled = false;
+        returnInput.placeholder = '';
+        returnInput.classList.remove('is-disabled');
+      }
+    }
+    if (togetherSel && returnInput) {
+      togetherSel.addEventListener('change', syncReturnState);
+      // 打開 modal 時可再呼叫一次 syncReturnState()
+    }
+  })();
+</script>
+
+
 
 </body>
 </html>

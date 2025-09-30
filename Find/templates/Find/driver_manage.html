@@ -131,60 +131,126 @@
       </form>
     </div>
 
-    <!-- 下半：候選乘客 -->
-    <div class="section">
-      <h3>🧍 候選乘客（同路線同日期・尚未媒合）</h3>
-      {% if candidates %}
-        <form method="POST">
-          {% csrf_token %}
-          <input type="hidden" name="form" value="accept_passengers">
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="width:40px;"></th>
-                <th>暱稱 / 性別</th>
-                <th>Email（隱藏不顯示）</th>
-                <th>聯絡方式</th>
-                <th>人數</th>
-                <th>願付費用</th>
-                <th>出發地</th>
-                <th>目的地</th>
-                <th>是否一起回程</th>
-                <th>備註</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for p in candidates %}
-                <tr>
-                  <td>
-                    <input type="checkbox" name="accept_ids" value="{{ p.id }}">
-                  </td>
-                  <td>{{ p.passenger_name }}（{{ p.get_gender_display }}）</td>
-                  <td>系統用</td>
-                  <td>{{ p.contact }}</td>
-                  <td>{{ p.seats_needed }}</td>
-                  <td>
-                    {% if p.willing_to_pay %}{{ p.willing_to_pay }}{% else %}-{% endif %}
-                  </td>
-                  <td>{{ p.departure }}</td>
-                  <td>{{ p.destination }}</td>
-                  <td>
-                    {% if p.return_date %}是{% else %}否 / 未定{% endif %}
-                  </td>
-                  <td>{{ p.note|default:"—" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    <h4>🧍 已登記乘客</h4>
 
-          <div class="actions">
-            <button type="submit" class="secondary">✅ 接受勾選乘客</button>
+<h5>待確認</h5>
+<ul class="pax-list">
+  {% if pending %}
+    {% for p in pending %}
+      <li class="pax-item pax-pending">
+        <div class="pax-row">
+          <!-- 標題列 -->
+          <div class="pax-head">
+            <span class="pax-name">{{ p.passenger_name }}</span>
+            <span class="badge gender">{{ p.get_gender_display }}</span>
+            {% if p.together_return is not None %}
+              <span class="badge rt">回程：{{ p.together_return|yesno:"一起,不一起" }}</span>
+            {% endif %}
           </div>
-        </form>
-      {% else %}
-        <p class="note">目前沒有候選乘客。</p>
-      {% endif %}
-    </div>
-  </div>
+
+          <!-- 重點欄（多欄） -->
+          <div class="pax-grid">
+            <div class="pax-cell"><label>出發地</label><div>{{ p.departure|default:"未填" }}</div></div>
+            <div class="pax-cell"><label>目的地</label><div>{{ p.destination|default:"未填" }}</div></div>
+            <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
+            <div class="pax-cell">
+              <label>願付</label>
+              <div>{% if p.willing_to_pay %}NT$ {{ p.willing_to_pay|floatformat:0 }}{% else %}未填{% endif %}</div>
+            </div>
+            <div class="pax-cell"><label>日期</label><div>{{ p.date }}</div></div>
+            <div class="pax-cell"><label>回程</label><div>{{ p.return_date|default:"未定" }}</div></div>
+            <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
+          </div>
+
+          {% if p.note %}
+            <div class="pax-note">備註：{{ p.note }}</div>
+          {% endif %}
+
+          <!-- 操作 -->
+          <div class="pax-actions">
+            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  {% else %}
+    <li class="pax-empty">目前沒有待確認乘客</li>
+  {% endif %}
+</ul>
+
+<h5>已接受</h5>
+<ul class="pax-list">
+  {% if accepted %}
+    {% for p in accepted %}
+      <li class="pax-item pax-accepted">
+        <span class="check">✔</span>
+        <span class="pax-name">{{ p.passenger_name }}</span>
+        <span class="pax-meta">
+          {{ p.get_gender_display }}・出發：{{ p.departure }}・人數：{{ p.seats_needed }}
+        </span>
+        <span class="pax-actions">
+          <button class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+          <button class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+        </span>
+      </li>
+    {% endfor %}
+  {% else %}
+    <li class="pax-empty">尚無已接受乘客</li>
+  {% endif %}
+</ul>
+<style>
+
+/* 列表 & 項目 */
+.pax-list{list-style:none;margin:10px 0 0;padding:0}
+.pax-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:10px 0}
+.pax-row{display:grid;grid-template-columns:1fr auto;grid-row-gap:10px;align-items:start}
+
+/* 標題列 */
+.pax-head{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.pax-name{font-weight:700;font-size:15px}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4338ca}
+.badge.gender{background:#e0f2fe;color:#0369a1}
+.badge.rt{background:#fef3c7;color:#92400e}
+
+/* 重點欄（多欄） */
+.pax-grid{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr)); /* 桌機 6 欄 */
+  gap:10px 14px;
+}
+.pax-cell label{
+  display:block;font-size:12px;color:#6b7280;margin-bottom:4px;letter-spacing:.02em
+}
+.pax-cell div{font-size:14px;color:#111827}
+.pax-cell.span-2{grid-column:span 2}
+
+/* 備註 */
+.pax-note{grid-column:1/-1;background:#f9fafb;border-radius:10px;padding:8px 10px;font-size:13px;color:#374151}
+
+/* 操作按鈕 */
+.pax-actions{display:flex;gap:8px;align-self:center}
+.btn-mini{border:0;border-radius:8px;padding:7px 12px;background:#e5e7eb;cursor:pointer;font-weight:600}
+.btn-mini:hover{background:#d1d5db}
+.btn-mini.danger{background:#fecaca;color:#7f1d1d}
+.btn-mini.danger:hover{background:#fca5a5}
+
+/* 手機／平板 RWD */
+@media (max-width:1024px){
+  .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} /* 4 欄 */
+}
+@media (max-width:768px){
+  .pax-row{grid-template-columns:1fr}
+  .pax-actions{justify-content:flex-end}
+  .pax-grid{grid-template-columns:repeat(2,minmax(0,1fr))} /* 2 欄 */
+  .pax-cell.span-2{grid-column:1/-1}
+}
+@media (max-width:480px){
+  .pax-grid{grid-template-columns:1fr} /* 手機單欄 */
+}
+
+
+</style>
 </body>
 </html>

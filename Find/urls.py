@@ -1,4 +1,5 @@
 from django.urls import path
+from django.urls import re_path
 from . import views
 
 urlpatterns = [
@@ -11,8 +12,10 @@ urlpatterns = [
     path("passenger/<int:passenger_id>/manage/", views.passenger_manage, name="passenger_manage"),
     path("driver/<int:driver_id>/join/", views.join_driver, name="join_driver"),
     # Find/urls.py
-    path("passenger/<int:pk>/update/", views.passenger_update, name="pax_update"),
-    path("passenger/<int:pk>/delete/", views.passenger_delete, name="pax_delete"),
+    re_path(r"^pax/(?P<pid>\d+)/auth/?$",   views.pax_auth,   name="pax_auth"),
+    re_path(r"^pax/(?P<pid>\d+)/get/?$",    views.pax_get,    name="pax_get"),
+    re_path(r"^pax/(?P<pid>\d+)/update/?$", views.pax_update, name="pax_update"),
+    re_path(r"^pax/(?P<pid>\d+)/delete/?$", views.pax_delete, name="pax_delete"),
 
     # 司機管理頁
     path("driver/<int:driver_id>/manage/", views.driver_manage, name="driver_manage"),

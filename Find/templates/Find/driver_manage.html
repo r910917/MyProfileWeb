@@ -1,0 +1,26 @@
+<h2>司機管理：{{ driver.driver_name }}</h2>
+<p>路線：{{ driver.departure }} → {{ driver.destination }}</p>
+<p>座位狀態：{{ driver.seats_filled }} / {{ driver.seats_total }}</p>
+
+<form method="POST">
+  {% csrf_token %}
+  <p>請勾選要接受的乘客：</p>
+  <ul>
+    {% for p in passengers %}
+      <li>
+        <input type="checkbox" name="confirm_passengers" value="{{ p.id }}">
+        {{ p.passenger_name }} - 需要 {{ p.seats_needed }} 人 - 聯絡：{{ p.contact }}
+      </li>
+    {% empty %}
+      <li>目前沒有候選乘客</li>
+    {% endfor %}
+  </ul>
+  <button type="submit">確認媒合</button>
+</form>
+
+<a href="{% url 'find_index' %}">回首頁</a>
+<script>
+  // 自動聚焦到第一個輸入框
+  document.addEventListener("DOMContentLoaded", function() {
+    document.querySelector("input[name='confirm_passengers']").focus();
+  });

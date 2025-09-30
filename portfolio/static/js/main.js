@@ -184,7 +184,7 @@ document.querySelectorAll(".rank-btn").forEach(btn => {
         if (type === "money") {
           html += "<th>#</th><th>玩家</th><th>金幣</th></tr></thead><tbody>";
           data.rows.forEach((row, i) => {
-            html += `<tr><td>${i+1}</td><td>${row.player_name}</td><td>${row.money}</td></tr>`;
+            html += `<tr><td>${i+1}</td><td>${row.player}</td><td>${row.balance}</td></tr>`;
           });
         } else if (type === "level") {
           html += "<th>#</th><th>UUID</th><th>職業</th><th>主等級</th></tr></thead><tbody>";
@@ -219,4 +219,65 @@ document.getElementById("rankSearchInput")?.addEventListener("input", function()
     row.style.display = text.includes(filter) ? "" : "none";
     row.style.backgroundColor = text.includes(filter) ? "#fff3cd" : "";
   });
+});
+
+
+document.getElementById("searchBtn").addEventListener("click", () => {
+  const playerId = document.getElementById("playerId").value;
+  fetch(`/minecraft/search/?player_id=${playerId}`)
+    .then(res => res.json())
+    .then(data => {
+      let html = "<div class='fade-in'>";
+      if (data.mmocore.length > 0) {
+        const d = data.mmocore[0];
+        html += `<h4 class="mt-4">MMOcore</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.uuid}</td></tr>
+          <tr><th>職業</th><td>${d.class}</td></tr>
+          <tr><th>等級</th><td>${d.level}</td></tr>
+          <tr><th>主等級</th><td>${d.mainlevel_level}</td></tr>
+        </table>`;
+      }
+      if (data.playerdata.length > 0) {
+        const d = data.playerdata[0];
+        html += `<h4 class="mt-4">經濟系統</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.UID}</td></tr>
+          <tr><th>玩家名稱</th><td>${d.player}</td></tr>
+          <tr><th>金幣</th><td>${d.balance}</td></tr>
+        </table>`;
+      }
+      if (data.guilds.length > 0) {
+        const d = data.guilds[0];
+        html += `<h4 class="mt-4">公會系統</h4>
+        <table class="table table-bordered">
+          <tr><th>公會名稱</th><td>${d.gname}</td></tr>
+          <tr><th>等級</th><td>${d.glevel}</td></tr>
+          <tr><th>資金</th><td>${d.gmoney}</td></tr>
+        </table>`;
+      }
+      if (data.cmi.length > 0) {
+        const d = data.cmi[0];
+        html += `<h4 class="mt-4">CMI 系統</h4>
+        <table class="table table-bordered">
+          <tr><th>UUID</th><td>${d.player_uuid}</td></tr>
+          <tr><th>玩家名稱</th><td>${d.username}</td></tr>
+          <tr><th>總遊玩時間</th><td>${d.TotalPlayTime}</td></tr>
+          <tr><th>餘額</th><td>${d.Balance}</td></tr>
+          <tr><th>飛行能量</th><td>${d.FlightCharge}</td></tr>
+          <tr><th>顯示名稱</th><td>${d.DisplayName}</td></tr>
+        </table>`;
+      }
+      html += "</div>";
+      document.getElementById("results").innerHTML = html || "<p class='text-danger'>找不到該玩家資料</p>";
+    });
+});
+
+
+
+// 收合排行榜
+document.getElementById("closeRankBtn").addEventListener("click", () => {
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("rankSearchBox").style.display = "none";
+  document.getElementById("rankSearchInput").value = "";
 });

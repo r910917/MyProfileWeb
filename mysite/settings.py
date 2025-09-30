@@ -51,7 +51,25 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'mysite',
     'portfolio',
+    "daphne",       # ✅ 如果你用 uvicorn 可跳過，但建議加
+    "channels",     # ✅ 必加
+    "Find.apps.FindConfig",         # 你的 app
 ]
+
+ASGI_APPLICATION = "mysite.asgi.application"
+
+# ⚡ Redis Channels Layer 設定
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(
+                config("REDIS_HOST", default="192.168.0.157"),
+                config("REDIS_PORT", default=6379, cast=int)
+            )],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -73,6 +91,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -95,6 +114,14 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST', default='127.0.0.1'),
         'PORT': config('DB_PORT', default='3306'),
+    },
+    'find_db': {   # 🔹 給 Find app 用的新資料庫
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('FIND_DB_NAME'),
+        'USER': config('FIND_DB_USER'),
+        'PASSWORD': config('FIND_DB_PASSWORD'),
+        'HOST': config('FIND_DB_HOST', default='127.0.0.1'),
+        'PORT': config('FIND_DB_PORT', default='3306'),
     }
 }
 
@@ -129,7 +156,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -153,3 +179,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+DATABASE_ROUTERS = ['mysite.dbrouters.FindRouter']
+# 指定自訂的資料庫路由器

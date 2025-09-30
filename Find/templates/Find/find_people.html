@@ -1,0 +1,13 @@
+<h2>新增找人需求</h2>
+<form method="POST">
+  {% csrf_token %}
+  姓名: <input type="text" name="name" required><br>
+  聯絡方式: <input type="text" name="contact" required><br>
+  管理密碼: <input type="password" name="password" placeholder="建議使用 4 碼"><br>
+  需要人數: <input type="number" name="seats_needed" min="1" required><br>
+  出發地: <input type="text" name="departure" required><br>
+  目的地: <input type="text" name="destination" required><br>
+  日期: <input type="date" name="date" required><br>
+  備註: <textarea name="note"></textarea><br>
+  <button type="submit">送出</button>
+</form>

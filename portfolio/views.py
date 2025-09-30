@@ -163,3 +163,17 @@ def minecraft_rank(request):
         rows = query_db("CMI", sql)
 
     return JsonResponse({"rank_type": rank_type, "rows": rows})
+
+
+# from django.shortcuts import render
+# import yaml
+
+# def show_greatsword(request):
+#     file_path = "C:\新原空伺服器New_OriginalSpace\Server副本分流\plugins\MMOItems\item\greatsword.yml"
+#     try:
+#         with open(file_path, "r", encoding="utf-8") as f:
+#             data = yaml.safe_load(f)
+#     except Exception as e:
+#         data = {"error": str(e)}
+
+#     return render(request, "show_item.html", {"item_data": data})

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>🌐 花蓮光復救災交通媒合</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #eaf8ff, #f7fff7);
+      color: #222;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 20px;
+      color: #005c4b;
+    }
+
+    .buttons {
+      text-align: center;
+      margin: 10px 0 20px;
+    }
+
+    .btn-main {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      margin: 0 5px;
+      color: white;
+      font-weight: bold;
+      transition: transform 0.2s, background 0.3s;
+    }
+    .btn-driver {
+      background: #007bff;
+    }
+    .btn-driver:hover {
+      background: #0056b3;
+      transform: scale(1.05);
+    }
+    .btn-passenger {
+      background: #dc3545;
+    }
+    .btn-passenger:hover {
+      background: #a71d2a;
+      transform: scale(1.05);
+    }
+
+    h2 {
+      color: #00695c;
+      margin-left: 20px;
+    }
+
+    .card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      margin: 10px 20px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      animation: fadeInUp 0.4s ease-in-out;
+    }
+
+    .card::before {
+      content: "";
+      display: block;
+      width: 6px;
+      height: 100%;
+      border-radius: 6px 0 0 6px;
+      margin-right: 10px;
+    }
+
+    .driver-card::before {
+      background: #2196f3;
+    }
+    .passenger-card::before {
+      background: #f44336;
+    }
+
+    .actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: white;
+      background: #007bff;
+      margin-left: 5px;
+      transition: background 0.3s;
+    }
+    .actions button:hover {
+      background: #0056b3;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+    }
+    .modal-content {
+      background: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .close {
+      float: right;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* 動畫 */
+    @keyframes fadeInUp {
+      from {opacity: 0; transform: translateY(15px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    /* 回到頂端按鈕 */
+    #backToTop {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      background: #00897b;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      padding: 14px;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1200;
+      transition: transform 0.2s, background 0.3s;
+    }
+    #backToTop:hover {
+      background: #00695c;
+      transform: scale(1.08);
+    }
+  </style>
+</head>
+<body>
+  <h1>🌐 花蓮光復救災交通媒合</h1>
+
+  <div class="buttons">
+    <a href="{% url 'find_car' %}">
+      <button class="btn-main btn-driver">🚗 我要出車（找乘客）</button>
+    </a>
+    <a href="{% url 'find_people' %}">
+      <button class="btn-main btn-passenger">🧍 我要搭車（找車）</button>
+    </a>
+  </div>
+
+  <h2>找車需求（乘客需要司機）</h2>
+  <ul id="passenger-list">
+    {% for p in passengers %}
+      {% if not p.is_matched %}
+        <li class="card passenger-card">
+          <span><b>{{ p.passenger_name }}</b> - 需要 {{ p.seats_needed }} 人
+            ({{ p.departure }} → {{ p.destination }}, {{ p.date }})</span>
+          <div class="actions">
+            <button onclick="openPassengerModal('{{ p.id }}')">編輯</button>
+            <button onclick="openJoinModal('{{ p.id }}')">參加</button>
+          </div>
+        </li>
+      {% endif %}
+    {% empty %}
+      <li class="card passenger-card">目前沒有需求</li>
+    {% endfor %}
+  </ul>
+
+  <h2>找人資訊（司機提供座位）</h2>
+  <ul id="driver-list">
+    {% for d in drivers %}
+      {% if d.is_active %}
+        <li class="card driver-card">
+          <span><b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }} / {{ d.seats_total }}
+            ({{ d.departure }} → {{ d.destination }}, {{ d.date }})</span>
+          <div class="actions">
+            <button onclick="openDriverModal('{{ d.id }}')">管理</button>
+          </div>
+        </li>
+      {% endif %}
+    {% empty %}
+      <li class="card driver-card">目前沒有車輛</li>
+    {% endfor %}
+  </ul>
+
+  <!-- 回到頂端 -->
+  <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆</button>
+
+  <script>
+    // WebSocket 自動更新
+    const socket = new WebSocket("ws://" + window.location.host + "/ws/find/");
+
+    socket.onopen = function() {
+      console.log("✅ WebSocket 連線成功");
+    };
+
+    socket.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📩 收到資料：", data);
+
+        if (data.type === "update") {
+          if (data.passengers_html) {
+            document.getElementById("passenger-list").innerHTML = data.passengers_html;
+          }
+          if (data.drivers_html) {
+            document.getElementById("driver-list").innerHTML = data.drivers_html;
+          }
+        }
+      } catch (err) {
+        console.error("⚠️ 解析訊息失敗", err, event.data);
+      }
+    };
+
+    socket.onclose = function() {
+      console.log("❌ WebSocket 已關閉");
+    };
+
+    socket.onerror = function(error) {
+      console.error("⚠️ WebSocket 發生錯誤", error);
+    };
+  </script>
+</body>
+</html>

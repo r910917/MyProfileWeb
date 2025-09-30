@@ -1,0 +1,12 @@
+{% for p in passengers %}
+  <li class="card passenger-card">
+    <span><b>{{ p.passenger_name }}</b> - 需要 {{ p.seats_needed }} 人
+      ({{ p.departure }} → {{ p.destination }}, {{ p.date }})</span>
+    <div class="actions">
+      <button onclick="openPassengerModal('{{ p.id }}')">編輯</button>
+      <button onclick="openJoinModal('{{ p.id }}')">參加</button>
+    </div>
+  </li>
+{% empty %}
+  <li class="card passenger-card">目前沒有需求</li>
+{% endfor %}

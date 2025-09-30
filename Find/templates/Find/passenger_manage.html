@@ -1,0 +1,42 @@
+<h2>司機管理：{{ driver.driver_name }}</h2>
+<p>路線：{{ driver.departure }} → {{ driver.destination }}</p>
+<p>座位狀態：{{ driver.seats_filled }} / {{ driver.seats_total }}</p>
+
+<hr>
+
+<!-- ✅ 候選乘客清單 -->
+<h3>候選乘客</h3>
+<form method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="match_passengers">
+  <ul>
+    {% for p in passengers %}
+      <li>
+        <input type="checkbox" name="confirm_passengers" value="{{ p.id }}">
+        {{ p.passenger_name }} - 需要 {{ p.seats_needed }} 人 - 聯絡方式：{{ p.contact }}
+      </li>
+    {% empty %}
+      <li>目前沒有候選乘客</li>
+    {% endfor %}
+  </ul>
+  <button type="submit">確認媒合</button>
+</form>
+
+<hr>
+
+<!-- ✅ 司機自己的資料更新 -->
+<h3>司機資料</h3>
+<form method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="update_driver">
+  姓名: <input type="text" name="name" value="{{ driver.driver_name }}"><br>
+  聯絡方式: <input type="text" name="contact" value="{{ driver.contact }}"><br>
+  總座位: <input type="number" name="seats_total" value="{{ driver.seats_total }}"><br>
+  出發地: <input type="text" name="departure" value="{{ driver.departure }}"><br>
+  目的地: <input type="text" name="destination" value="{{ driver.destination }}"><br>
+  日期: <input type="date" name="date" value="{{ driver.date }}"><br>
+  備註: <textarea name="note">{{ driver.note }}</textarea><br>
+  <button type="submit">更新司機資訊</button>
+</form>
+
+<a href="{% url 'find_index' %}">回首頁</a>

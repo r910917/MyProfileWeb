@@ -1,0 +1,11 @@
+{% for d in drivers %}
+  <li class="card driver-card">
+    <span><b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }} / {{ d.seats_total }}
+      ({{ d.departure }} → {{ d.destination }}, {{ d.date }})</span>
+    <div class="actions">
+      <button onclick="openDriverModal('{{ d.id }}')">管理</button>
+    </div>
+  </li>
+{% empty %}
+  <li class="card driver-card">目前沒有車輛</li>
+{% endfor %}

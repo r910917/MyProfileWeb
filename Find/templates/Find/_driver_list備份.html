@@ -1,0 +1,138 @@
+
+{# templates/Find/_driver_list.html #}
+<ul id="driver-list">
+  {% for d in drivers %}
+    {% if d.is_active %}
+      <li class="card driver-card" data-driver="{{ d.id }}">
+        <div class="driver-grid">
+          <!-- 左：暱稱 - 座位 -->
+          <div class="col-left">
+            <div class="name-seat">
+              <b>{{ d.driver_name }}</b> - 座位：{{ d.seats_filled }}/{{ d.seats_total }}
+            </div>
+          </div>
+
+          <!-- 中：三行資訊 -->
+          <div class="col-middle">
+            <div class="line line1">{{ d.departure }} → {{ d.destination }}</div>
+            <div class="line line2">出發：{{ d.date }}　|　回程：{{ d.return_date|default:"未定" }}</div>
+            <div class="line line3">
+              順路接送：
+              {% if d.flexible_pickup == "YES" %}順路可載
+              {% elif d.flexible_pickup == "NO" %}不順路也OK
+              {% else %}視情況{% endif %}
+            </div>
+          </div>
+
+          <!-- 右：按鈕與箭頭 -->
+          <div class="col-actions">
+            <button type="button" class="btn-manage" data-action="manage" data-id="{{ d.id }}">管理</button>
+            <button type="button" class="btn-join" data-action="join" data-id="{{ d.id }}"
+                    data-date="{{ d.date|date:'Y-m-d' }}"
+                    data-return="{{ d.return_date|date:'Y-m-d'|default_if_none:'' }}">參加</button>
+            <button id="arrow-{{ d.id }}" class="arrow" type="button"
+                    data-action="toggle" data-id="{{ d.id }}"
+                    aria-controls="details-{{ d.id }}" aria-expanded="false"
+                    title="展開/收合">▶</button>
+          </div>
+
+          <!-- 展開詳情 -->
+<div id="details-{{ d.id }}" class="details" aria-hidden="true">
+  <div class="details-grid3">
+
+    <!-- 左欄：司機資訊（等高＋可捲動） -->
+    <div class="details-col">
+      <div class="driver-info__title">
+        <span class="emoji">🚗</span><span>司機資訊</span>
+      </div>
+
+      <div class="driver-info__group">
+        <div class="driver-kv">
+          <div class="k">暱稱</div><div class="v">{{ d.driver_name }}</div>
+          <div class="k">性別</div><div class="v">{{ d.get_gender_display }}</div>
+          <div class="k">Email</div><div class="v">{{ d.email|default:"未提供" }}</div>
+          <div class="k">聯絡方式</div><div class="v">{{ d.contact }}</div>
+        </div>
+      </div>
+
+      <div class="driver-info__group">
+        <div class="driver-kv">
+          <div class="k">出發日期</div><div class="v">{{ d.date }}</div>
+          <div class="k">回程日期</div><div class="v">{{ d.return_date|default:"未定" }}</div>
+          <div class="k">順路意願</div>
+          <div class="v">
+            {% if d.flexible_pickup == "YES" %}順路可載
+            {% elif d.flexible_pickup == "NO" %}不順路也OK
+            {% else %}視情況{% endif %}
+          </div>
+          <div class="k">備註</div><div class="v">{{ d.note|default:"無" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中欄：待確認（等高＋可捲動） -->
+    <div class="details-col">
+      <h4 class="pax-panel-title">🧍 待確認</h4>
+      <div class="pax-scroll">
+        <ul class="pax-list">
+          
+          {% if d.pending %}
+            {% for p in d.pending %}
+            <li class="pax-item">
+              <div class="pax-2col">
+                <div class="pax-left">
+                  <div class="pax-title">{{ p.passenger_name }}</div>
+                  <div class="pax-sub">上車地：{{ p.departure|default:"未填" }}　·　人數：{{ p.seats_needed }}</div>
+                </div>
+                <div class="pax-actions">
+                  <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                  <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          {% else %}
+            <li class="pax-item">目前沒有待確認乘客</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- 右欄：已接受（等高＋可捲動） -->
+    <div class="details-col">
+      <h4 class="pax-panel-title">✅ 已接受</h4>
+      <div class="pax-scroll">
+        <ul class="pax-list">
+          {% if d.accepted %}
+            {% for p in d.accepted %}
+            <li class="pax-item pax-accepted">
+              <div class="pax-2col">
+                <div class="pax-left">
+                  <div class="pax-title"><span class="check">✔</span>{{ p.passenger_name }}</div>
+                  <div class="pax-sub">上車地：{{ p.departure|default:"未填" }}　·　人數：{{ p.seats_needed }}</div>
+                </div>
+                <div class="pax-actions">
+                  <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                  <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          {% else %}
+            <li class="pax-item">尚無已接受乘客</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+        </div>
+      </li>
+    {% endif %}
+  {% empty %}
+    <li class="card driver-card">目前沒有車輛</li>
+  {% endfor %}
+</ul>

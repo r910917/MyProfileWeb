@@ -5,7 +5,6 @@ from django.db import models
 from channels.db import database_sync_to_async
 from django.template.loader import render_to_string
 from .models import PassengerRequest, DriverTrip
-from django.db.models import Prefetch
 
 class FindConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -90,36 +89,6 @@ class FindConsumer(AsyncWebsocketConsumer):
         drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
         passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
         return drivers_html, passengers_html
-    
-    # ========= 重點：所有 ORM + template rendering 都放到 sync 內執行 =========
-    @sync_to_async
-    def _render_lists(self):
-        # 分兩個 QuerySet：pending / accepted
-        pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
-        accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("-id")
-
-        # drivers 帶 prefetch，並把結果掛到 to_attr，避免模板中觸發 lazy DB 讀取
-        drivers = (
-            DriverTrip.objects.using("find_db")
-            .filter(is_active=True)
-            .prefetch_related(
-                Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
-                Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
-            )
-        )
-
-        # passengers：只顯示「未媒合且未掛司機」的人
-        passengers = (
-            PassengerRequest.objects.using("find_db")
-            .filter(is_matched=False, driver__isnull=True)
-            .order_by("-id")
-        )
-
-        # 直接在同一個 sync 內 render，避免模板迭代 QuerySet 時再去打 DB
-        drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
-        passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-        return drivers_html, passengers_html
-    
     def update_driver(self, driver_id, seats_total, is_active):
         try:
             driver = DriverTrip.objects.using("find_db").get(id=driver_id)
@@ -130,7 +99,7 @@ class FindConsumer(AsyncWebsocketConsumer):
             print(f"⚠️ DriverTrip {driver_id} 不存在")
 
     async def send_current_data(self):
-        passengers_html, drivers_html = await self._render_lists()
+        passengers_html, drivers_html = await self.render_lists()
         await self.send(text_data=json.dumps({
             "type": "update",
             "passengers_html": passengers_html,
@@ -138,7 +107,7 @@ class FindConsumer(AsyncWebsocketConsumer):
         }))
 
     async def broadcast_update(self):
-        passengers_html, drivers_html = await self._render_lists()
+        passengers_html, drivers_html = await self.render_lists()
         await self.channel_layer.group_send(
             "find_group",
             {
@@ -155,17 +124,17 @@ class FindConsumer(AsyncWebsocketConsumer):
             "drivers_html": event["drivers_html"],
         }))
 
-    # @sync_to_async
-    # def render_lists(self):
-    #     """把查詢和模板渲染放進 sync_to_async"""
-    #     passengers = PassengerRequest.objects.using("find_db").filter(is_matched=False)
-    #     drivers = build_driver_cards()
-    #     html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+    @sync_to_async
+    def render_lists(self):
+        """把查詢和模板渲染放進 sync_to_async"""
+        passengers = PassengerRequest.objects.using("find_db").filter(is_matched=False)
+        drivers = build_driver_cards()
+        html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
 
-    #     passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-    #     drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+        passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+        drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
 
-    #     return passengers_html, drivers_html
+        return passengers_html, drivers_html
 
 # views.py 或 utils.py
 def build_driver_cards():

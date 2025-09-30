@@ -779,41 +779,6 @@ socket.onmessage = function (event) {
     console.error("⚠️ 解析訊息失敗", err, event.data);
   }
 };
-// 記住目前展開的 driver ids（#details-<id> 有 .open 的）
-function snapshotOpenDrivers() {
-  return Array.from(document.querySelectorAll('#driver-list .details.open'))
-    .map(el => el.id.replace('details-', ''));
-}
-
-// 把展開狀態（以及箭頭/ARIA）還原回去
-function restoreOpenDrivers(openIds) {
-  openIds.forEach(id => {
-    const details = document.getElementById('details-' + id);
-    const arrow   = document.getElementById('arrow-' + id);
-    if (details) {
-      details.classList.add('open');
-      details.setAttribute('aria-hidden', 'false');
-    }
-    if (arrow) {
-      arrow.classList.add('open');
-      arrow.setAttribute('aria-expanded', 'true');
-    }
-  });
-}
-
-// 包一個安全替換 #driver-list 的函式
-function replaceDriverListSafely(newHtml) {
-  const list = document.getElementById('driver-list');
-  if (!list) return;
-
-  const openIds = snapshotOpenDrivers(); // 1) 記住展開的卡片
-  const y       = window.scrollY;        // 2)（可選）記住捲動位置
-
-  list.innerHTML = newHtml;              // 3) 換 HTML
-
-  restoreOpenDrivers(openIds);           // 4) 還原展開
-  window.scrollTo(0, y);                 // 5)（可選）還原捲動位置
-}
 
 /* ---------- 事件委派：管理 / 參加 / 展開 ---------- */
 document.addEventListener("click", function (e) {
@@ -1688,6 +1653,53 @@ async function doPaxDelete(pid){
       // 打開 modal 時可再呼叫一次 syncReturnState()
     }
   })();
+
+
+  // 記住目前展開的 driver ids
+function snapshotOpenDrivers() {
+  return Array.from(document.querySelectorAll('#driver-list .details.open'))
+    .map(el => el.id.replace('details-', ''));
+}
+
+// 將展開狀態還原回去（也順便恢復箭頭 aria）
+function restoreOpenDrivers(openIds) {
+  openIds.forEach(id => {
+    const details = document.getElementById('details-' + id);
+    const arrow   = document.getElementById('arrow-' + id);
+    if (details) {
+      details.classList.add('open');
+      details.setAttribute('aria-hidden', 'false');
+    }
+    if (arrow) {
+      arrow.classList.add('open');
+      arrow.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+function replaceDriverListSafely(newHtml) {
+  const list = document.getElementById('driver-list');
+  if (!list) return;
+
+  const openIds   = snapshotOpenDrivers();   // 1) 記住哪些是展開的
+  const scrollY   = window.scrollY;          // 2) 記住捲動位置（可選）
+
+  list.innerHTML = newHtml;                  // 3) 替換 HTML
+
+  restoreOpenDrivers(openIds);               // 4) 還原展開的卡片
+  window.scrollTo(0, scrollY);               // 5) 還原捲動（可選）
+}
+
+// 如果你同時會更新乘客清單：
+function replaceLists(data) {
+  if (data.drivers_html) {
+    replaceDriverListSafely(data.drivers_html);
+  }
+  if (data.passengers_html) {
+    const p = document.getElementById('passenger-list');
+    if (p) p.innerHTML = data.passengers_html;
+  }
+}
+
 </script>
 
 

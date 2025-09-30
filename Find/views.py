@@ -48,36 +48,6 @@ def _broadcast_lists():
         {"type": "send.update", "drivers_html": drivers_html, "passengers_html": passengers_html},
     )
 
-def _render_partials():
-    # 兩個分開的 queryset（注意 using('find_db')）
-    pending_qs  = PassengerRequest.objects.using("find_db") \
-                  .filter(is_matched=False) \
-                  .order_by("-id")
-    accepted_qs = PassengerRequest.objects.using("find_db") \
-                  .filter(is_matched=True) \
-                  .order_by("-id")
-
-    # 這裡最重要：同一個 related_name 'passengers' 進行兩次 Prefetch，
-    # 分別掛到 driver.pending / driver.accepted
-    drivers = (
-        DriverTrip.objects.using("find_db")
-        .filter(is_active=True)
-        .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
-        )
-        .order_by("-id")
-    )
-
-    # 上方「找人資訊」清單：只顯示尚未媒合且沒有掛到任何 driver 的乘客
-    passengers = PassengerRequest.objects.using("find_db") \
-                  .filter(is_matched=False, driver__isnull=True) \
-                  .order_by("-id")
-
-    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
-    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-    return drivers_html, passengers_html
-
 # 統一的 session key
 SESSION_PAX = "pax_auth_{}"
 
@@ -122,6 +92,27 @@ def pax_get(request, pid: int):
     }
     return JsonResponse({"ok": True, "p": data})
 
+# 取得單一乘客資料（給編輯 Modal 預填）
+def passenger_json(request, pid: int):
+    p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
+    data = {
+        "id": p.id,
+        "passenger_name": p.passenger_name,
+        "gender": p.gender,
+        "email": p.email or "",
+        "contact": p.contact or "",
+        "seats_needed": p.seats_needed,
+        "willing_to_pay": str(p.willing_to_pay or ""),
+        "departure": p.departure or "",
+        "destination": p.destination or "",
+        "date": p.date.isoformat() if p.date else "",
+        "return_date": p.return_date.isoformat() if p.return_date else "",
+        "together_return": None if p.together_return is None else bool(p.together_return),
+        "note": p.note or "",
+        "driver_id": p.driver_id,
+        "is_matched": p.is_matched,
+    }
+    return JsonResponse({"ok": True, "data": data})
 
 @require_POST
 def pax_update(request, pid: int):
@@ -168,19 +159,28 @@ def pax_update(request, pid: int):
 
 @require_POST
 def pax_delete(request, pid: int):
-    try:
-        p = PassengerRequest.objects.using("find_db").get(id=pid)
-    except PassengerRequest.DoesNotExist:
-        return JsonResponse({"ok": False, "error": "乘客不存在"}, status=404)
+    """
+    刪除乘客紀錄（需先授權）：
+    - 若該乘客已被接受 (is_matched=True)，會回沖司機 seats_filled。
+    """
+    p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
+    if not _pax_authorized(request, pid):
+        return JsonResponse({"ok": False, "error": "未授權"}, status=403)
 
-    if not request.session.get(f"pax_auth_{pid}"):
-        return JsonResponse({"ok": False, "error": "尚未授權"}, status=403)
+    # 若是已接受的乘客，回沖座位
+    if p.is_matched and p.driver_id:
+        try:
+            d = DriverTrip.objects.using("find_db").select_for_update().get(id=p.driver_id)
+            d.seats_filled = max(0, d.seats_filled - (p.seats_needed or 0))
+            # 回沖後座位未滿，可自動重新上架（看你需求；不想自動上架就註解掉）
+            if d.seats_filled < d.seats_total:
+                d.is_active = True
+            d.save(using="find_db")
+        except DriverTrip.DoesNotExist:
+            pass
 
     p.delete(using="find_db")
-
-    drivers_html, passengers_html = _render_partials()
-    return JsonResponse({"ok": True, "drivers_html": drivers_html, "passengers_html": passengers_html})
-
+    return JsonResponse({"ok": True})
 
 
 

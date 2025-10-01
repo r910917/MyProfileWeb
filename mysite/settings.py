@@ -37,7 +37,12 @@ SECRET_KEY = 'django-insecure-e1bff65ylga-0uhq8eos(nj9rs8ztlx8pzcjh5fre(&!xa@bfk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*',
+                 'os.ddns.me',
+                 'hopngo.info',
+                 '127.0.0.1',
+                 '192.168.0.157',
+                 ]
 
 
 # Application definition
@@ -70,7 +75,10 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
+# 讓 Django 相信代理傳來的協定
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# 如果你用反向代理轉 Host，建議也打開
+USE_X_FORWARDED_HOST = True
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -83,7 +91,14 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'mysite.urls'
-
+# Django 4+ 需要包含「協定」；可加萬用網域
+CSRF_TRUSTED_ORIGINS = [
+    "https://os.ddns.me",
+    "https://hopngo.info",
+    "https://*.ddns.me",   # 可選：你所有 ddns.me 子網域
+    # 如果你在內網用 http，也可以加：
+    "http://192.168.0.157",
+]
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

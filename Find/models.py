@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.exceptions import ValidationError
 # 🚗 出車人 (司機)
 class DriverTrip(models.Model):
     driver_name = models.CharField(max_length=50)
@@ -19,6 +19,7 @@ class DriverTrip(models.Model):
     seats_filled = models.IntegerField(default=0)
     departure = models.CharField(max_length=100)
     destination = models.CharField(max_length=100)
+    fare_note = models.CharField("酌收費用", max_length=100, blank=True, null=True)
     date = models.DateField()
     return_date = models.DateField(blank=True, null=True)  # ✅ 回程日期，可空
     flexible_pickup = models.CharField(   # ✅ 改到 DriverTrip
@@ -30,9 +31,14 @@ class DriverTrip(models.Model):
         ],
         default="YES"
     )
-    note = models.TextField(blank=True)
+    note = models.TextField(blank=True,null=True)
     is_active = models.BooleanField(default=True)
     pass
+
+    def clean(self):
+        super().clean()
+        if self.return_date and self.date and self.return_date < self.date:
+            raise ValidationError({'return_date': '回程日期不可早於出發日期'})
 
     @property
     def seats_left(self):
@@ -71,6 +77,10 @@ class PassengerRequest(models.Model):
         null=True, blank=True,
         on_delete=models.SET_NULL
     )
+    def clean(self):
+        super().clean()
+        if self.return_date and self.date and self.return_date < self.date:
+            raise ValidationError({'return_date': '回程日期不可早於出發日期'})
     # 可選：如果你之後要真的存「是否一起回程」
     together_return = models.BooleanField(null=True, blank=True)
 

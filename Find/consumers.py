@@ -74,12 +74,8 @@ class FindConsumer(AsyncWebsocketConsumer):
     # Single driver card patch
     async def send_partial(self, event):
         driver_html = event.get("driver_html") or event.get("html") or ""
-        await self.send(text_data=json.dumps({
-            "type": "partial",
-            "driver_id": event["driver_id"],
-            "driver_html": driver_html,
-            "remove": event.get("remove", False),
-        }))
+        payload = event.get("payload", {})
+        await self.send(text_data=json.dumps(payload))
 
 
      # ---- 將「同步 ORM 查詢」包成 async 可用 ----

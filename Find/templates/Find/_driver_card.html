@@ -10,7 +10,7 @@
 
     <!-- 中：三行資訊 -->
     <div class="col-middle">
-      <div class="line line1">{{ d.departure }} → {{ d.destination }}</div>
+      <div class="line line1">{{ d.departure }} → {{ d.destination }} | 酌收費用： {{ d.fare_note|default:"未填" }}</div>
       <div class="line line2">出發：{{ d.date }}　|　回程：{{ d.return_date|default:"未定" }}</div>
       <div class="line line3">
         順路接送：
@@ -30,7 +30,7 @@
         data-id="{{ d.id }}"
         data-date="{{ d.date|date:'Y-m-d' }}"
         data-return="{{ d.return_date|date:'Y-m-d'|default_if_none:'' }}"
-      >參加</button>
+        >參加</button>
       <button
         id="arrow-{{ d.id }}"
         class="arrow"
@@ -68,6 +68,8 @@
                 {% elif d.flexible_pickup == "NO" %}不順路也OK
                 {% else %}視情況{% endif %}
               </div>
+              <div class="k">酌收費用</div>
+              <div class="v">{{ d.fare_note|default:"未填" }}</div>
               <div class="k">備註</div><div class="v">{{ d.note|default:"無" }}</div>
             </div>
           </div>

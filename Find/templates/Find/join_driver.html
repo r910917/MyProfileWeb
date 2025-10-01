@@ -26,5 +26,17 @@
 
     <button type="submit">確認加入</button>
   </form>
+
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  bindDateGuard({
+    depart: '#join-date',
+    ret: '#join-return',
+    form: '#joinForm',
+    msg: '回程不能早於出發（請重新選擇）'
+  });
+});
+</script>
+
 </body>
 </html>

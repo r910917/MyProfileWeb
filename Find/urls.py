@@ -19,6 +19,7 @@ urlpatterns = [
 
     # 司機管理頁
     path("driver/<int:driver_id>/manage/", views.driver_manage, name="driver_manage"),
+    path("driver/<int:driver_id>/delete/", views.delete_driver, name="delete_driver"),
     # 密碼驗證（AJAX）
     path("driver/<int:driver_id>/manage/auth/", views.driver_manage_auth, name="driver_manage_auth"),
 ]

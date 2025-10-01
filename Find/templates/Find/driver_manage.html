@@ -2,255 +2,345 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>司機管理</title>
+  <title>🛠 司機管理</title>
   <style>
-    body { font-family: "Microsoft JhengHei", sans-serif; background:#f7fbff; margin:0; padding:20px; }
-    h2 { color:#005c4b; margin: 10px 0 6px; }
-    .wrap { max-width: 1000px; margin: 0 auto; }
-    .section { background:#fff; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.06); padding:16px 18px; margin:16px 0; }
-    label { display:block; font-weight:bold; margin:10px 0 6px; }
-    input, select, textarea {
-      width:100%; padding:10px; border-radius:8px; border:1px solid #d7dde5; background:#fcfdff;
+    body { font-family:"Microsoft JhengHei",sans-serif; background:linear-gradient(to right,#f0f9ff,#fefefe); margin:0; padding:40px 20px; }
+    h2 { text-align:center; color:#005c4b; margin-bottom:25px; font-size:26px; }
+    form { max-width:600px; margin:0 auto; background:#fff; padding:25px 30px; border-radius:16px; box-shadow:0 6px 12px rgba(0,0,0,.1); animation:fadeIn .5s ease-in-out; }
+    label { font-weight:700; display:block; margin-top:12px; margin-bottom:6px; color:#444; }
+    input,textarea,select { width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #ccc; transition:border-color .3s, box-shadow .3s; font-size:15px; }
+    input:focus,textarea:focus,select:focus { border-color:#007bff; box-shadow:0 0 8px rgba(0,123,255,.3); outline:none; }
+    textarea { min-height:80px; resize:vertical; }
+    .btn { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s; }
+    .btn:hover { background:linear-gradient(45deg,#0056b3,#009e77); transform:scale(1.02); }
+    .btn-danger { background:linear-gradient(45deg,#ef4444,#f97316); }
+    .btn-danger:hover { background:linear-gradient(45deg,#b91c1c,#ea580c); }
+    .btn-ghost { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s;}
+    .btn-ghost:hover { background:linear-gradient(45deg,#0fbfd2,#402fc7); transform:scale(1.02); }
+
+    .alert { max-width:600px; margin:0 auto 12px; padding:12px 14px; border-radius:10px; }
+    .alert-ok { background:#e8f8ef; color:#206b3a; border:1px solid #a7e2bf; }
+    .alert-warn { background:#fff7e6; color:#9a6b00; border:1px solid #f7d7a3; }
+    .required::after{ content:" *"; color:red; }
+
+    @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+
+    /* 乘客清單 */
+    .panel { max-width:900px; margin:18px auto; }
+    .pax-list{list-style:none;margin:10px auto 0;padding:0;max-width:900px}
+    .pax-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:10px 0;box-shadow:0 3px 8px rgba(0,0,0,.05)}
+    .pax-row{display:grid;grid-template-columns:1fr auto;grid-row-gap:10px;align-items:start}
+    .pax-head{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+    .pax-name{font-weight:700;font-size:15px}
+    .badge{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4338ca}
+    .badge.gender{background:#e0f2fe;color:#0369a1}
+    .badge.rt{background:#fef3c7;color:#92400e}
+    .pax-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px 14px}
+    .pax-cell label{display:block;font-size:12px;color:#6b7280;margin-bottom:4px;letter-spacing:.02em}
+    .pax-cell div{font-size:14px;color:#111827}
+    .pax-cell.span-2{grid-column:span 2}
+    .pax-note{grid-column:1/-1;background:#f9fafb;border-radius:10px;padding:8px 10px;font-size:13px;color:#374151}
+    .pax-actions{display:flex;gap:8px;align-self:center}
+    .btn-mini{border:0;border-radius:8px;padding:7px 12px;background:#e5e7eb;cursor:pointer;font-weight:600}
+    .btn-mini:hover{background:#d1d5db}
+    .btn-mini.danger{background:#fecaca;color:#7f1d1d}
+    .btn-mini.danger:hover{background:#fca5a5}
+
+    @media (max-width:1024px){ .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+    @media (max-width:768px){
+      form { padding:18px 16px; }
+      .pax-row{grid-template-columns:1fr}
+      .pax-actions{justify-content:flex-end}
+      .pax-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .pax-cell.span-2{grid-column:1/-1}
     }
-    .row { display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
-    .row-3 { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
-    .actions { display:flex; gap:10px; margin-top:12px; }
-    button {
-      padding:10px 16px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:bold;
-      background:#007bff;
+    @media (max-width:480px){ .pax-grid{grid-template-columns:1fr} }
+    /* 靚版「是否開放」switch */
+    .switch {
+      display:flex;align-items:center;gap:10px;margin:8px 0 14px;
     }
-    button.secondary { background:#28a745; }
-    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; margin-left:8px; }
-    .pill.on { background:#e3f7ec; color:#1f7a3b; border:1px solid #a7e2bf; }
-    .pill.off{ background:#fdeeee; color:#a63f3f; border:1px solid #f3b6b6; }
-    .note { font-size: 12px; color:#666; }
-    .msg { margin:8px 0; padding:10px 12px; border-radius:8px; font-weight:bold; }
-    .msg.ok { background:#e8f8ef; color:#206b3a; }
-    .msg.warn { background:#fff7e6; color:#9a6b00; }
-    .msg.err { background:#ffefef; color:#9a2a2a; }
-    .table { width:100%; border-collapse: collapse; }
-    .table th, .table td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
-    .table th { background:#f6f9fc; }
+    .switch input { display:none; }
+    .toggle {
+      width:48px;height:28px;background:#d1d5db;border-radius:999px;position:relative;cursor:pointer;transition:background .25s ease;
+    }
+    .toggle::after{
+      content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .25s ease;
+    }
+    .switch input:checked + .toggle{ background:#34d399; }
+    .switch input:checked + .toggle::after{ transform:translateX(20px); }
+    .switch label { font-weight:600;color:#374151; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h2>司機管理：{{ driver.driver_name }}
-      {% if driver.is_active %}
-        <span class="pill on">上架中</span>
-      {% else %}
-        <span class="pill off">未上架</span>
-      {% endif %}
-    </h2>
-    <p class="note">路線：{{ driver.departure }} → {{ driver.destination }}　｜　座位：{{ driver.seats_filled }} / {{ driver.seats_total }}</p>
+  <h2>🛠 司機管理</h2>
 
-    {% if saved_msg %}<div class="msg ok">{{ saved_msg }}</div>{% endif %}
-    {% if matched_msg %}<div class="msg ok">{{ matched_msg }}</div>{% endif %}
-    {% if full_msg %}<div class="msg warn">{{ full_msg }}</div>{% endif %}
+  {% if saved_msg %}<div class="alert alert-ok">{{ saved_msg }}</div>{% endif %}
+  {% if matched_msg %}<div class="alert alert-ok">{{ matched_msg }}</div>{% endif %}
+  {% if full_msg %}<div class="alert alert-warn">{{ full_msg }}</div>{% endif %}
 
-    <!-- 上半：編輯司機 -->
-    <div class="section">
-      <h3>🛠️ 編輯司機資料</h3>
-      <form method="POST">
-        {% csrf_token %}
-        <input type="hidden" name="form" value="update_driver">
-        <div class="row">
-          <div>
-            <label>暱稱</label>
-            <input type="text" name="driver_name" value="{{ driver.driver_name }}" required>
-          </div>
-          <div>
-            <label>性別</label>
-            <select name="gender">
-              <option value="M" {% if driver.gender == "M" %}selected{% endif %}>男生</option>
-              <option value="F" {% if driver.gender == "F" %}selected{% endif %}>女生</option>
-              <option value="X" {% if driver.gender == "X" %}selected{% endif %}>不方便透漏</option>
-            </select>
-          </div>
-          <div>
-            <label>Email（可留空）</label>
-            <input type="email" name="email" value="{{ driver.email|default_if_none:'' }}">
-          </div>
-          <div>
-            <label>聯絡方式</label>
-            <input type="text" name="contact" value="{{ driver.contact }}" placeholder="LINE ID / IG / Phone Number" required>
-          </div>
-          <div>
-            <label>管理密碼（留空則不變更）</label>
-            <input type="password" name="password" placeholder="留空不修改">
-          </div>
-          <div>
-            <label>總座位</label>
-            <input type="number" name="seats_total" min="1" value="{{ driver.seats_total }}" required>
-          </div>
-        </div>
+  <!-- A) 編輯司機資料 -->
+  <form method="POST">
+    {% csrf_token %}
+    <input type="hidden" name="form" value="update_driver" />
 
-        <div class="row-3" style="margin-top:10px;">
-          <div>
-            <label>出發地</label>
-            <input type="text" name="departure" value="{{ driver.departure }}" required>
-          </div>
-          <div>
-            <label>目的地</label>
-            <input type="text" name="destination" value="{{ driver.destination }}" required>
-          </div>
-          <div>
-            <label>出發日期</label>
-            <input type="date" name="date" value="{{ driver.date|date:'Y-m-d' }}" required>
-          </div>
-          <div>
-            <label>回程日期（可留空）</label>
-            <input type="date" name="return_date" value="{{ driver.return_date|date:'Y-m-d' }}">
-          </div>
-          <div>
-            <label>順路接送意願</label>
-            <select name="flexible_pickup">
-              <option value="YES" {% if driver.flexible_pickup == "YES" %}selected{% endif %}>順路可載</option>
-              <option value="NO"  {% if driver.flexible_pickup == "NO"  %}selected{% endif %}>不順路也OK</option>
-              <option value="MAYBE" {% if driver.flexible_pickup == "MAYBE" %}selected{% endif %}>視情況</option>
-            </select>
-          </div>
-          <div>
-            <label>是否上架</label>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-              <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %}>
-              <label for="is_active" style="margin:0;font-weight:normal;">上架（座位滿會自動下架）</label>
-            </div>
-          </div>
-        </div>
+    <label class="required">暱稱</label>
+    <input type="text" name="driver_name" value="{{ driver.driver_name }}" required />
 
-        <label style="margin-top:12px;">備註</label>
-        <textarea name="note" rows="3" placeholder="補充說明">{{ driver.note }}</textarea>
+    <label class="required">性別</label>
+    <select name="gender" required>
+      <option value="M" {% if driver.gender == 'M' %}selected{% endif %}>男生</option>
+      <option value="F" {% if driver.gender == 'F' %}selected{% endif %}>女生</option>
+      <option value="X" {% if driver.gender == 'X' %}selected{% endif %}>不方便透漏</option>
+    </select>
 
-        <div class="actions">
-          <button type="submit">💾 儲存</button>
-          <a href="{% url 'find_index' %}" style="text-decoration:none;">
-            <button type="button" class="secondary">🏠 回首頁</button>
-          </a>
-        </div>
-      </form>
+    <label>Email（選填）</label>
+    <input type="email" name="email" value="{{ driver.email|default_if_none:'' }}" />
+
+    <label class="required">聯絡方式</label>
+    <input type="text" name="contact" value="{{ driver.contact }}" placeholder="LINE / IG / Phone Number" required />
+
+    <label>管理密碼（留空不變更）</label>
+    <input type="password" name="password" placeholder="留空不修改" />
+
+    <label class="required">總座位</label>
+    <input type="number" name="seats_total" min="1" value="{{ driver.seats_total }}" required />
+
+    <!-- 出發地（下拉 + 自填） -->
+    {% with has_dep_custom=driver.departure_custom %}
+    <label class="required">出發地</label>
+    <select name="departure" id="departure" onchange="checkCustomDeparture(this)" required>
+      <option value="" {% if not driver.departure and not has_dep_custom %}selected{% endif %}>請選擇縣市</option>
+      <option value="自填" {% if has_dep_custom %}selected{% endif %}>其他</option>
+      <option value="花蓮縣光復鄉" {% if not has_dep_custom and driver.departure == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
+      <option value="花蓮縣光復車站以外火車站" {% if not has_dep_custom and driver.departure == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
+      <option value="花蓮縣光復車站" {% if not has_dep_custom and driver.departure == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
+      <option value="光復鄉糖廠" {% if not has_dep_custom and driver.departure == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
+      <option value="需清淤地區" {% if not has_dep_custom and driver.departure == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
+      <option value="台北市" {% if not has_dep_custom and driver.departure == '台北市' %}selected{% endif %}>台北市</option>
+      <option value="新北市" {% if not has_dep_custom and driver.departure == '新北市' %}selected{% endif %}>新北市</option>
+      <option value="基隆市" {% if not has_dep_custom and driver.departure == '基隆市' %}selected{% endif %}>基隆市</option>
+      <option value="桃園市" {% if not has_dep_custom and driver.departure == '桃園市' %}selected{% endif %}>桃園市</option>
+      <option value="新竹市" {% if not has_dep_custom and driver.departure == '新竹市' %}selected{% endif %}>新竹市</option>
+       <option value="新竹縣"  {% if not has_dep_custom and driver.departure == '新竹縣' %}selected{% endif %}>新竹縣</option>
+      <option value="苗栗縣"  {% if not has_dep_custom and driver.departure == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+      <option value="台中市"  {% if not has_dep_custom and driver.departure == '台中市' %}selected{% endif %}>台中市</option>
+      <option value="彰化縣"  {% if not has_dep_custom and driver.departure == '彰化縣' %}selected{% endif %}>彰化縣</option>
+      <option value="南投縣"  {% if not has_dep_custom and driver.departure == '南投縣' %}selected{% endif %}>南投縣</option>
+      <option value="雲林縣"  {% if not has_dep_custom and driver.departure == '雲林縣' %}selected{% endif %}>雲林縣</option>
+      <option value="嘉義市"  {% if not has_dep_custom and driver.departure == '嘉義市' %}selected{% endif %}>嘉義市</option>
+      <option value="嘉義縣"  {% if not has_dep_custom and driver.departure == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+      <option value="台南市"  {% if not has_dep_custom and driver.departure == '台南市' %}selected{% endif %}>台南市</option>
+      <option value="高雄市"  {% if not has_dep_custom and driver.departure == '高雄市' %}selected{% endif %}>高雄市</option>
+      <option value="屏東縣"  {% if not has_dep_custom and driver.departure == '屏東縣' %}selected{% endif %}>屏東縣</option>
+      <option value="宜蘭縣"  {% if not has_dep_custom and driver.departure == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+      <option value="花蓮縣"  {% if not has_dep_custom and driver.departure == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+      <option value="台東縣"  {% if not has_dep_custom and driver.departure == '台東縣' %}selected{% endif %}>台東縣</option>
+      <option value="澎湖縣"  {% if not has_dep_custom and driver.departure == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+      <option value="金門縣"  {% if not has_dep_custom and driver.departure == '金門縣' %}selected{% endif %}>金門縣</option>
+      <option value="連江縣"  {% if not has_dep_custom and driver.departure == '連江縣' %}selected{% endif %}>連江縣</option>
+      <!-- 其餘縣市照這個寫法擴充 -->
+    </select>
+    <input type="text"
+           id="customDeparture"
+           name="departure_custom"
+           value="{{ driver.departure_custom|default:'' }}"
+           style="display:{% if has_dep_custom %}block{% else %}none{% endif %};"
+           placeholder="輸入自訂出發地" />
+    {% endwith %}
+
+    <!-- 目的地（下拉 + 自填） -->
+    {% with has_des_custom=driver.destination_custom %}
+    <label>目的地</label>
+    <select name="destination" id="destination" onchange="checkCustomDestination(this)">
+      <option value="" {% if not driver.destination and not has_des_custom %}selected{% endif %}>請選擇縣市</option>
+      <option value="自填" {% if has_des_custom %}selected{% endif %}>其他</option>
+      <option value="花蓮縣光復鄉" {% if not has_des_custom and driver.destination == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
+      <option value="花蓮縣光復車站以外火車站" {% if not has_des_custom and driver.destination == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
+      <option value="花蓮縣光復車站" {% if not has_des_custom and driver.destination == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
+      <option value="光復鄉糖廠" {% if not has_des_custom and driver.destination == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
+      <option value="需清淤地區" {% if not has_des_custom and driver.destination == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
+      <option value="台北市" {% if not has_des_custom and driver.destination == '台北市' %}selected{% endif %}>台北市</option>
+      <option value="新北市"  {% if not has_des_custom and driver.destination == '新北市' %}selected{% endif %}>新北市</option>
+      <option value="基隆市"  {% if not has_des_custom and driver.destination == '基隆市' %}selected{% endif %}>基隆市</option>
+      <option value="桃園市"  {% if not has_des_custom and driver.destination == '桃園市' %}selected{% endif %}>桃園市</option>
+      <option value="新竹市"  {% if not has_des_custom and driver.destination == '新竹市' %}selected{% endif %}>新竹市</option>
+      <option value="新竹縣"  {% if not has_des_custom and driver.destination == '新竹縣' %}selected{% endif %}>新竹縣</option>
+      <option value="苗栗縣"  {% if not has_des_custom and driver.destination == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+      <option value="台中市"  {% if not has_des_custom and driver.destination == '台中市' %}selected{% endif %}>台中市</option>
+      <option value="彰化縣"  {% if not has_des_custom and driver.destination == '彰化縣' %}selected{% endif %}>彰化縣</option>
+      <option value="南投縣"  {% if not has_des_custom and driver.destination == '南投縣' %}selected{% endif %}>南投縣</option>
+      <option value="雲林縣"  {% if not has_des_custom and driver.destination == '雲林縣' %}selected{% endif %}>雲林縣</option>
+      <option value="嘉義市"  {% if not has_des_custom and driver.destination == '嘉義市' %}selected{% endif %}>嘉義市</option>
+      <option value="嘉義縣"  {% if not has_des_custom and driver.destination == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+      <option value="台南市"  {% if not has_des_custom and driver.destination == '台南市' %}selected{% endif %}>台南市</option>
+      <option value="高雄市"  {% if not has_des_custom and driver.destination == '高雄市' %}selected{% endif %}>高雄市</option>
+      <option value="屏東縣"  {% if not has_des_custom and driver.destination == '屏東縣' %}selected{% endif %}>屏東縣</option>
+      <option value="宜蘭縣"  {% if not has_des_custom and driver.destination == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+      <option value="花蓮縣"  {% if not has_des_custom and driver.destination == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+      <option value="台東縣"  {% if not has_des_custom and driver.destination == '台東縣' %}selected{% endif %}>台東縣</option>
+      <option value="澎湖縣"  {% if not has_des_custom and driver.destination == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+      <option value="金門縣"  {% if not has_des_custom and driver.destination == '金門縣' %}selected{% endif %}>金門縣</option>
+      <option value="連江縣"  {% if not has_des_custom and driver.destination == '連江縣' %}selected{% endif %}>連江縣</option>
+    </select>
+    <input type="text"
+           id="customDestination"
+           name="destination_custom"
+           value="{{ driver.destination_custom|default:'' }}"
+           style="display:{% if has_des_custom %}block{% else %}none{% endif %};"
+           placeholder="輸入自訂目的地" />
+    {% endwith %}
+
+    <label>酌收費用（選填）</label>
+    <input type="text" name="fare_note" value="{{ driver.fare_note|default_if_none:'' }}" placeholder="例如：每人 200、油錢均攤、視里程而定…" />
+
+    <label class="required">出發日期</label>
+    <input type="date" name="date" id="driver-date" value="{{ driver.date|date:'Y-m-d' }}" required />
+
+    <label>回程日期（選填）</label>
+    <input type="date" name="return_date" id="driver-return" value="{{ driver.return_date|date:'Y-m-d' }}" />
+
+    <label>順路接送意願</label>
+    <select name="flexible_pickup">
+      <option value="YES" {% if driver.flexible_pickup == 'YES' %}selected{% endif %}>順路可載</option>
+      <option value="NO"  {% if driver.flexible_pickup == 'NO'  %}selected{% endif %}>不順路也OK</option>
+      <option value="MAYBE" {% if driver.flexible_pickup == 'MAYBE' %}selected{% endif %}>視情況</option>
+    </select>
+
+    <div class="switch">
+      <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %} />
+      <span class="toggle"></span>
+      <label for="is_active">是否開放（座位滿會自動關閉）</label>
     </div>
 
-    <h4>🧍 已登記乘客</h4>
+    <label>備註</label>
+    <textarea name="note">{{ driver.note|default_if_none:'' }}</textarea>
 
-<h5>待確認</h5>
-<ul class="pax-list">
-  {% if pending %}
-    {% for p in pending %}
-      <li class="pax-item pax-pending">
-        <div class="pax-row">
-          <!-- 標題列 -->
-          <div class="pax-head">
-            <span class="pax-name">{{ p.passenger_name }}</span>
-            <span class="badge gender">{{ p.get_gender_display }}</span>
-            {% if p.together_return is not None %}
-              <span class="badge rt">回程：{{ p.together_return|yesno:"一起,不一起" }}</span>
-            {% endif %}
-          </div>
+    <button class="btn" type="submit">💾 儲存</button>
+    <!-- ✅ 回首頁按鈕（表單外，純連結，不會觸發提交） -->
+<div style="max-width:600px;margin:0 auto 8px;">
+  <a href="{% url 'find_index' %}" class="btn-ghost" style="
+     display:inline-block;text-decoration:none;text-align:center;
+     width:96%;padding:12px;margin-top: 10px;border-radius:10px;font-weight:700;">
+    🏠 回首頁
+  </a>
+</div>
+  </form>
+  <!-- B) 刪除司機（獨立 form，避免誤觸送到上面） -->
+  <form method="POST" action="{% url 'delete_driver' driver.id %}" style="max-width:600px;margin:14px auto 0;"
+        onsubmit="return confirm('⚠️ 確定要刪除此司機？相關乘客也會被解除關聯！')">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">🗑️ 刪除司機</button>
+  </form>
 
-          <!-- 重點欄（多欄） -->
-          <div class="pax-grid">
-            <div class="pax-cell"><label>出發地</label><div>{{ p.departure|default:"未填" }}</div></div>
-            <div class="pax-cell"><label>目的地</label><div>{{ p.destination|default:"未填" }}</div></div>
-            <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
-            <div class="pax-cell">
-              <label>願付</label>
-              <div>{% if p.willing_to_pay %}NT$ {{ p.willing_to_pay|floatformat:0 }}{% else %}未填{% endif %}</div>
+  <!-- C) 已登記乘客 -->
+  <div class="panel">
+    <h3>🧍 待確認</h3>
+    <ul class="pax-list">
+      {% if pending %}
+        {% for p in pending %}
+          <li class="pax-item pax-pending">
+            <div class="pax-row">
+              <div class="pax-head">
+                <span class="pax-name">{{ p.passenger_name }}</span>
+                <span class="badge gender">{{ p.get_gender_display }}</span>
+                {% if p.together_return is not None %}
+                  <span class="badge rt">回程：{{ p.together_return|yesno:"一起,不一起" }}</span>
+                {% endif %}
+              </div>
+              <div class="pax-grid">
+                <div class="pax-cell"><label>出發地</label><div>{{ p.departure|default:"未填" }}</div></div>
+                <div class="pax-cell"><label>目的地</label><div>{{ p.destination|default:"未填" }}</div></div>
+                <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
+                <div class="pax-cell"><label>願付</label><div>{% if p.willing_to_pay %}NT$ {{ p.willing_to_pay|floatformat:0 }}{% else %}未填{% endif %}</div></div>
+                <div class="pax-cell"><label>日期</label><div>{{ p.date }}</div></div>
+                <div class="pax-cell"><label>回程</label><div>{{ p.return_date|default:"未定" }}</div></div>
+                <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
+              </div>
+              {% if p.note %}<div class="pax-note">備註：{{ p.note }}</div>{% endif %}
+              <div class="pax-actions">
+                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+              </div>
             </div>
-            <div class="pax-cell"><label>日期</label><div>{{ p.date }}</div></div>
-            <div class="pax-cell"><label>回程</label><div>{{ p.return_date|default:"未定" }}</div></div>
-            <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
-          </div>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-item">目前沒有待確認乘客</li>
+      {% endif %}
+    </ul>
 
-          {% if p.note %}
-            <div class="pax-note">備註：{{ p.note }}</div>
-          {% endif %}
+    <h3 style="margin-top:18px;">✅ 已接受</h3>
+    <ul class="pax-list">
+      {% if accepted %}
+        {% for p in accepted %}
+          <li class="pax-item pax-accepted">
+            <div class="pax-row">
+              <div class="pax-head">
+                <span class="pax-name">✔ {{ p.passenger_name }}</span>
+                <span class="badge gender">{{ p.get_gender_display }}</span>
+              </div>
+              <div class="pax-grid">
+                <div class="pax-cell"><label>出發地</label><div>{{ p.departure }}</div></div>
+                <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
+                <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
+              </div>
+              <div class="pax-actions">
+                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-item">尚無已接受乘客</li>
+      {% endif %}
+    </ul>
+  </div>
 
-          <!-- 操作 -->
-          <div class="pax-actions">
-            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-          </div>
-        </div>
-      </li>
-    {% endfor %}
-  {% else %}
-    <li class="pax-empty">目前沒有待確認乘客</li>
-  {% endif %}
-</ul>
+  <script>
+    // 出發地為「自填」時顯示自訂輸入框
+    function checkCustomDeparture(select){
+      const customInput = document.getElementById('customDeparture');
+      if (!customInput) return;
+      const show = (select.value === '自填');
+      customInput.style.display = show ? 'block' : 'none';
+      customInput.required = show;
+      if (!show) customInput.value = '';
+    }
+    // 目的地為「自填」時顯示自訂輸入框
+    function checkCustomDestination(select){
+      const input = document.getElementById('customDestination');
+      if (!input) return;
+      const show = (select.value === '自填');
+      input.style.display = show ? 'block' : 'none';
+      input.required = show;
+      if (!show) input.value = '';
+    }
 
-<h5>已接受</h5>
-<ul class="pax-list">
-  {% if accepted %}
-    {% for p in accepted %}
-      <li class="pax-item pax-accepted">
-        <span class="check">✔</span>
-        <span class="pax-name">{{ p.passenger_name }}</span>
-        <span class="pax-meta">
-          {{ p.get_gender_display }}・出發：{{ p.departure }}・人數：{{ p.seats_needed }}
-        </span>
-        <span class="pax-actions">
-          <button class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-          <button class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-        </span>
-      </li>
-    {% endfor %}
-  {% else %}
-    <li class="pax-empty">尚無已接受乘客</li>
-  {% endif %}
-</ul>
-<style>
+    // 日期前端防呆：出發 >= 今天；回程 >= max(今天, 出發) 或為空
+    document.addEventListener('DOMContentLoaded', () => {
+      const dep = document.getElementById('driver-date');
+      const ret = document.getElementById('driver-return');
+      const today = new Date().toISOString().split('T')[0];
+      if (!dep || !ret) return;
 
-/* 列表 & 項目 */
-.pax-list{list-style:none;margin:10px 0 0;padding:0}
-.pax-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:10px 0}
-.pax-row{display:grid;grid-template-columns:1fr auto;grid-row-gap:10px;align-items:start}
+      function syncMin(){
+        dep.min = today;
+        ret.min = dep.value || today;
+        if (ret.value && ret.value < ret.min) ret.value = '';
+      }
+      dep.addEventListener('change', syncMin);
+      ret.addEventListener('change', syncMin);
+      syncMin();
+    });
 
-/* 標題列 */
-.pax-head{grid-column:1/-1;display:flex;align-items:center;gap:8px}
-.pax-name{font-weight:700;font-size:15px}
-.badge{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4338ca}
-.badge.gender{background:#e0f2fe;color:#0369a1}
-.badge.rt{background:#fef3c7;color:#92400e}
-
-/* 重點欄（多欄） */
-.pax-grid{
-  grid-column:1/-1;
-  display:grid;
-  grid-template-columns:repeat(6,minmax(0,1fr)); /* 桌機 6 欄 */
-  gap:10px 14px;
-}
-.pax-cell label{
-  display:block;font-size:12px;color:#6b7280;margin-bottom:4px;letter-spacing:.02em
-}
-.pax-cell div{font-size:14px;color:#111827}
-.pax-cell.span-2{grid-column:span 2}
-
-/* 備註 */
-.pax-note{grid-column:1/-1;background:#f9fafb;border-radius:10px;padding:8px 10px;font-size:13px;color:#374151}
-
-/* 操作按鈕 */
-.pax-actions{display:flex;gap:8px;align-self:center}
-.btn-mini{border:0;border-radius:8px;padding:7px 12px;background:#e5e7eb;cursor:pointer;font-weight:600}
-.btn-mini:hover{background:#d1d5db}
-.btn-mini.danger{background:#fecaca;color:#7f1d1d}
-.btn-mini.danger:hover{background:#fca5a5}
-
-/* 手機／平板 RWD */
-@media (max-width:1024px){
-  .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} /* 4 欄 */
-}
-@media (max-width:768px){
-  .pax-row{grid-template-columns:1fr}
-  .pax-actions{justify-content:flex-end}
-  .pax-grid{grid-template-columns:repeat(2,minmax(0,1fr))} /* 2 欄 */
-  .pax-cell.span-2{grid-column:1/-1}
-}
-@media (max-width:480px){
-  .pax-grid{grid-template-columns:1fr} /* 手機單欄 */
-}
-
-
-</style>
+    // 進頁初始化（若預設就選到自填要展開）
+    (function(){
+      const depSel = document.getElementById('departure');
+      const desSel = document.getElementById('destination');
+      if (depSel) checkCustomDeparture(depSel);
+      if (desSel) checkCustomDestination(desSel);
+    })();
+  </script>
 </body>
 </html>

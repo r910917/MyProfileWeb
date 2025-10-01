@@ -101,20 +101,20 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 /* ==========================================================================
    展開/收合：箭頭旋轉、絲滑開合；管理/參加按鈕色系
    ========================================================================== */
-.arrow{
+.driver-card .arrow{
   cursor:pointer; margin-left:6px; min-width:36px; min-height:36px;
   font-size:16px; color:#333; background:transparent; border:0;
   transition:transform .25s ease;
 }
-.arrow.open{ transform:rotate(90deg); }
+.driver-card .arrow.open{ transform:rotate(90deg); }
 
-.details{
+.driver-card .details{
   margin-top:0px; max-height:0; overflow:hidden; padding:0px 0px;
   background: transparent; border:0 #e6e6e6;
   transition:max-height 1.2s ease, padding 1s ease;
 }
 /* 展開時再加回外觀 */
-.details.open {
+.driver-card .details.open {
   margin-top: 8px;
   max-height: 650px;
   padding: 10px;
@@ -123,10 +123,10 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   border-radius: 6px;
 }
 
-.btn-manage{ background:#007bff; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
-.btn-manage:hover{ background:#0056b3; }
-.btn-join{ background:#28a745; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
-.btn-join:hover{ background:#1e7e34; }
+.driver-card .btn-manage{ background:#007bff; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.driver-card .btn-manage:hover{ background:#0056b3; }
+.driver-card .btn-join{ background:#28a745; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
+.driver-card .btn-join:hover{ background:#1e7e34; }
 
 /* =============================================================================
    A. 乘客清單（待確認 / 已接受）卡片樣式
@@ -330,8 +330,19 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
    Modal：通用（遮罩/容器/關閉鈕/區塊）
    ========================================================================== */
 .modal{
-  position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.55);
-  display:none;
+  position:fixed; inset:0; z-index:1000;left: 0; top: 0; background:rgba(0,0,0,.55);
+  display:none;justify-content: center; align-items: center;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 30px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;   /* 🎯 置中所有文字 */
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  position: relative;
+  animation: fadeIn 0.3s ease-out;
 }
 .modal .modal-content{
   display:flex; flex-direction:column;
@@ -347,74 +358,218 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .close{ background:transparent; border:0; font-size:20px; cursor:pointer; }
 /* 背景頁在 modal 開啟時不要捲動（可選） */
 .body-modal-open{ overflow:hidden; }
+/* 標題與描述 */
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+}
+.modal-desc {
+  font-size: 14px;
+  color: #666;
+  margin: 8px 0 20px;
+}
 
+/* 關閉按鈕 */
+.close {
+  position: absolute;
+  top: 12px; right: 16px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #888;
+  cursor: pointer;
+}
+.close:hover { color: #000; }
+
+/* 表單欄位 */
+.form-group {
+  margin-bottom: 20px;
+  text-align: center;  /* label 單獨靠左，輸入框保持置中 */
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;    /* 🎯 標籤靠左 */
+}
+.form-group input {
+  width: 50%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  transition: border-color 0.2s;
+  text-align: center;   /* 🎯 輸入框文字置中 */
+}
+.form-group input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* 按鈕區塊 */
+.modal-actions {
+  display: flex;
+  justify-content: center;  /* 🎯 按鈕置中 */
+  gap: 12px;
+}
+.btn-primary {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary:hover { background: #0056b3; }
+
+.btn-secondary {
+  background: #f1f1f1;
+  color: #333;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-secondary:hover { background: #ddd; }
+
+/* 動畫 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 🎯 手機版 RWD */
+@media (max-width: 480px) {
+  #driverAuthModal .modal-content {
+    width: 70%;
+    margin-top: 60%;
+  }
+  #driverAuthModal.btn-primary, .btn-secondary {
+    flex: 1;              /* 按鈕變成等寬 */
+    padding: 12px;
+  }
+  .modal-actions {
+    flex-direction: column; /* 🎯 手機版按鈕上下排列 */
+  }
+}
 /* ==========================================================================
    Join Modal：外觀微調（高度較矮、Header/Body/Footer 黏貼）
    ========================================================================== */
-#joinModal .modal-content{
-  width:min(520px,94vw);
-  max-height:min(88svh,620px);
-  margin:4svh auto;
-  border-radius:14px; overflow:hidden;
-  box-shadow:0 14px 34px rgba(0,0,0,.25);
-  background:#fff; display:flex; flex-direction:column;
-}
-/* Header（置中、較薄、sticky） */
-#joinModal .modal-header{
-  position:sticky; top:0; z-index:2;
-  display:flex; align-items:center; justify-content:center;
-  min-height:44px; padding:8px 16px; background:#fff; border-bottom:1px solid #eee;
-}
-#joinModal .modal-header .title{
-  font-size:16px; font-weight:700; color:#111827;
-  display:inline-flex; align-items:center; gap:8px;
-}
-#joinModal .modal-header .title .emoji{ font-size:18px; line-height:1; }
-/* 右上角關閉 */
-#joinModal .modal-header .close{
-  position:absolute; right:10px; top:8px;
-  width:28px; height:28px; border-radius:6px;
-  display:inline-grid; place-items:center;
-  font-size:18px; color:#6b7280; background:transparent;
-}
-#joinModal .modal-header .close:hover{ background:#f3f4f6; color:#111827; }
-/* Body 滾動 */
-#joinModal .modal-body{ flex:1 1 auto; overflow-y:auto; padding:12px 16px; }
-/* Footer 黏底 */
-#joinModal .modal-footer{
-  position:sticky; bottom:0; z-index:2;
-  display:flex; justify-content:flex-end; gap:8px;
-  padding:10px 16px; background:#fff; border-top:1px solid #eee;
-}
-#joinModal .btn-cancel, #joinModal .btn-submit{
-  border-radius:10px; padding:10px 18px; font-weight:700;
+/* Join Modal 外觀 */
+#joinModal .modal-content {
+  width: min(520px, 94vw);
+  max-height: min(88svh, 620px);
+  margin: 4svh auto;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(0,0,0,.25);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ==========================================================================
-   Join Modal：表單欄位（上方標籤、下方輸入框）
-   ========================================================================== */
-#joinModal .join-field{
-  display:flex; flex-direction:column; gap:6px; margin:12px 0;
+/* Header */
+#joinModal .modal-header {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 8px 16px;
+  background: #fff; border-bottom: 1px solid #eee;
 }
-#joinModal .join-field label{
-  display:block; font-weight:600; color:#1f2937; line-height:1.2;
+#joinModal .modal-header .title {
+  font-size: 16px; font-weight: 700; color: #111827;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+#joinModal .modal-header .title .emoji { font-size: 18px; }
+#joinModal .modal-header .close {
+  position: absolute; right: 10px; top: 8px;
+  width: 28px; height: 28px;
+  display: inline-grid; place-items: center;
+  font-size: 18px; color: #6b7280; background: transparent; border: none;
+  cursor: pointer; border-radius: 6px;
+}
+#joinModal .modal-header .close:hover { background: #f3f4f6; color: #111827; }
+
+/* Body */
+#joinModal .modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+/* Footer */
+#joinModal .modal-footer {
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 10px 16px; background: #fff;
+  border-top: 1px solid #eee;
+}
+#joinModal .btn-cancel, #joinModal .btn-submit {
+  border-radius: 10px; padding: 10px 18px;
+  font-weight: 700; font-size: 15px;
+  border: none; cursor: pointer;
+}
+#joinModal .btn-cancel { background: #f3f4f6; color: #333; }
+#joinModal .btn-cancel:hover { background: #ddd; }
+#joinModal .btn-submit { background: #3b82f6; color: #fff; }
+#joinModal .btn-submit:hover { background: #2563eb; }
+
+/* 表單欄位 */
+#joinModal .join-field {
+  display: flex; flex-direction: column;
+  gap: 6px; margin: 12px 0;
+  align-items: flex-start; /* 標籤靠左 */
+}
+#joinModal .join-field label {
+  font-weight: 600; color: #1f2937; line-height: 1.2;
 }
 #joinModal .join-field input,
 #joinModal .join-field select,
-#joinModal .join-field textarea{
-  width:50%;
-  padding:10px 12px; border:1px solid #d1d5db; border-radius:8px;
-  background:#fff; font-size:14px; line-height:1.25;
-  transition:border-color .2s, box-shadow .2s;
+#joinModal .join-field textarea {
+  width: 70%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: 14px; line-height: 1.25;
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s;
 }
 #joinModal .join-field input:focus,
 #joinModal .join-field select:focus,
-#joinModal .join-field textarea:focus{
-  outline:none; border-color:#3b82f6;
-  box-shadow:0 0 0 3px rgba(59,130,246,.15);
+#joinModal .join-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
 }
-/* 備註較高 */
-#joinModal textarea[name="note"]{ min-height:96px; }
+#joinModal textarea[name="note"] { min-height: 96px; }
+
+/* 手機優化 */
+@media (max-width: 480px) {
+  #joinModal .modal-content {
+    width: 80%; max-height: 90vh;
+  }
+  #joinModal .modal-footer {
+    flex-direction: column;
+  }
+  #joinModal .btn-cancel, #joinModal .btn-submit {
+    width: 100%;
+  }
+}
+  /* Join 表單欄位間距與按鈕高度 */
+  #joinModal .join-field{ margin:10px 0; gap:6px; }
+  .btn-submit, .btn-cancel{ min-height:44px; font-size:16px; }
+
+  /* JoinModal 再壓縮 header/邊距 */
+  #joinModal .modal-content{ max-height:min(92svh,640px); margin:3svh auto; }
+  #joinModal .modal-header{ min-height:40px; padding:6px 14px; }
+  #joinModal .modal-header .title{ font-size:15px; }
+  #joinModal .modal-body{ padding:10px 14px; }
+  #joinModal .modal-footer{ padding:8px 14px; }
 
 /* ==========================================================================
    返回頂端按鈕
@@ -493,17 +648,6 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 
   /* 通用 modal 寬度 */
   .modal .modal-content{ width:94vw; margin:4svh auto; }
-
-  /* Join 表單欄位間距與按鈕高度 */
-  #joinModal .join-field{ margin:10px 0; gap:6px; }
-  .btn-submit, .btn-cancel{ min-height:44px; font-size:16px; }
-
-  /* JoinModal 再壓縮 header/邊距 */
-  #joinModal .modal-content{ max-height:min(92svh,640px); margin:3svh auto; }
-  #joinModal .modal-header{ min-height:40px; padding:6px 14px; }
-  #joinModal .modal-header .title{ font-size:15px; }
-  #joinModal .modal-body{ padding:10px 14px; }
-  #joinModal .modal-footer{ padding:8px 14px; }
 
   /* 返回頂端位置 */
   #backToTop{ right:12px; bottom:16px; }
@@ -665,6 +809,9 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   #paxEditModal .modal-footer{ padding: 10px 14px; }
 }
 
+ #paxDelModal .btn-cancel{background:#d1d5db;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+ #paxDelModal .btn-delete{background:#dc2626;color:#fff;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+ #paxDelModal .btn-delete:hover{background:#b91c1c;}
 
 </style>
 
@@ -708,312 +855,45 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   <!-- 回到頂端 -->
   <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆</button>
 
- <script>
-/* ---------- 小工具 ---------- */
-function $id(id){ return document.getElementById(id); }
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-  return null;
-}
-function getFormCSRF() {
-  const el = document.querySelector('#driverAuthForm input[name="csrfmiddlewaretoken"]');
-  return el ? el.value : "";
-}
-function getCSRF() {
-  return getCookie("csrftoken") || getFormCSRF() || "";
-}
-function showToastSafe(msg, type) {
-  if (typeof showToast === "function") showToast(msg, type);
-  else alert(msg);
-}
-
-/* ---------- 管理授權 Modal ---------- */
-function openDriverModal(id){
-  const modal = $id("driverAuthModal");
-  const idEl  = $id("driverAuthId");
-  const pwdEl = $id("driverAuthPassword");
-  if(!modal || !idEl || !pwdEl){
-    alert("管理視窗元件缺失");
-    return;
-  }
-  idEl.value = id;
-  pwdEl.value = "";
-  modal.style.display = "block";
-  setTimeout(()=>pwdEl.focus(), 0);
-}
-window.closeDriverAuth = function(){
-  const modal = $id("driverAuthModal");
-  if(modal) modal.style.display = "none";
-};
-
-/* ---------- WebSocket 即時更新 ---------- */
-const socket = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws/find/"
-);
-socket.onopen  = () => console.log("✅ WebSocket 連線成功");
-socket.onclose = () => console.log("❌ WebSocket 已關閉");
-socket.onerror = (err) => console.error("⚠️ WebSocket 發生錯誤", err);
-
-socket.onmessage = function (event) {
-  try {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "update") {
-      if (data.passengers_html) {
-        const plist = $id("passenger-list");
-        if (plist) plist.innerHTML = data.passengers_html;
-      }
-      if (data.drivers_html) {
-        const dlist = $id("driver-list");
-        if (dlist) dlist.innerHTML = data.drivers_html;
-      }
-    }
-
-    if (data.type === "join_result") {
-      if (data.success) showToastSafe("✅ 成功加入乘客行程！", "success");
-      else showToastSafe("⚠️ 加入失敗：" + (data.message || "沒有可用的司機"), "error");
-    }
-  } catch (err) {
-    console.error("⚠️ 解析訊息失敗", err, event.data);
-  }
-};
-
-/* ---------- 事件委派：管理 / 參加 / 展開 ---------- */
-document.addEventListener("click", function (e) {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-
-  const action   = btn.dataset.action;
-  const driverId = btn.dataset.id;
-  if (!action || !driverId) return;
-
-  if (action === "manage") {
-    e.preventDefault();
-    openDriverModal(driverId);
-    return;
-  }
-
-  if (action === "join") {
-    e.preventDefault();
-    const joinModal = $id("joinModal");
-    const joinForm  = $id("joinForm");
-    if (joinModal && joinForm) {
-      joinForm.action = `/find/driver/${driverId}/join/`;
-      joinModal.style.display = "block";
-    }
-    return;
-  }
-
-  if (action === "toggle") {
-    e.preventDefault();
-    const details = $id("details-" + driverId);
-    const arrow   = $id("arrow-" + driverId) || btn;
-    if (!details) return;
-
-    const isOpen = details.classList.toggle("open");
-    arrow.classList.toggle("open", isOpen);
-    arrow.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    details.setAttribute("aria-hidden", isOpen ? "false" : "true");
-    return;
-  }
-});
-
-/* ---------- 供 WebSocket 管理更新（若有需要） ---------- */
-window.manageDriver = function (driverId) {
-  socket.send(JSON.stringify({ action: "driver_manage", driver_id: driverId }));
-};
-
-
-// 打開參加 Modal（你在 _driver_list.html 的「參加」按鈕要呼叫 openJoinModal(id)）
-  function openJoinModal(driverId){
-    const m = document.getElementById('joinModal');
-    const f = document.getElementById('joinForm');
-    // 後端用這個路由處理加入：/find/driver/<id>/join/
-    f.action = `/find/driver/${driverId}/join/`;
-    m.style.display = 'block';
-    document.body.classList.add('body-modal-open');
-    // 自動聚焦第一個欄位
-    setTimeout(() => {
-      const first = f.querySelector('input,select,textarea');
-      if (first) first.focus();
-    }, 0);
-  }
-
-  function closeJoinModal(){
-    document.getElementById('joinModal').style.display = 'none';
-    document.body.classList.remove('body-modal-open');
-  }
-  // 打開取消 Modal（你在乘客清單那邊放一顆「取消」按鈕呼叫 openCancelModal(pid)）
-  function openCancelModal(passengerId) {
-    const m = document.getElementById("cancelModal");
-    const f = document.getElementById("cancelForm");
-    document.getElementById("cancelPassengerId").value = passengerId;
-    // 後端路由：/find/passenger/<pid>/cancel/
-    f.action = `/find/passenger/${passengerId}/cancel/`;
-    m.style.display = "block";
-  }
-
-  //（可選）攔截 join/cancel 以 AJAX 送出，成功後關閉 modal + showToast
-  // 如果你要保留一般 POST 重新導向也 OK，這段就不必加。
-  (function enhanceJoinCancel() {
-    const joinForm   = document.getElementById("joinForm");
-    const cancelForm = document.getElementById("cancelForm");
-
-    async function ajaxSubmit(form, okMsg) {
-      const url  = form.action;
-      const body = new URLSearchParams(new FormData(form));
-      const res  = await fetch(url, {
-        method: "POST",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        body
-      });
-      let data = {};
-      try { data = await res.json(); } catch {}
-      if (res.ok && data.ok) {
-        if (typeof showToast === "function") showToast(okMsg || "成功", "success");
-        // 關 Modal
-        form.closest(".modal").style.display = "none";
-      } else {
-        const msg = (data && (data.error || data.detail)) || `失敗（${res.status}）`;
-        if (typeof showToast === "function") showToast(msg, "error");
-      }
-    }
-
-    if (joinForm) {
-      joinForm.addEventListener("submit", async function(e) {
-        // 直接用 AJAX；若想正常 POST 就把 preventDefault 拔掉
-        e.preventDefault();
-        await ajaxSubmit(joinForm, "✅ 已送出申請");
-      });
-    }
-    if (cancelForm) {
-      cancelForm.addEventListener("submit", async function(e) {
-        e.preventDefault();
-        await ajaxSubmit(cancelForm, "🗑️ 已取消");
-      });
-    }
-  })();
-
-
-</script>
-
-<script>
-/* ====== 工具 ====== */
-function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(";").shift();
-  return null;
-}
-function showToastSafe(msg, type) {
-  if (typeof showToast === "function") showToast(msg, type);
-  else alert(msg);
-}
-
-/* ====== 綁定授權表單（可重入） ====== */
-function bindDriverAuthForm() {
-  const form   = document.getElementById("driverAuthForm");
-  if (!form || form.dataset.bound === "1") return;
-
-  const idEl  = document.getElementById("driverAuthId");
-  const pwdEl = document.getElementById("driverAuthPassword");
-
-  function getFormCSRF() {
-    const el = form.querySelector('input[name="csrfmiddlewaretoken"]');
-    return el ? el.value : null;
-  }
-  function getCSRF() {
-    return getFormCSRF() || getCookie("csrftoken") || "";
-  }
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const driverId = idEl && idEl.value;
-    const password = pwdEl && pwdEl.value;
-
-    if (!driverId) { console.error("缺 driverId"); return; }
-    if (!password) { showToastSafe("請輸入密碼", "error"); pwdEl && pwdEl.focus(); return; }
-
-    const url = `/find/driver/${driverId}/manage/auth/`;
-
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          "X-CSRFToken": getCSRF(),
-          "X-Requested-With": "XMLHttpRequest"
-        },
-        body: new URLSearchParams({ password })
-      });
-
-      let data = {};
-      try { data = await res.json(); } catch (_) {}
-
-      console.log("[auth] status:", res.status, data);
-
-      if (res.ok && data && data.ok && data.url) {
-        showToastSafe("✅ 驗證成功，前往管理頁…", "success");
-        // 關掉 modal 再跳轉
-        const modal = document.getElementById("driverAuthModal");
-        if (modal) modal.style.display = "none";
-        window.location.href = data.url;
-      } else {
-        const msg = (data && (data.error || data.detail)) || `驗證失敗 (HTTP ${res.status})`;
-        showToastSafe(msg, "error");
-        pwdEl && pwdEl.focus();
-      }
-    } catch (err) {
-      console.error(err);
-      showToastSafe("伺服器錯誤，稍後再試", "error");
-    }
-  });
-
-  form.dataset.bound = "1";
-}
-
-/* ====== 開關 Modal ====== */
-window.openDriverModal = function (driverId) {
-  const idEl  = document.getElementById("driverAuthId");
-  const pwdEl = document.getElementById("driverAuthPassword");
-  const modal = document.getElementById("driverAuthModal");
-  if (!idEl || !pwdEl || !modal) { alert("管理視窗元件缺失"); return; }
-
-  idEl.value = driverId;
-  pwdEl.value = "";
-  modal.style.display = "block";
-  // 確保此時也已綁到 submit（避免先前沒綁上）
-  bindDriverAuthForm();
-  setTimeout(() => pwdEl.focus(), 0);
-};
-window.closeDriverAuth = function () {
-  const modal = document.getElementById("driverAuthModal");
-  if (modal) modal.style.display = "none";
-};
-
-/* 首次載入時綁一次（如果 script 在 body 尾端，這一步就能綁上） */
-document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
-</script>
-
-
-
 <!-- 司機管理授權 Modal -->
 <div id="driverAuthModal" class="modal" style="display:none;">
   <div class="modal-content">
     <span class="close" onclick="closeDriverAuth()">&times;</span>
-    <h3>🔐 管理授權</h3>
+    <h3 class="modal-title">🔐 管理授權</h3>
+    <p class="modal-desc">請輸入管理密碼以繼續</p>
     <form id="driverAuthForm" method="POST">
-  {% csrf_token %}
-  <input type="hidden" id="driverAuthId" value="">
-  <input id="driverAuthPassword" type="password" name="password" required>
-  <button type="submit">確認</button>
-</form>
+      {% csrf_token %}
+      <input type="hidden" id="driverAuthId" value="">
+      <div class="form-group">
+        <label for="driverAuthPassword">管理密碼</label>
+        <input id="driverAuthPassword" type="password" name="password" required placeholder="輸入管理密碼">
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn-primary">確認</button>
+        <button type="button" class="btn-secondary" onclick="closeDriverAuth()">取消</button>
+      </div>
+    </form>
   </div>
 </div>
+<!-- 刪除司機 Modal -->
+<div id="deleteDriverModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:400px;text-align:center;">
+    <h3 style="color:#b91c1c;">⚠️ 確認刪除</h3>
+    <p>確定要刪除此司機嗎？<br>此動作會解除所有乘客關聯，且無法復原。</p>
+    <div style="margin-top:20px;display:flex;justify-content:center;gap:12px;">
+      <button type="button" class="btn-cancel" onclick="closeDeleteDriver()">取消</button>
+      <button type="button" class="btn-delete" id="confirmDeleteDriver">刪除</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .btn-cancel{background:#d1d5db;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+  .btn-delete{background:#dc2626;color:#fff;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+  .btn-delete:hover{background:#b91c1c;}
+</style>
+
+
 
 <!-- Toast 容器 -->
 <div id="toast-container" style="
@@ -1051,12 +931,12 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
 
         <div class="join-field">
           <label>Email <span class="muted">(不公開，用於媒合通知)</span></label>
-          <input type="email" name="email" placeholder="可留空">
+          <input type="email" name="email" placeholder="選填">
         </div>
 
         <div class="join-field">
-          <label>聯絡方式</label>
-          <input type="text" name="contact" placeholder="LINE / IG / Phone" required>
+          <label>聯絡方式(選填,未填請自行連絡司機)</label>
+          <input type="text" name="contact" placeholder="LINE / IG / Phone 擇一">
         </div>
 
         <div class="join-field">
@@ -1065,8 +945,8 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
         </div>
 
         <div class="join-field">
-          <label>願付金額 <span class="muted">（可留空，單位 NTS）</span></label>
-          <input type="number" name="willing_to_pay" min="0" step="1" placeholder="可留空">
+          <label>願付金額 <span class="muted">（選填，單位 NTS）</span></label>
+          <input type="number" name="willing_to_pay" min="0" step="1" placeholder="選填">
         </div>
 
         <!-- 上車地點（縣市下拉 + 自填） -->
@@ -1077,6 +957,11 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
           <select id="join-pickup-select">
             <option value="">請選擇縣市</option>
             <option value="其他">其他</option>
+            <option value="花蓮縣光復鄉">花蓮縣光復鄉</option>
+            <option value="花蓮縣光復車站以外火車站">花蓮縣光復車站以外火車站</option>
+            <option value="花蓮縣光復車站">花蓮縣光復車站</option>
+            <option value="光復鄉糖廠">光復鄉糖廠</option>
+            <option value="需清淤地區">需清淤地區</option>
             <option value="台北市">台北市</option>
             <option value="新北市">新北市</option>
             <option value="基隆市">基隆市</option>
@@ -1107,13 +992,22 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
           <!-- 真正提交用（有 name） -->
           <input type="hidden" id="join-pickup" name="departure">
         </div>
-
+        
+        
 
         <div class="join-field">
           <label>目的地</label>
           <input type="text" name="destination">
         </div>
 
+
+
+        <!-- 出發日期（必填） -->
+        <div class="join-field">
+          <label for="join-date">出發日期</label>
+          <input type="date" id="join-date" name="date" required>
+        </div>
+        <!-- 是否一起回程 -->
         <div class="join-field">
           <label>是否一起回程？</label>
           <select name="together_return" id="join-together">
@@ -1122,12 +1016,12 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
             <option value="false">否</option>
           </select>
         </div>
-
-                <!-- 回程日期（可留空） -->
+        <!-- 回程日期 -->
         <div class="join-field" id="returnField" style="display:none;">
-          <label for="join-return">回程日期（可留空）</label>
-          <input type="date" id="join-return" name="return_date" placeholder="可留空">
+          <label for="join-return">回程日期</label>
+          <input type="date" id="join-return" name="return_date">
         </div>
+
 
         <div class="join-field">
           <label>管理密碼 <span class="muted">（建議 4 碼，供取消/編輯用，預設0000）</span></label>
@@ -1233,7 +1127,7 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
         </div>
 
         <div class="join-field">
-          <label>回程日期（可留空）</label>
+          <label>回程日期（選填）</label>
           <input type="date" id="paxReturn" name="return_date">
         </div>
 
@@ -1278,391 +1172,98 @@ document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
 </div>
 
 
+
 <script>
-  // 這兩個會在 openJoinModal 時被設定
-let currentDriverDate = "";
-let currentDriverReturn = "";
+/* =========================================================================
+ * 0) 公用小工具（單一來源）
+ * ========================================================================= */
+(function initUtils(){
+  if (window.__UTILS_READY__) return;
+  window.__UTILS_READY__ = true;
 
-// 快取元素
-const togetherSel  = document.getElementById("join-together");
-const departInput  = document.getElementById("join-date");
-const returnWrap   = document.getElementById("returnField");
-const returnInput  = document.getElementById("join-return");
-// 切換「是否一起回程？」時的行為
-function handleTogetherChange() {
-  const v = togetherSel ? togetherSel.value : "";
+  window.$id = (id) => document.getElementById(id);
 
-  // 同步最小回程日：不可早於出發日或司機出發日
-  if (returnInput) {
-    // 以出發日為優先，其次用司機的出發日（備援）
-    const minBase = (departInput && departInput.value) || currentDriverDate || "";
-    returnInput.min = minBase;
-  }
-
-  if (v === "false") {
-    // 否：手動選擇 → 顯示、可編輯
-    if (returnWrap) returnWrap.style.display = "block";
-    if (returnInput) {
-      returnInput.readOnly = false; // 不要 disabled，避免不送值
-      if (!returnInput.value && returnInput.min) {
-        returnInput.value = returnInput.min; // 幫個忙帶出發日當起點
-      }
-    }
-  } else if (v === "true") {
-    // 是：跟司機 → 將司機回程日期帶入，欄位唯讀（有值才顯示）
-    const hasReturn = !!currentDriverReturn;
-    if (returnWrap) returnWrap.style.display = hasReturn ? "block" : "none";
-
-    if (returnInput) {
-      returnInput.readOnly = true;
-      returnInput.value = hasReturn ? currentDriverReturn : "";
-    }
-  } else {
-    // 未指定：隱藏 & 清空
-    if (returnWrap) returnWrap.style.display = "none";
-    if (returnInput) {
-      returnInput.readOnly = false;
-      returnInput.value = "";
-    }
-  }
-}
-
-// 出發日變更時，更新回程最小日
-if (departInput) {
-  departInput.addEventListener("change", () => {
-    if (returnInput) {
-      const minBase = departInput.value || currentDriverDate || "";
-      returnInput.min = minBase;
-      if (returnInput.value && minBase && returnInput.value < minBase) {
-        returnInput.value = ""; // 無效就清掉
-      }
-    }
-  });
-}
-
-// 打開 Join Modal（事件委派那邊呼叫時要把 data 傳進來）
-function openJoinModal(driverId, driverDate = "", driverReturn = "") {
-  currentDriverDate = driverDate || "";
-  currentDriverReturn = driverReturn || "";
-
-  // 將出發日預設到司機出發日（若你想預設）
-  if (departInput && currentDriverDate) {
-    departInput.value = currentDriverDate;
-  }
-
-  // 重置 together 回選單 → 未指定
-  if (togetherSel) togetherSel.value = "";
-
-  // 回程欄位重置
-  if (returnInput) {
-    returnInput.value = "";
-    returnInput.readOnly = false;
-  }
-  if (returnWrap) returnWrap.style.display = "none";
-
-  // 把最小日先設好
-  if (returnInput) {
-    returnInput.min = (departInput && departInput.value) || currentDriverDate || "";
-  }
-
-  // 你的開啟 modal 既有程式（保持）
-  const joinModal = document.getElementById("joinModal");
-  const joinForm  = document.getElementById("joinForm");
-  if (joinForm) joinForm.action = `/find/driver/${driverId}/join/`;
-  if (joinModal) joinModal.style.display = "block";
-}
-
-// 綁定 select 事件
-if (togetherSel) {
-  togetherSel.addEventListener("change", handleTogetherChange);
-}
-
-// 事件委派的 join 分支，記得把 data-date / data-return 傳進來
-document.addEventListener("click", function (e) {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-
-  const action   = btn.dataset.action;
-  const driverId = btn.dataset.id;
-
-  if (action === "join") {
-    e.preventDefault();
-    const dDate   = btn.dataset.date   || ""; // 司機出發日 YYYY-MM-DD
-    const dReturn = btn.dataset.return || ""; // 司機回程日（可能空）
-    openJoinModal(driverId, dDate, dReturn);
-  }
-});
-
-(function () {
-  
-
-  if (!departInput || !returnInput) return;
-
-  function syncReturnMin() {
-    // 回程最早不得早於出發
-    returnInput.min = departInput.value || "";
-    if (returnInput.value && departInput.value && returnInput.value < departInput.value) {
-      returnInput.value = "";
-    }
-  }
-
-  // 打開 modal 時可呼叫一次，確保狀態乾淨
-  window.resetReturnDate = function () {
-    if (returnInput) returnInput.value = "";
-    syncReturnMin();
+  window.getCookie = function(name){
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    return parts.length === 2 ? parts.pop().split(';').shift() : null;
   };
 
-  departInput.addEventListener("change", syncReturnMin);
-})();
-</script>
-
-<script>
-(function () {
-  // 這兩個會在 openJoinModal 時被設定
-  const sel    = document.getElementById("join-pickup-select");
-  const custom = document.getElementById("join-pickup-custom");
-  const hidden = document.getElementById("join-pickup"); // name="departure"
-
-  if (!sel || !custom || !hidden) return;
-
-  function syncHidden() {
-    if (sel.value === "其他") {
-      hidden.value = (custom.value || "").trim();
-    } else {
-      hidden.value = sel.value || "";
-    }
-  }
-
-  sel.addEventListener("change", () => {
-    if (sel.value === "其他") {
-      custom.style.display = "block";
-      custom.focus();
-    } else {
-      custom.style.display = "none";
-      custom.value = "";
-    }
-    syncHidden();
-  });
-
-  custom.addEventListener("input", syncHidden);
-
-  // 保險：送出前再次同步一次
-  const joinForm = document.getElementById("joinForm");
-  if (joinForm) {
-    joinForm.addEventListener("submit", () => {
-      syncHidden();
-    });
-  }
-
-  // 每次打開 Modal 也重置一下（你的 openJoinModal 裡面呼叫）
-  window.resetPickupField = function () {
-    sel.value = "";
-    custom.value = "";
-    custom.style.display = "none";
-    hidden.value = "";
+  // 從任一表單或 cookie 取 CSRF（優先表單）
+  window.getCSRF = function(form){
+    const el = (form || document).querySelector('input[name="csrfmiddlewaretoken"]');
+    return (el && el.value) || getCookie('csrftoken') || '';
   };
-})();
-</script>
 
-<script>
-// ===== 共用小工具 =====
-function getCSRF(){
-  const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
-  return el ? el.value : '';
-}
-function toast(msg, type="info"){
-  if (typeof showToast === "function") showToast(msg, type);
-  else alert(msg);
-}
+  window.showToastSafe = function(msg, type){
+    if (typeof showToast === 'function') showToast(msg, type);
+    else alert(msg);
+  };
 
-// ===== 狀態：下一步動作（'edit' | 'delete'）=====
-let __paxNextAction = null;
-
-// ===== 密碼 Modal =====
-function openPaxAuth(pid){
-  document.getElementById("paxAuthId").value = pid;
-  document.getElementById("paxAuthPassword").value = "";
-  document.getElementById("paxAuthModal").style.display = "block";
-  setTimeout(()=>document.getElementById("paxAuthPassword").focus(), 0);
-}
-function closePaxAuth(){ document.getElementById("paxAuthModal").style.display = "none"; }
-
-// ===== 編輯 Modal =====
-function openPaxEdit(){ document.getElementById("paxEditModal").style.display = "block"; }
-function closePaxEdit(){ document.getElementById("paxEditModal").style.display = "none"; }
-
-// ===== 事件委派：編輯 / 刪除 =====
-document.addEventListener("click", function(e){
-  // 編輯
-  const editBtn = e.target.closest("[data-pax-edit]");
-  if (editBtn){
-    e.preventDefault();
-    __paxNextAction = "edit";
-    openPaxAuth(editBtn.dataset.id);
-    return;
-  }
-  // 刪除
-  const delBtn = e.target.closest("[data-pax-del]");
-  if (delBtn){
-    e.preventDefault();
-    __paxNextAction = "delete";
-    openPaxAuth(delBtn.dataset.id);
-    return;
-  }
-});
-
-// ===== 送密碼 → 驗證 → 依 nextAction 執行 =====
-async function submitPaxAuth(){
-  const pid = document.getElementById("paxAuthId").value;
-  const pwd = document.getElementById("paxAuthPassword").value;
-  if(!pid || !pwd){ toast("請輸入密碼", "error"); return; }
-
-  try{
-    const res = await fetch(`/find/pax/${pid}/auth/`, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": getCSRF(),
-        "X-Requested-With": "XMLHttpRequest",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
-      body: new URLSearchParams({ password: pwd })
-    });
+  // 安全 JSON 取回：res 失敗或非 JSON 不拋例外
+  window.jsonFetch = async function(url, options = {}){
+    const res = await fetch(url, options);
     let data = {};
-    try{ data = await res.json(); }catch(_){}
-    if(!res.ok || !data.ok){ toast(data.error || "驗證失敗", "error"); return; }
+    try { data = await res.json(); } catch(_) {}
+    return { res, data };
+  };
+})();
 
-    closePaxAuth();
+/* =========================================================================
+ * 1) WebSocket 初始化（單一來源）+ 事件綁定（使用 addEventListener）
+ *    - 支援全量 passengers_html
+ *    - 支援單卡片 driver_partial → patchDriverCard()
+ * ========================================================================= */
+(function initSocket(){
+  if (!window.socket) {
+    window.socket = new WebSocket(
+      (location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/find/'
+    );
+  }
+  socket.addEventListener('open',  () => console.log('✅ WebSocket 連線成功'));
+  socket.addEventListener('close', () => console.log('❌ WebSocket 已關閉'));
+  socket.addEventListener('error', (err) => console.error('⚠️ WebSocket 發生錯誤', err));
 
-    if (__paxNextAction === "delete"){
-      // 走刪除流程
-      await doPaxDelete(pid);
+  socket.addEventListener('message', (event) => {
+    let data;
+    try { data = JSON.parse(event.data); } catch { return; }
+
+    // 單一卡片更新
+    if (data.type === 'driver_partial') {
+      // 期待 payload: { type, driver_id, driver_html, active }
+      patchDriverCard(data.driver_id, data.driver_html, data.active);
       return;
     }
 
-    // 走編輯流程：抓資料打開 Modal
-    const res2 = await fetch(`/find/pax/${pid}/get/`, {
-      headers: { "X-Requested-With":"XMLHttpRequest" }
-    });
-    const data2 = await res2.json();
-    if(!res2.ok || !data2.ok){ toast(data2.error || "讀取資料失敗", "error"); return; }
-
-    const p = data2.p;
-    document.getElementById("paxEditId").value = p.id;
-    document.getElementById("paxName").value = p.passenger_name || "";
-    document.getElementById("paxGender").value = p.gender || "X";
-    document.getElementById("paxEmail").value = p.email || "";
-    document.getElementById("paxContact").value = p.contact || "";
-    document.getElementById("paxSeats").value = p.seats_needed || 1;
-    document.getElementById("paxPay").value = p.willing_to_pay || "";
-    document.getElementById("paxDeparture").value = p.departure || "";
-    document.getElementById("paxDestination").value = p.destination || "";
-    document.getElementById("paxDate").value = p.date || "";
-    document.getElementById("paxReturn").value = p.return_date || "";
-    document.getElementById("paxTogether").value = p.together_return || "";
-    document.getElementById("paxNote").value = p.note || "";
-
-    openPaxEdit();
-  }catch(err){
-    console.error(err);
-    toast("伺服器錯誤，稍後再試", "error");
-  }finally{
-    __paxNextAction = null;
-  }
-}
-
-// ===== 儲存編輯 =====
-async function submitPaxEdit(){
-  const form = document.getElementById("paxEditForm");
-  const pid  = document.getElementById("paxEditId").value;
-  const body = new URLSearchParams(new FormData(form));
-
-  try{
-    const res = await fetch(`/find/pax/${pid}/update/`, {
-      method: "POST",
-      headers: {
-        "X-CSRFToken": getCSRF(),
-        "X-Requested-With": "XMLHttpRequest",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
-      body
-    });
-    const data = await res.json();
-    if(!res.ok || !data.ok){
-      toast(data.error || "更新失敗", "error");
-      return;
-    }
-    toast("✅ 已更新乘客資料", "success");
-    closePaxEdit();
-    // 這裡可觸發你既有 WebSocket 即時刷新；或暫時用重整
-    // location.reload();
-  }catch(err){
-    console.error(err);
-    toast("伺服器錯誤，稍後再試", "error");
-  }
-}
-
-// ===== 刪除（已授權） =====
-async function doPaxDelete(pid){
-  if (!confirm("確定要刪除這位乘客嗎？此動作無法復原。")) return;
-
-  try{
-        const res = await fetch(`/find/pax/${pid}/delete/`, {   // ← 注意最後的斜線
-      method: "POST",
-      headers: {
-        "X-CSRFToken": getCSRF(),
-        "X-Requested-With": "XMLHttpRequest",
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      },
-      body: new URLSearchParams()
-    });
-    const data = await res.json();
-    if(!res.ok || !data.ok){
-      toast(data.error || "刪除失敗", "error");
-      return;
-    }
-    toast("🗑️ 已刪除乘客", "success");
-    // 這裡建議觸發你目前的 WS 重新渲染；或先用重整
-    // location.reload();
-  }catch(err){
-    console.error(err);
-    toast("伺服器錯誤，稍後再試", "error");
-  }
-}
-</script>
-
-<script>
-  (function () {
-    const togetherSel = document.getElementById('paxTogether');
-    const returnInput = document.getElementById('paxReturn');
-
-    function syncReturnState() {
-      const val = togetherSel.value;
-      if (val === 'true') {
-        returnInput.value = '';
-        returnInput.disabled = true;
-        returnInput.placeholder = '與司機回程日期相同';
-        returnInput.classList.add('is-disabled');
-      } else {
-        returnInput.disabled = false;
-        returnInput.placeholder = '';
-        returnInput.classList.remove('is-disabled');
+    // 全量更新（保留乘客清單）
+    if (data.type === 'update') {
+      if (data.passengers_html) {
+        const plist = $id('passenger-list');
+        if (plist) plist.innerHTML = data.passengers_html;
       }
+      // drivers_html 建議改走 driver_partial；如仍傳入，可視需求處理
+      return;
     }
-    if (togetherSel && returnInput) {
-      togetherSel.addEventListener('change', syncReturnState);
-      // 打開 modal 時可再呼叫一次 syncReturnState()
+
+    if (data.type === 'join_result') {
+      if (data.success) showToastSafe('✅ 成功加入乘客行程！', 'success');
+      else showToastSafe('⚠️ 加入失敗：' + (data.message || '沒有可用的司機'), 'error');
     }
-  })();
+  });
+})();
 
-
-  // 記住目前展開的 driver ids
-function snapshotOpenDrivers() {
-  return Array.from(document.querySelectorAll('#driver-list .details.open'))
+/* =========================================================================
+ * 2) Driver 列表：全量替換（保留展開與卷軸） & 單卡片替換
+ * ========================================================================= */
+// 記住目前展開的 driver ids
+function snapshotOpenDrivers () {
+  return Array
+    .from(document.querySelectorAll('#driver-list .details.open'))
     .map(el => el.id.replace('details-', ''));
 }
-
-// 將展開狀態還原回去（也順便恢復箭頭 aria）
-function restoreOpenDrivers(openIds) {
+// 還原展開狀態（包含箭頭 aria）
+function restoreOpenDrivers (openIds) {
+  if (!Array.isArray(openIds) || openIds.length === 0) return;
   openIds.forEach(id => {
     const details = document.getElementById('details-' + id);
     const arrow   = document.getElementById('arrow-' + id);
@@ -1676,129 +1277,625 @@ function restoreOpenDrivers(openIds) {
     }
   });
 }
-function replaceDriverListSafely(newHtml) {
+// 全量替換 driver list
+function replaceDriverListSafely (newHtml) {
   const list = document.getElementById('driver-list');
-  if (!list) return;
-
-  const openIds   = snapshotOpenDrivers();   // 1) 記住哪些是展開的
-  const scrollY   = window.scrollY;          // 2) 記住捲動位置（可選）
-
-  list.innerHTML = newHtml;                  // 3) 替換 HTML
-
-  restoreOpenDrivers(openIds);               // 4) 還原展開的卡片
-  window.scrollTo(0, scrollY);               // 5) 還原捲動（可選）
+  if (!list || typeof newHtml !== 'string') return;
+  const openIds     = snapshotOpenDrivers();
+  const prevScrollY = window.scrollY;
+  list.innerHTML = newHtml;
+  restoreOpenDrivers(openIds);
+  window.scrollTo(0, prevScrollY);
 }
-
-// 如果你同時會更新乘客清單：
-function replaceLists(data) {
-  if (data.drivers_html) {
-    replaceDriverListSafely(data.drivers_html);
-  }
-  if (data.passengers_html) {
+// 同時處理 drivers / passengers
+function replaceLists (data) {
+  if (!data || typeof data !== 'object') return;
+  if (typeof data.drivers_html === 'string') replaceDriverListSafely(data.drivers_html);
+  if (typeof data.passengers_html === 'string') {
     const p = document.getElementById('passenger-list');
     if (p) p.innerHTML = data.passengers_html;
   }
 }
 
-</script>
+// 取得卡片狀態
+function snapshotCardState(li) {
+  if (!li) return null;
+  const panel    = li.querySelector('.details');
+  if (!panel) return { open: false, scrollP: 0, scrollA: 0 };
+  const pending  = panel.querySelector('.pending-scroll');
+  const accepted = panel.querySelector('.accepted-scroll');
+  return {
+    open   : panel.classList.contains('open'),
+    scrollP: pending  ? pending.scrollTop  : 0,
+    scrollA: accepted ? accepted.scrollTop : 0
+  };
+}
+// 還原卡片狀態
+function restoreCardState(li, state) {
+  if (!li || !state) return;
+  const panel = li.querySelector('.details');
+  const arrow = li.querySelector('.arrow');
+  if (state.open && panel) {
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    if (arrow) {
+      arrow.classList.add('open');
+      arrow.setAttribute('aria-expanded', 'true');
+    }
+  }
+  const pending  = li.querySelector('.pending-scroll');
+  const accepted = li.querySelector('.accepted-scroll');
+  if (pending)  pending.scrollTop  = state.scrollP || 0;
+  if (accepted) accepted.scrollTop = state.scrollA || 0;
+}
+// 單一卡片替換 / 附加 / 移除
+function patchDriverCard(driverId, driverHTML, active = true) {
+  const list = document.getElementById('driver-list');
+  if (!list || !driverId || typeof driverHTML !== 'string') return;
+  const selector = `li[data-driver="${CSS.escape(String(driverId))}"]`;
+  const oldLi = list.querySelector(selector);
 
-<script>
-  // 取得指定卡片的「展開狀態與卷軸」
-  function snapshotCardState(li) {
-    if (!li) return null;
-    const panel = li.querySelector('.details');
-    if (!panel) return null;
-    const isOpen = panel.classList.contains('open');
-    const pending = panel.querySelector('.pending-scroll');
-    const accepted = panel.querySelector('.accepted-scroll');
+  // 不存在：active=true → append
+  if (!oldLi) {
+    if (!active) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = driverHTML.trim();
+    const newLi = tmp.querySelector('li') || tmp.firstElementChild;
+    if (newLi) list.appendChild(newLi);
+    return;
+  }
+  // 下架：移除
+  if (!active) { oldLi.remove(); return; }
+
+  const state = snapshotCardState(oldLi);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = driverHTML.trim();
+  const newLi = tmp.querySelector('li') || tmp.firstElementChild;
+  if (!newLi) return;
+  oldLi.replaceWith(newLi);
+  restoreCardState(newLi, state);
+}
+
+/* =========================================================================
+ * 3) Driver 管理授權（密碼驗證 → 成功跳轉）
+ *    - openDriverModal(driverId) / closeDriverAuth()
+ * ========================================================================= */
+(function initDriverAuth(){
+  function bindDriverAuthForm() {
+    const form = $id("driverAuthForm");
+    if (!form || form.dataset.bound === "1") return;
+
+    const idEl  = $id("driverAuthId");
+    const pwdEl = $id("driverAuthPassword");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const driverId = idEl && idEl.value;
+      const password = pwdEl && pwdEl.value;
+      if (!driverId) { console.error("缺 driverId"); return; }
+      if (!password) { showToastSafe("請輸入密碼", "error"); pwdEl && pwdEl.focus(); return; }
+
+      const btn = form.querySelector('[type="submit"]');
+      try {
+        if (btn) btn.disabled = true;
+        const { res, data } = await jsonFetch(`/find/driver/${driverId}/manage/auth/`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            "X-CSRFToken": getCSRF(form),
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new URLSearchParams({ password }),
+        });
+
+        if (res.ok && data && data.ok && data.url) {
+          showToastSafe("✅ 驗證成功，前往管理頁…", "success");
+          closeDriverAuth();
+          window.location.href = data.url;
+        } else {
+          const msg = (data && (data.error || data.detail)) || `驗證失敗 (HTTP ${res.status})`;
+          showToastSafe(msg, "error");
+          pwdEl && pwdEl.focus();
+        }
+      } catch (err) {
+        console.error(err);
+        showToastSafe("伺服器錯誤，稍後再試", "error");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    form.dataset.bound = "1";
+  }
+
+  window.openDriverModal = function (driverId) {
+    const idEl  = $id("driverAuthId");
+    const pwdEl = $id("driverAuthPassword");
+    const modal = $id("driverAuthModal");
+    if (!idEl || !pwdEl || !modal) { alert("管理視窗元件缺失"); return; }
+    idEl.value = driverId;
+    pwdEl.value = "";
+    modal.style.display = "block";
+    bindDriverAuthForm();
+    setTimeout(() => pwdEl.focus(), 0);
+  };
+  window.closeDriverAuth = function () {
+    const modal = $id("driverAuthModal");
+    if (modal) modal.style.display = "none";
+  };
+  document.addEventListener("DOMContentLoaded", bindDriverAuthForm);
+})();
+
+/* =========================================================================
+ * 4) Join / Cancel Modal 開關 + 可選 AJAX 送出
+ *    - openJoinModal(driverId) / closeJoinModal()
+ *    - openCancelModal(passengerId)
+ * ========================================================================= */
+function openJoinModal(driverId){
+  const m = $id('joinModal');
+  const f = $id('joinForm');
+  if (!m || !f) return;
+  f.action = `/find/driver/${driverId}/join/`;
+  m.style.display = 'block';
+  document.body.classList.add('body-modal-open');
+  setTimeout(() => {
+    const first = f.querySelector('input,select,textarea');
+    if (first) first.focus();
+  }, 0);
+}
+function closeJoinModal(){
+  const m = $id('joinModal');
+  if (m) m.style.display = 'none';
+  document.body.classList.remove('body-modal-open');
+}
+function openCancelModal(passengerId){
+  const m = $id('cancelModal');
+  const f = $id('cancelForm');
+  const hidden = $id('cancelPassengerId');
+  if (!m || !f || !hidden) return;
+  hidden.value = passengerId;
+  f.action = `/find/passenger/${passengerId}/cancel/`;
+  m.style.display = 'block';
+}
+
+// 可選：把 join/cancel 攔截成 AJAX
+(function enhanceJoinCancel(){
+  const joinForm   = $id('joinForm');
+  const cancelForm = $id('cancelForm');
+
+  async function ajaxSubmit(form, okMsg){
+    const body = new URLSearchParams(new FormData(form));
+    const { res, data } = await jsonFetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body
+    });
+    if (res.ok && data.ok) {
+      showToastSafe(okMsg || '成功', 'success');
+      const modal = form.closest('.modal');
+      if (modal) modal.style.display = 'none';
+    } else {
+      const msg = (data && (data.error || data.detail)) || `失敗（${res.status}）`;
+      showToastSafe(msg, 'error');
+    }
+  }
+
+  if (joinForm) {
+    joinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();             // 要走同步 POST 的話，移除此行
+      await ajaxSubmit(joinForm, '✅ 已送出申請');
+    });
+  }
+  if (cancelForm) {
+    cancelForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await ajaxSubmit(cancelForm, '🗑️ 已取消');
+    });
+  }
+})();
+
+/* =========================================================================
+ * 5) Join Modal 行為（帶入司機日期、控制回程欄位、最小日期限制）
+ *    - openJoinModal(driverId, driverDate?, driverReturn?)
+ *    - resetReturnDate()（可選）
+ * ========================================================================= */
+(function joinModalBehavior(){
+  let currentDriverDate   = "";
+  let currentDriverReturn = "";
+
+  function grabJoinEls() {
     return {
-      open: isOpen,
-      scrollP: pending ? pending.scrollTop : 0,
-      scrollA: accepted ? accepted.scrollTop : 0
+      togetherSel: $id("join-together"),
+      departInput: $id("join-date"),
+      returnWrap : $id("returnField"),
+      returnInput: $id("join-return"),
+      joinModal  : $id("joinModal"),
+      joinForm   : $id("joinForm"),
     };
   }
 
-  // 把狀態還原回新的卡片
-  function restoreCardState(li, state) {
-    if (!li || !state) return;
-    const panel = li.querySelector('.details');
-    const arrow = li.querySelector('.arrow');
-    if (state.open && panel) {
-      panel.classList.add('open');
-      panel.setAttribute('aria-hidden','false');
-      if (arrow) {
-        arrow.classList.add('open');
-        arrow.setAttribute('aria-expanded','true');
-      }
+  function handleTogetherChange() {
+    const { togetherSel, departInput, returnWrap, returnInput } = grabJoinEls();
+    const v = togetherSel ? togetherSel.value : "";
+    if (returnInput) {
+      const minBase = (departInput && departInput.value) || currentDriverDate || "";
+      returnInput.min = minBase;
     }
-    const pending = li.querySelector('.pending-scroll');
-    const accepted = li.querySelector('.accepted-scroll');
-    if (pending) pending.scrollTop = state.scrollP || 0;
-    if (accepted) accepted.scrollTop = state.scrollA || 0;
+    if (v === "false") {
+      if (returnWrap) returnWrap.style.display = "block";
+      if (returnInput) {
+        returnInput.readOnly = false;
+        if (!returnInput.value && returnInput.min) returnInput.value = returnInput.min;
+      }
+    } else if (v === "true") {
+      const hasReturn = !!currentDriverReturn;
+      if (returnWrap) returnWrap.style.display = hasReturn ? "block" : "none";
+      if (returnInput) {
+        returnInput.readOnly = true;
+        returnInput.value = hasReturn ? currentDriverReturn : "";
+      }
+    } else {
+      if (returnWrap) returnWrap.style.display = "none";
+      if (returnInput) { returnInput.readOnly = false; returnInput.value = ""; }
+    }
   }
 
-  // 單一卡片更新：用新 html 替換 li[data-driver="{id}"]
-  function patchDriverCard(driverId, driverHTML, active = true) {
-    const list = document.getElementById('driver-list');
-    if (!list) return;
-
-    const oldLi = list.querySelector(`li[data-driver="${driverId}"]`);
-
-    // 若卡片不存在且 active=true，就 append；若 active=false 並不存在就算了
-    if (!oldLi) {
-      if (!active) return;
-      const tmp = document.createElement('div');
-      tmp.innerHTML = driverHTML.trim();
-      const newLi = tmp.firstElementChild;
-      if (newLi) list.appendChild(newLi);
-      return;
+  function syncReturnMin() {
+    const { departInput, returnInput } = grabJoinEls();
+    if (!departInput || !returnInput) return;
+    returnInput.min = departInput.value || currentDriverDate || "";
+    if (returnInput.value && departInput.value && returnInput.value < departInput.value) {
+      returnInput.value = "";
     }
-
-    // 若這張卡片被下架（active=false）→ 直接移除
-    if (!active) {
-      oldLi.remove();
-      return;
-    }
-
-    // 記錄展開與卷軸狀態
-    const state = snapshotCardState(oldLi);
-
-    // 用新 html 替換整張卡片
-    const tmp = document.createElement('div');
-    tmp.innerHTML = driverHTML.trim();
-    const newLi = tmp.firstElementChild;
-    if (!newLi) return;
-
-    oldLi.replaceWith(newLi);
-
-    // 還原展開/卷軸
-    restoreCardState(newLi, state);
   }
 
-  // ---- WebSocket 收訊處理 ----
-  socket.onmessage = function (event) {
-    try {
-      const data = JSON.parse(event.data);
-
-      // 只更新單一卡片
-      if (data.type === 'driver_partial') {
-        patchDriverCard(data.driver_id, data.driver_html, data.active);
-        return;
-      }
-
-      // 你原本的其他事件（像 join_result / 全量 passengers_html 等）照舊
-      if (data.type === "update") {
-        if (data.passengers_html) {
-          const plist = document.getElementById("passenger-list");
-          if (plist) plist.innerHTML = data.passengers_html;
-        }
-        // 建議：drivers_html 之後就不要再用全量重繪了
-        // if (data.drivers_html) { ... }
-      }
-    } catch (err) {
-      console.error("⚠️ 解析訊息失敗", err, event.data);
-    }
+  window.openJoinModal = function (driverId, driverDate = "", driverReturn = "") {
+    const { togetherSel, departInput, returnWrap, returnInput, joinModal, joinForm } = grabJoinEls();
+    currentDriverDate   = driverDate || "";
+    currentDriverReturn = driverReturn || "";
+    if (departInput && currentDriverDate) departInput.value = currentDriverDate;
+    if (togetherSel) togetherSel.value = "";
+    if (returnInput) { returnInput.value = ""; returnInput.readOnly = false; }
+    if (returnWrap) returnWrap.style.display = "none";
+    syncReturnMin();
+    if (joinForm)  joinForm.action  = `/find/driver/${driverId}/join/`;
+    if (joinModal) joinModal.style.display = "block";
   };
+
+  window.resetReturnDate = function () {
+    const { returnInput } = grabJoinEls();
+    if (returnInput) returnInput.value = "";
+    syncReturnMin();
+  };
+
+  // 綁定（一次）
+  if (!window.__JOIN_MODAL_BOUND__) {
+    window.__JOIN_MODAL_BOUND__ = true;
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "join-together") handleTogetherChange();
+      if (e.target && e.target.id === "join-date")     syncReturnMin();
+    });
+    // 讓 data-action="join" 的按鈕可將 data-date / data-return 帶入
+    document.addEventListener("click", function (e) {
+      const btn = e.target.closest('[data-action="join"]');
+      if (!btn) return;
+      e.preventDefault();
+      openJoinModal(btn.dataset.id, btn.dataset.date || "", btn.dataset.return || "");
+    });
+  }
+})();
+
+/* =========================================================================
+ * 6) 參加表單：上車地點（下拉＋自填）→ 同步到隱藏欄位 name="departure"
+ *    元素：
+ *      #join-pickup-select（含「其他」）
+ *      #join-pickup-custom（輸入框，選「其他」才顯示）
+ *      #join-pickup（hidden，真正送後端的 departure）
+ *      #joinForm
+ * ========================================================================= */
+(function pickupFieldBinding(){
+  if (window.__PICKUP_BIND__) return; // 防重複
+  window.__PICKUP_BIND__ = true;
+
+  const PICKUP_SELECT_ID = "join-pickup-select";
+  const PICKUP_CUSTOM_ID = "join-pickup-custom";
+  const PICKUP_HIDDEN_ID = "join-pickup";
+  const JOIN_FORM_ID     = "joinForm";
+
+  function getEls() {
+    return {
+      sel   : $id(PICKUP_SELECT_ID),
+      custom: $id(PICKUP_CUSTOM_ID),
+      hidden: $id(PICKUP_HIDDEN_ID),
+      form  : $id(JOIN_FORM_ID),
+    };
+  }
+  function applyPickupUI() {
+    const { sel, custom } = getEls();
+    if (!sel || !custom) return;
+    if (sel.value === "其他") {
+      custom.style.display = "block";
+    } else {
+      custom.style.display = "none";
+      custom.value = "";
+    }
+  }
+  function syncHidden() {
+    const { sel, custom, hidden } = getEls();
+    if (!sel || !custom || !hidden) return;
+    hidden.value = (sel.value === "其他") ? (custom.value || "").trim() : (sel.value || "");
+  }
+
+  // 事件委派一次搞定
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.id === PICKUP_SELECT_ID) {
+      applyPickupUI(); syncHidden();
+    }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.id === PICKUP_CUSTOM_ID) syncHidden();
+  });
+  document.addEventListener("submit", (e) => {
+    const { form } = getEls();
+    if (form && e.target === form) syncHidden();
+  });
+
+  // 對外重置（打開 Modal 時可用）
+  window.resetPickupField = function(){
+    const { sel, custom, hidden } = getEls();
+    if (!sel || !custom || !hidden) return;
+    sel.value = ""; custom.value = ""; custom.style.display = "none"; hidden.value = "";
+  };
+
+  // 初始套用一次
+  setTimeout(() => { applyPickupUI(); syncHidden(); }, 0);
+})();
+
+/* =========================================================================
+ * 7) 乘客：密碼驗證 →（編輯｜刪除）/ 編輯儲存 / 刪除
+ *    - 事件委派： [data-pax-edit], [data-pax-del]
+ *    - 可用 window.afterPaxChanged?.({action, id}) 作為更新鉤子
+ * ========================================================================= */
+// Modal 開關
+function openPaxAuth (pid) {
+  const idEl  = $id('paxAuthId');
+  const pwdEl = $id('paxAuthPassword');
+  const modal = $id('paxAuthModal');
+  if (!idEl || !pwdEl || !modal) return;
+  idEl.value = pid; pwdEl.value = '';
+  modal.style.display = 'block';
+  setTimeout(() => pwdEl.focus(), 0);
+}
+function closePaxAuth () { const m = $id('paxAuthModal'); if (m) m.style.display = 'none'; }
+function openPaxEdit ()  { const m = $id('paxEditModal'); if (m) m.style.display  = 'block'; }
+function closePaxEdit () { const m = $id('paxEditModal'); if (m) m.style.display  = 'none'; }
+
+let __paxNextAction = null;
+
+// 委派：編輯 / 刪除 → 先驗證密碼
+document.addEventListener('click', (e) => {
+  const editBtn = e.target.closest('[data-pax-edit]');
+  if (editBtn){ e.preventDefault(); __paxNextAction = 'edit';   openPaxAuth(editBtn.dataset.id); return; }
+  const delBtn  = e.target.closest('[data-pax-del]');
+  if (delBtn){  e.preventDefault(); __paxNextAction = 'delete'; openPaxAuth(delBtn.dataset.id); return; }
+});
+
+async function submitPaxAuth () {
+  const pid = $id('paxAuthId')?.value;
+  const pwd = $id('paxAuthPassword')?.value;
+  if (!pid || !pwd) { showToastSafe('請輸入密碼', 'error'); return; }
+
+  try {
+    const { res, data } = await jsonFetch(`/find/pax/${pid}/auth/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRF(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: new URLSearchParams({ password: pwd })
+    });
+    if (!res.ok || !data.ok) { showToastSafe(data.error || '驗證失敗', 'error'); return; }
+    closePaxAuth();
+    if (__paxNextAction === 'delete') { await doPaxDelete(pid); return; }
+    if (__paxNextAction === 'edit')   { await loadPaxAndOpenEdit(pid); return; }
+  } catch (err) {
+    console.error(err);
+    showToastSafe('伺服器錯誤，稍後再試', 'error');
+  } finally {
+    __paxNextAction = null;
+  }
+}
+window.submitPaxAuth = submitPaxAuth;
+
+async function loadPaxAndOpenEdit (pid) {
+  const { res, data } = await jsonFetch(`/find/pax/${pid}/get/`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  });
+  if (!res.ok || !data.ok) { showToastSafe(data.error || '讀取資料失敗', 'error'); return; }
+  const p = data.p || {};
+  ($id('paxEditId')       || {}).value = p.id ?? '';
+  ($id('paxName')         || {}).value = p.passenger_name ?? '';
+  ($id('paxGender')       || {}).value = p.gender ?? 'X';
+  ($id('paxEmail')        || {}).value = p.email ?? '';
+  ($id('paxContact')      || {}).value = p.contact ?? '';
+  ($id('paxSeats')        || {}).value = p.seats_needed ?? 1;
+  ($id('paxPay')          || {}).value = p.willing_to_pay ?? '';
+  ($id('paxDeparture')    || {}).value = p.departure ?? '';
+  ($id('paxDestination')  || {}).value = p.destination ?? '';
+  ($id('paxDate')         || {}).value = p.date ?? '';
+  ($id('paxReturn')       || {}).value = p.return_date ?? '';
+  ($id('paxTogether')     || {}).value = p.together_return ?? '';
+  ($id('paxNote')         || {}).value = p.note ?? '';
+  openPaxEdit();
+}
+
+async function submitPaxEdit () {
+  const form = $id('paxEditForm');
+  const pid  = $id('paxEditId')?.value;
+  if (!form || !pid) return;
+  const btn = form.querySelector('[type="button"],[type="submit"]');
+  if (btn) btn.disabled = true;
+  try {
+    const body = new URLSearchParams(new FormData(form));
+    const { res, data } = await jsonFetch(`/find/pax/${pid}/update/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRF(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body
+    });
+    if (!res.ok || !data.ok) { showToastSafe(data.error || '更新失敗', 'error'); return; }
+    showToastSafe('✅ 已更新乘客資料', 'success');
+    closePaxEdit();
+    window.afterPaxChanged && window.afterPaxChanged({ action: 'update', id: Number(pid) });
+  } catch (err) {
+    console.error(err);
+    showToastSafe('伺服器錯誤，稍後再試', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.submitPaxEdit = submitPaxEdit;
+
+async function doPaxDelete (pid) {
+  if (!confirm('確定要刪除這位乘客嗎？此動作無法復原。')) return;
+  try {
+    const { res, data } = await jsonFetch(`/find/pax/${pid}/delete/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRF(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: new URLSearchParams()
+    });
+    if (!res.ok || !data.ok) { showToastSafe(data.error || '刪除失敗', 'error'); return; }
+    showToastSafe('🗑️ 已刪除乘客', 'success');
+    window.afterPaxChanged && window.afterPaxChanged({ action: 'delete', id: Number(pid) });
+  } catch (err) {
+    console.error(err);
+    showToastSafe('伺服器錯誤，稍後再試', 'error');
+  }
+}
+
+/* =========================================================================
+ * 8) 乘客編輯 Modal：together_return 與回程日期聯動
+ * ========================================================================= */
+(function paxEditReturnLink(){
+  const togetherSel = document.getElementById('paxTogether');
+  const returnInput = document.getElementById('paxReturn');
+  function syncReturnState () {
+    if (!togetherSel || !returnInput) return;
+    const v = togetherSel.value;
+    if (v === 'true') {
+      returnInput.value = '';
+      returnInput.disabled = true;
+      returnInput.placeholder = '與司機回程日期相同';
+      returnInput.classList.add('is-disabled');
+    } else {
+      returnInput.disabled = false;
+      returnInput.placeholder = '';
+      returnInput.classList.remove('is-disabled');
+    }
+  }
+  if (togetherSel && returnInput) {
+    togetherSel.addEventListener('change', syncReturnState);
+  }
+  window.syncPaxReturnOnce = syncReturnState; // 可在打開編輯 Modal 後呼叫一次
+})();
+
+/* =========================================================================
+ * 9) 頁面級事件委派：管理 / 參加 / 展開（避免動態內容失效）
+ * ========================================================================= */
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action   = btn.dataset.action;
+  const driverId = btn.dataset.id;
+  if (!action || !driverId) return;
+
+  if (action === 'manage') {
+    e.preventDefault();
+    openDriverModal(driverId);
+    return;
+  }
+  if (action === 'join') {
+    e.preventDefault();
+    // 若 _driver_list.html 上有 data-date / data-return 就讀取，否則 fallback
+    openJoinModal(driverId, btn.dataset.date || "", btn.dataset.return || "");
+    return;
+  }
+  if (action === 'toggle') {
+    e.preventDefault();
+    const details = $id('details-' + driverId);
+    const arrow   = $id('arrow-' + driverId) || btn;
+    if (!details) return;
+    const isOpen = details.classList.toggle('open');
+    arrow.classList.toggle('open', isOpen);
+    arrow.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    details.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    return;
+  }
+});
+
+/* =========================================================================
+ * 10) 其他：後端事件（可選）。例：透過 WS 主動告知「管理某司機」
+ * ========================================================================= */
+window.manageDriver = function (driverId) {
+  try { socket.send(JSON.stringify({ action: 'driver_manage', driver_id: driverId })); }
+  catch (e) { console.warn('WS send 失敗', e); }
+};
+
+
+// 綁定一組出發/回程欄位的防呆
+// params: { depart: '#出發input', ret: '#回程input', form: '#表單', msg?: '自訂錯誤訊息' }
+function bindDateGuard({ depart, ret, form, msg }){
+  const dep = document.querySelector(depart);
+  const rtn = document.querySelector(ret);
+  const frm = form ? document.querySelector(form) : null;
+  if(!dep || !rtn) return;
+
+  // 即時：回程最小日 ≧ 出發
+  function syncMin(){
+    rtn.min = dep.value || '';
+    if(rtn.value && dep.value && rtn.value < dep.value){
+      rtn.value = ''; // 自動清空無效值
+    }
+  }
+  dep.addEventListener('change', syncMin);
+  // 初始跑一次
+  syncMin();
+
+  // 送出時：硬性檢查，不符就擋下
+  function checkOnSubmit(e){
+    if(dep.value && rtn.value && rtn.value < dep.value){
+      e && e.preventDefault();
+      alert(msg || '回程日期不可早於出發日期');
+      rtn.focus();
+      return false;
+    }
+    return true;
+  }
+
+  if(frm){
+    frm.addEventListener('submit', checkOnSubmit);
+  }
+  // 若要在 JS 手動檢查也能呼叫：
+  return { check: checkOnSubmit, syncMin };
+
+  document.addEventListener('DOMContentLoaded', () => {
+  bindDateGuard({
+    depart: '#paxDate',
+    ret: '#paxReturn',
+    form: '#paxEditForm'
+  });
+});
+}
 </script>
 
 

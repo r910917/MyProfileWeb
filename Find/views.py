@@ -10,6 +10,7 @@ from django.template.loader import render_to_string
 from django.db.models import Prefetch
 from django.core.mail import send_mail
 from django.utils.dateparse import parse_date
+from datetime import date as _date
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -98,35 +99,59 @@ def fetch_driver_with_lists(driver_id: int):
     accepted_list = list(getattr(d, "accepted", []))
     return d, pending_list, accepted_list
 
-def _driver_for_card(driver_id: int):
-    # split pending / accepted to two lists for template
-    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False)
-    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True)
-    return (
-        DriverTrip.objects.using("find_db")
-        .filter(id=driver_id)
-        .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
-        )
-        .first()
-    )
-
 def broadcast_driver_card(driver_id: int):
     channel_layer = get_channel_layer()
-
+    d = DriverTrip.objects.using("find_db").filter(id=driver_id).first()
     driver = (driver_cards_qs(only_active=False)
               .filter(id=driver_id)
               .first())
     if not driver:
         # 可回傳移除卡片的訊息（如果被下架/刪除）
         async_to_sync(channel_layer.group_send)("find_group", {
-            "type": "send.partial",
-            "driver_id": driver_id,
-            "html": "",              # 或帶一個刪除指令型態
-            "remove": True,
+            "payload": {
+                    "type": "driver_partial",
+                    "driver_id": driver_id,
+                    "driver_html": "",
+                    "active": False,
+                },
         })
         return
+    # 準備這張卡片需要的 pending / accepted
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=True ).order_by("-id")
+
+    # 兩種作法：要嘛 prefetch 到 driver，要嘛直接掛暫時屬性給模板用
+    driver.pending  = list(pending_qs)
+    driver.accepted = list(accepted_qs)
+
+    # 準備這張卡片需要的兩個清單（對應模板的 d.pending_list / d.accepted_list）
+    d.pending_list  = list(
+        PassengerRequest.objects.using("find_db")
+        .filter(driver_id=driver_id, is_matched=False)
+        .order_by("-id")
+    )
+    d.accepted_list = list(
+        PassengerRequest.objects.using("find_db")
+        .filter(driver_id=driver_id, is_matched=True)
+        .order_by("-id")
+    )
+
+    # 渲染「單一卡片模板」(下一節會給)
+    driver_html = render_to_string("Find/_driver_card.html", {"d": d})
+
+    # 廣播
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.partial",
+            "payload": {
+                "type": "driver_partial",
+                "driver_id": d.id,
+                "driver_html": driver_html,
+                "active": bool(d.is_active),
+            },
+        },
+    )
 
     html = render_to_string("Find/_driver_card.html", {"d": driver})
     async_to_sync(channel_layer.group_send)("find_group", {
@@ -301,31 +326,32 @@ def pax_delete(request, pid: int):
         except DriverTrip.DoesNotExist:
             pass
 
+    p.delete(using="find_db")
     driver_id = p.driver_id  # 廣播用
     transaction.on_commit(lambda: broadcast_driver_card(driver_id))
     if driver_id:
         broadcast_driver_card(driver_id)
-    p.delete(using="find_db")
+    
     return JsonResponse({"ok": True})
 
-@require_POST
-def driver_delete(request, driver_id: int):
-    DriverTrip.objects.using("find_db").filter(id=driver_id).delete()
-    broadcast_driver_card(driver_id, remove=True)   # 讓客戶端把 <li> 移除
-    return JsonResponse({"ok": True})
+@transaction.atomic
+def delete_driver(request, driver_id):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "只允許 POST 請求"}, status=405)
 
+    driver = get_object_or_404(DriverTrip.objects.using("find_db"), pk=driver_id)
 
-def build_driver_cards():
-    qs = (DriverTrip.objects.using("find_db")
-          .filter(is_active=True)
-          .prefetch_related("passengers"))
-    drivers = []
-    for d in qs:
-        plist = list(d.passengers.all())
-        d.pending  = [p for p in plist if not p.is_matched]  # 待確認
-        d.accepted = [p for p in plist if p.is_matched]      # 已接受
-        drivers.append(d)
-    return drivers
+    # 解除乘客關聯
+    PassengerRequest.objects.using("find_db").filter(driver=driver).update(driver=None)
+
+    # 刪掉司機
+    driver.delete(using="find_db")
+
+    transaction.on_commit(lambda: broadcast_driver_card(driver.id))
+    # 可回到首頁或回傳 JSON 讓前端 toast 與關閉 modal
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": True})
+    return redirect("find_index")
 
 @require_POST
 def driver_manage_auth(request, driver_id: int):
@@ -345,15 +371,13 @@ def driver_manage_auth(request, driver_id: int):
 
 
 def driver_manage(request, driver_id: int):
-    # 抓司機 + 乘客
+    # 司機 + 乘客列表（首次進頁）
     driver = (DriverTrip.objects.using("find_db")
               .prefetch_related("passengers")
               .get(id=driver_id))
-
-    # 先把列表算好，頁面一進來就能顯示
     attach_passenger_lists(driver)
 
-    # 下半部：候選乘客（同路線同一天、尚未媒合、且尚未指派 driver）
+    # 候選乘客：同路線同一天、未媒合、且未指派 driver
     candidates = (PassengerRequest.objects.using("find_db")
                   .filter(departure=driver.departure,
                           destination=driver.destination,
@@ -367,34 +391,94 @@ def driver_manage(request, driver_id: int):
     if request.method == "POST":
         form_type = request.POST.get("form", "")
 
-        # ============ A) 更新司機資訊 ============
+        # ===================== A) 更新司機資訊 =====================
         if form_type == "update_driver":
-            driver.driver_name = request.POST.get("driver_name", driver.driver_name).strip()
-            driver.gender      = request.POST.get("gender", driver.gender)
-            driver.email       = request.POST.get("email") or None
-            driver.contact     = request.POST.get("contact", driver.contact).strip()
+            # --- 基本欄位 ---
+            driver.driver_name = (request.POST.get("driver_name") or driver.driver_name).strip()
+            driver.gender      = (request.POST.get("gender") or driver.gender).strip() or "X"
+            driver.email       = (request.POST.get("email") or None)
+            driver.contact     = (request.POST.get("contact") or driver.contact).strip()
 
-            new_password = request.POST.get("password")
-            if new_password:
-                driver.password = new_password
+            # 密碼：有填才更新
+            pwd = (request.POST.get("password") or "").strip()
+            if pwd:
+                driver.password = pwd
 
             # 座位
             try:
-                seats_total = int(request.POST.get("seats_total", driver.seats_total))
+                seats_total = int(request.POST.get("seats_total") or driver.seats_total)
             except (TypeError, ValueError):
                 seats_total = driver.seats_total
             driver.seats_total = max(1, seats_total)
             if driver.seats_filled > driver.seats_total:
                 driver.seats_filled = driver.seats_total
 
-            # 起訖、日期
-            driver.departure   = request.POST.get("departure", driver.departure).strip()
-            driver.destination = request.POST.get("destination", driver.destination).strip()
-            driver.date        = request.POST.get("date") or driver.date
-            driver.return_date = request.POST.get("return_date") or None
+            # 酌收費用（選填）
+            if hasattr(driver, "fare_note"):
+                driver.fare_note = (request.POST.get("fare_note") or "").strip() or None
 
-            # 順路意願 / 上架
-            driver.flexible_pickup = request.POST.get("flexible_pickup", getattr(driver, "flexible_pickup", "MAYBE"))
+            # --- 出發地（一般 / 自填 正規化） ---
+            dep_choice = (request.POST.get("departure") or "").strip()
+            dep_custom = (request.POST.get("departure_custom") or "").strip()
+            if dep_choice == "自填":
+                departure          = dep_custom
+                departure_custom   = dep_custom
+            else:
+                departure          = dep_choice
+                departure_custom   = ""
+
+            # --- 目的地（一般 / 自填 正規化） ---
+            des_choice = (request.POST.get("destination") or "").strip()
+            des_custom = (request.POST.get("destination_custom") or "").strip()
+            if des_choice == "自填":
+                destination        = des_custom
+                destination_custom = des_custom
+            else:
+                destination        = des_choice
+                destination_custom = ""
+
+            driver.departure = departure
+            if hasattr(driver, "departure_custom"):
+                driver.departure_custom = departure_custom
+
+            driver.destination = destination
+            if hasattr(driver, "destination_custom"):
+                driver.destination_custom = destination_custom
+
+            # --- 日期防呆 ---
+            date_str   = (request.POST.get("date") or "").strip()
+            return_str = (request.POST.get("return_date") or "").strip() or None
+            dt  = parse_date(date_str)
+            rdt = parse_date(return_str) if return_str else None
+
+            today = _date.today()
+            error_msg = None
+            if not dt or dt < today:
+                error_msg = "出發日期不可小於今天"
+            elif rdt and rdt < today:
+                error_msg = "回程日期不可小於今天（可留空）"
+            elif rdt and rdt < dt:
+                error_msg = "回程日期不可早於出發日期"
+
+            if error_msg:
+                # 回填目前 driver 狀態與候選列表，顯示錯誤
+                attach_passenger_lists(driver)
+                return render(request, "Find/driver_manage.html", {
+                    "driver": driver,
+                    "pending": driver.pending,
+                    "accepted": driver.accepted,
+                    "candidates": candidates,
+                    "saved_msg": "",
+                    "matched_msg": "",
+                    "full_msg": "",
+                    "error": error_msg,
+                })
+
+            driver.date        = dt
+            driver.return_date = rdt
+
+            # --- 其他旗標 ---
+            driver.flexible_pickup = (request.POST.get("flexible_pickup") or getattr(driver, "flexible_pickup", "MAYBE")).strip() or "MAYBE"
             driver.is_active       = (request.POST.get("is_active") == "on")
             if driver.seats_filled >= driver.seats_total:
                 driver.is_active = False
@@ -403,7 +487,7 @@ def driver_manage(request, driver_id: int):
             saved_msg = "✅ 已更新司機資料"
             transaction.on_commit(lambda: broadcast_driver_card(driver.id))
 
-        # ============ B) 接受乘客（把 `driver` 指給乘客並設 is_matched=True） ============
+        # ===================== B) 接受乘客 =====================
         elif form_type == "accept_passengers":
             ids = request.POST.getlist("accept_ids")
             accepted_names = []
@@ -421,11 +505,9 @@ def driver_manage(request, driver_id: int):
                     except PassengerRequest.DoesNotExist:
                         continue
 
-                    # 若該乘客還沒綁 driver，幫他綁上（加入這位司機的待確認或直接接受）
                     if p.driver_id is None:
                         p.driver = d
 
-                    # 座位足夠就接受
                     if d.seats_filled + p.seats_needed <= d.seats_total:
                         d.seats_filled += p.seats_needed
                         p.is_matched = True
@@ -443,9 +525,11 @@ def driver_manage(request, driver_id: int):
 
             matched_msg = "✅ 已成功媒合：" + "、".join(accepted_names) if accepted_names else "⚠️ 沒有可媒合的乘客或座位不足"
 
-        # 其他表單略…
+        # ===== 其他表單分支 …（保留你原本的）=====
 
-        # 重新抓候選乘客與列表（提交後頁面要即時反映）
+        # 提交後重新載入最新資料與候選
+        driver.refresh_from_db(using="find_db")
+        attach_passenger_lists(driver)
         candidates = (PassengerRequest.objects.using("find_db")
                       .filter(departure=driver.departure,
                               destination=driver.destination,
@@ -454,23 +538,15 @@ def driver_manage(request, driver_id: int):
                               driver__isnull=True)
                       .order_by("id"))
 
-        driver.refresh_from_db(using="find_db")
-        driver = (DriverTrip.objects.using("find_db")
-                  .prefetch_related("passengers")
-                  .get(id=driver.id))
-        attach_passenger_lists(driver)
-
-
     return render(request, "Find/driver_manage.html", {
         "driver": driver,
-        "pending": driver.pending,    # ✅ 模板可直接用
-        "accepted": driver.accepted,  # ✅ 模板可直接用
+        "pending": driver.pending,
+        "accepted": driver.accepted,
         "candidates": candidates,
         "saved_msg": saved_msg,
         "matched_msg": matched_msg,
         "full_msg": full_msg,
-    })
-# -------------------
+    })# -------------------
 # 首頁
 # -------------------
 def index(request):
@@ -521,40 +597,74 @@ def find_people(request):
 # -------------------
 def find_car(request):
     if request.method == "POST":
-        name = request.POST.get("name")
-        contact = request.POST.get("contact")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        gender = request.POST.get("gender")
-        seats_total = int(request.POST.get("seats_total"))
-        
-        # 出發地處理：先選單，若有輸入自訂的，覆蓋掉
-        departure = request.POST.get("departure")
-        departure_custom = request.POST.get("departure_custom")
-        if departure_custom:
+        name         = (request.POST.get("name") or "").strip()
+        contact      = (request.POST.get("contact") or "").strip()
+        email        = (request.POST.get("email") or "").strip() or None
+        password     = (request.POST.get("password") or "").strip()
+        gender       = (request.POST.get("gender") or "X").strip()
+        seats_total  = int(request.POST.get("seats_total") or 0)
+
+        # 出發地：下拉 + 自填覆蓋
+        departure           = (request.POST.get("departure") or "").strip()
+        departure_custom    = (request.POST.get("departure_custom") or "").strip()
+        if departure == "自填" or departure_custom:
             departure = departure_custom
 
-        destination = request.POST.get("destination")
-        date = request.POST.get("date")
-        return_date = request.POST.get("return_date") or None
-        flexible_pickup = request.POST.get("flexible_pickup")
-        note = request.POST.get("note")
+        # 目的地：下拉 + 自填覆蓋（新增這段）
+        destination   = (request.POST.get("destination") or "").strip()
+        destination_custom = request.POST.get("destination_custom")
+        if destination == "自填" or destination_custom:
+            destination = destination_custom
+        date          = (request.POST.get("date") or "").strip()
+        return_date   = (request.POST.get("return_date") or "").strip() or None
 
-        DriverTrip.objects.using("find_db").create(
-            driver_name=name,
-            contact=contact,
-            email=email,
-            password=password,
-            gender=gender,
-            seats_total=seats_total,
-            departure=departure,
-            destination=destination,
-            date=date,
-            return_date=return_date,
-            flexible_pickup=flexible_pickup,
-            note=note,
+        
+
+        flexible_pickup = (request.POST.get("flexible_pickup") or "").strip()
+        note          = (request.POST.get("note") or "").strip() or None
+
+        # ⬇️ 新增：酌收費用
+        fare_note     = (request.POST.get("fare_note") or "").strip() or None
+
+        d = DriverTrip.objects.using("find_db").create(
+            driver_name    = name,
+            contact        = contact,
+            email          = email,
+            password       = password,
+            gender         = gender,
+            seats_total    = seats_total,
+            departure      = departure,
+            destination    = destination,
+            date           = date,
+            return_date    = return_date,
+            flexible_pickup= flexible_pickup,
+            note           = note,
+            fare_note      = fare_note,   # ⬅️ 存進資料庫
         )
-        return redirect("find_index")  # ✅ 送出後回首頁
+
+        # （可選）如果你有做 Channels 的單卡片廣播，打這一行
+        #from .ws import broadcast_driver_card
+        from django.contrib import messages
+        dt  = parse_date(date)
+        rdt = parse_date(return_date) if return_date else None
+        if dt and rdt and rdt < dt:
+            # 轉成一般 dict，避免模板取值時拿到 list
+            messages.error(request, "回程日期不可早於出發日期")
+            prefill = request.POST.dict()
+            return render(request, "Find/find_car.html", {
+                "error": "回程日期不可早於出發日期",
+                "prefill": prefill,
+            })
+
+        # …通過檢查才寫入 DB
+        # DriverTrip.objects.using("find_db").create( ... )
+        broadcast_driver_card(d.id)
+        # 若是 AJAX 送出可回 JSON；否則回首頁
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"ok": True, "id": d.id})
+        return redirect("find_index")
+
+        
 
     return render(request, "Find/find_car.html")
 

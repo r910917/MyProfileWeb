@@ -1,196 +1,197 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>🚗 新增出車資訊</title>
   <style>
-    body {
-      font-family: "Microsoft JhengHei", sans-serif;
-      background: linear-gradient(to right, #f0f9ff, #fefefe);
-      margin: 0;
-      padding: 40px 20px;
-    }
-
-    h2 {
-      text-align: center;
-      color: #005c4b;
-      margin-bottom: 25px;
-      font-size: 26px;
-    }
-
-    form {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 25px 30px;
-      border-radius: 16px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-      animation: fadeIn 0.5s ease-in-out;
-    }
-
-    fieldset {
-      border: none;
-      margin-bottom: 20px;
-      padding: 0;
-    }
-
-    legend {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 10px;
-    }
-
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 12px;
-      margin-bottom: 6px;
-      color: #444;
-    }
-
-    input, textarea, select {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      transition: border-color 0.3s, box-shadow 0.3s;
-      font-size: 15px;
-    }
-
-    input:focus, textarea:focus, select:focus {
-      border-color: #007bff;
-      box-shadow: 0 0 8px rgba(0,123,255,0.3);
-      outline: none;
-    }
-
-    textarea {
-      min-height: 80px;
-      resize: vertical;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(45deg, #007bff, #00b894);
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.2s;
-    }
-
-    button:hover {
-      background: linear-gradient(45deg, #0056b3, #009e77);
-      transform: scale(1.02);
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* 顯示必填欄位的紅色星號 */
-    .required::after {
-      content: " *";
-      color: red;
-    }
+    body { font-family:"Microsoft JhengHei",sans-serif; background:linear-gradient(to right,#f0f9ff,#fefefe); margin:0; padding:40px 20px; }
+    h2 { text-align:center; color:#005c4b; margin-bottom:25px; font-size:26px; }
+    form { max-width:600px; margin:0 auto; background:#fff; padding:25px 30px; border-radius:16px; box-shadow:0 6px 12px rgba(0,0,0,.1); animation:fadeIn .5s ease-in-out; }
+    label { font-weight:700; display:block; margin-top:12px; margin-bottom:6px; color:#444; }
+    input,textarea,select { width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #ccc; transition:border-color .3s, box-shadow .3s; font-size:15px; }
+    input:focus,textarea:focus,select:focus { border-color:#007bff; box-shadow:0 0 8px rgba(0,123,255,.3); outline:none; }
+    textarea { min-height:80px; resize:vertical; }
+    button { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s; }
+    button:hover { background:linear-gradient(45deg,#0056b3,#009e77); transform:scale(1.02); }
+    .alert { max-width:600px; margin:0 auto 12px; padding:12px 14px; border-radius:10px; }
+    .alert-danger { background:#fdeaea; color:#7f1d1d; border:1px solid #f5c2c7; }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+    .required::after{ content:" *"; color:red; }
   </style>
 </head>
 <body>
   <h2>🚗 新增出車資訊</h2>
+  <form method="POST" id="driverCreateForm">
+    {% csrf_token %}
 
-  <form method="POST">
-  {% csrf_token %}
-  
-  <label for="nickname">暱稱</label>
-  <input type="text" name="name" id="nickname" required>
+    <label for="nickname" class="required">暱稱</label>
+    <input type="text" name="name" id="nickname" value="{{ prefill.name|default:'' }}" required />
 
-  <label>性別:</label>
-  <select name="gender" required>
-    <option value="M">男生</option>
-    <option value="F">女生</option>
-    <option value="X" selected>不方便透漏</option>
-  </select><br>
+    <label for="gender" class="required">性別</label>
+    <select name="gender" id="gender" required>
+      <option value="" {% if not prefill.gender %}selected{% endif %}>未指定</option>
+      <option value="M" {% if prefill.gender == 'M' %}selected{% endif %}>男生</option>
+      <option value="F" {% if prefill.gender == 'F' %}selected{% endif %}>女生</option>
+      <option value="X" {% if prefill.gender == 'X' %}selected{% endif %}>不方便透漏</option>
+    </select>
 
-  <label for="email">Email</label>
-  <input type="email" name="email" id="email" placeholder="可留空白，填寫此欄僅供傳送乘客加入通知">
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email" value="{{ prefill.email|default:'' }}" placeholder="選填白，僅用於寄送通知" />
 
-  <label for="contact">聯絡方式</label>
-  <input type="text" name="contact" id="contact" placeholder="LINE ID, IG, Phone Number" required>
+    <label for="contact" class="required">聯絡方式</label>
+    <input type="text" name="contact" id="contact" value="{{ prefill.contact|default:'' }}" placeholder="LINE、IG 或手機號碼" required />
 
-  <label for="password">管理密碼</label>
-  <input type="password" name="password" id="password" placeholder="建議使用 4 碼,預設0000,方便修改資料及乘客資訊" value="0000">
+    <label for="password" class="required">管理密碼</label>
+    <input type="password" name="password" id="password" value="{{ prefill.password|default:'' }}" placeholder="建議 4 碼，預設 0000 方便管理" required />
 
-  <label for="flexible_pickup">順路接送意願</label>
-  <select name="flexible_pickup" id="flexible_pickup" required>
-    <option value="YES">順路可載</option>
-    <option value="NO">不順路也OK</option>
-    <option value="MAYBE" selected>視情況</option>
-  </select>
+    <label for="flexible_pickup" class="required">順路接送意願</label>
+    <select name="flexible_pickup" id="flexible_pickup" required>
+      <option value="YES"  {% if prefill.flexible_pickup == 'YES' %}selected{% endif %}>順路可載</option>
+      <option value="NO"   {% if prefill.flexible_pickup == 'NO' %}selected{% endif %}>不順路也OK</option>
+      <option value="MAYBE" {% if prefill.flexible_pickup == 'MAYBE' or not prefill.flexible_pickup %}selected{% endif %}>視情況</option>
+    </select>
 
-  <label for="seats_total">總座位</label>
-  <input type="number" name="seats_total" id="seats_total" min="1" placeholder="剩餘座位" required>
+    <label for="seats_total" class="required">總座位</label>
+    <input type="number" name="seats_total" id="seats_total" min="1" value="{{ prefill.seats_total|default:'1' }}" required />
 
-  <label for="departure">出發地</label>
-  <select name="departure" id="departure" onchange="checkCustomDeparture(this)" required>
-    <option value="">請選擇縣市</option>
-    <option value="自填">自填</option>
-    <option value="台北市">台北市</option>
-    <option value="新北市">新北市</option>
-    <option value="基隆市">基隆市</option>
-    <option value="桃園市">桃園市</option>
-    <option value="新竹市">新竹市</option>
-    <option value="新竹縣">新竹縣</option>
-    <option value="苗栗縣">苗栗縣</option>
-    <option value="台中市">台中市</option>
-    <option value="彰化縣">彰化縣</option>
-    <option value="南投縣">南投縣</option>
-    <option value="雲林縣">雲林縣</option>
-    <option value="嘉義市">嘉義市</option>
-    <option value="嘉義縣">嘉義縣</option>
-    <option value="台南市">台南市</option>
-    <option value="高雄市">高雄市</option>
-    <option value="屏東縣">屏東縣</option>
-    <option value="宜蘭縣">宜蘭縣</option>
-    <option value="花蓮縣">花蓮縣</option>
-    <option value="台東縣">台東縣</option>
-    <option value="澎湖縣">澎湖縣</option>
-    <option value="金門縣">金門縣</option>
-    <option value="連江縣">連江縣</option>
-  </select>
-  <input type="text" id="customDeparture" name="custom_departure" style="display:none;" placeholder="輸入自訂出發地">
+    <label for="departure" class="required">出發地</label>
+    <select name="departure" id="departure" onchange="checkCustomDeparture(this)" required>
+      <option value="" {% if not prefill.departure %}selected{% endif %}>請選擇縣市</option>
+      <option value="自填" {% if prefill.departure == '自填' %}selected{% endif %}>其他</option>
+      <option value="花蓮縣光復鄉"  {% if prefill.destination == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
+      <option value="花蓮縣光復車站以外火車站"  {% if prefill.destination == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
+      <option value="花蓮縣光復車站"  {% if prefill.destination == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
+      <option value="光復鄉糖廠"  {% if prefill.destination == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
+      <option value="需清淤地區"  {% if prefill.destination == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
+      <option value="台北市"  {% if prefill.departure == '台北市' %}selected{% endif %}>台北市</option>
+      <option value="新北市"  {% if prefill.departure == '新北市' %}selected{% endif %}>新北市</option>
+      <option value="基隆市"  {% if prefill.departure == '基隆市' %}selected{% endif %}>基隆市</option>
+      <option value="桃園市"  {% if prefill.departure == '桃園市' %}selected{% endif %}>桃園市</option>
+      <option value="新竹市"  {% if prefill.departure == '新竹市' %}selected{% endif %}>新竹市</option>
+      <option value="新竹縣"  {% if prefill.departure == '新竹縣' %}selected{% endif %}>新竹縣</option>
+      <option value="苗栗縣"  {% if prefill.departure == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+      <option value="台中市"  {% if prefill.departure == '台中市' %}selected{% endif %}>台中市</option>
+      <option value="彰化縣"  {% if prefill.departure == '彰化縣' %}selected{% endif %}>彰化縣</option>
+      <option value="南投縣"  {% if prefill.departure == '南投縣' %}selected{% endif %}>南投縣</option>
+      <option value="雲林縣"  {% if prefill.departure == '雲林縣' %}selected{% endif %}>雲林縣</option>
+      <option value="嘉義市"  {% if prefill.departure == '嘉義市' %}selected{% endif %}>嘉義市</option>
+      <option value="嘉義縣"  {% if prefill.departure == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+      <option value="台南市"  {% if prefill.departure == '台南市' %}selected{% endif %}>台南市</option>
+      <option value="高雄市"  {% if prefill.departure == '高雄市' %}selected{% endif %}>高雄市</option>
+      <option value="屏東縣"  {% if prefill.departure == '屏東縣' %}selected{% endif %}>屏東縣</option>
+      <option value="宜蘭縣"  {% if prefill.departure == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+      <option value="花蓮縣"  {% if prefill.departure == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+      <option value="台東縣"  {% if prefill.departure == '台東縣' %}selected{% endif %}>台東縣</option>
+      <option value="澎湖縣"  {% if prefill.departure == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+      <option value="金門縣"  {% if prefill.departure == '金門縣' %}selected{% endif %}>金門縣</option>
+      <option value="連江縣"  {% if prefill.departure == '連江縣' %}selected{% endif %}>連江縣</option>
+    </select>
 
-  <label for="destination">目的地</label>
-  <input type="text" name="destination" id="destination" placeholder="可留空">
+    {# 注意：name 要叫 departure_custom（後端才接得到） #}
+    <input type="text" id="customDeparture" name="departure_custom"
+           value="{{ prefill.departure_custom|default:'' }}"
+           style="display:{% if prefill.departure == '自填' or prefill.departure_custom %}block{% else %}none{% endif %};"
+           placeholder="輸入自訂出發地" />
 
-  <label for="date">出發日期</label>
-  <input type="date" name="date" id="date" required>
+    <label for="destination">目的地</label>
+<select name="destination" id="destination" onchange="checkCustomDestination(this)">
+  <option value="" {% if not prefill.destination %}selected{% endif %}>請選擇縣市</option>
+  <option value="自填" {% if prefill.destination == '自填' %}selected{% endif %}>其他</option>
+  <option value="花蓮縣光復鄉"  {% if prefill.destination == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
+  <option value="花蓮縣光復車站以外火車站"  {% if prefill.destination == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
+  <option value="花蓮縣光復車站"  {% if prefill.destination == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
+  <option value="光復鄉糖廠"  {% if prefill.destination == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
+  <option value="需清淤地區"  {% if prefill.destination == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
+  <option value="台北市"  {% if prefill.destination == '台北市' %}selected{% endif %}>台北市</option>
+  <option value="新北市"  {% if prefill.destination == '新北市' %}selected{% endif %}>新北市</option>
+  <option value="基隆市"  {% if prefill.destination == '基隆市' %}selected{% endif %}>基隆市</option>
+  <option value="桃園市"  {% if prefill.destination == '桃園市' %}selected{% endif %}>桃園市</option>
+  <option value="新竹市"  {% if prefill.destination == '新竹市' %}selected{% endif %}>新竹市</option>
+  <option value="新竹縣"  {% if prefill.destination == '新竹縣' %}selected{% endif %}>新竹縣</option>
+  <option value="苗栗縣"  {% if prefill.destination == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+  <option value="台中市"  {% if prefill.destination == '台中市' %}selected{% endif %}>台中市</option>
+  <option value="彰化縣"  {% if prefill.destination == '彰化縣' %}selected{% endif %}>彰化縣</option>
+  <option value="南投縣"  {% if prefill.destination == '南投縣' %}selected{% endif %}>南投縣</option>
+  <option value="雲林縣"  {% if prefill.destination == '雲林縣' %}selected{% endif %}>雲林縣</option>
+  <option value="嘉義市"  {% if prefill.destination == '嘉義市' %}selected{% endif %}>嘉義市</option>
+  <option value="嘉義縣"  {% if prefill.destination == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+  <option value="台南市"  {% if prefill.destination == '台南市' %}selected{% endif %}>台南市</option>
+  <option value="高雄市"  {% if prefill.destination == '高雄市' %}selected{% endif %}>高雄市</option>
+  <option value="屏東縣"  {% if prefill.destination == '屏東縣' %}selected{% endif %}>屏東縣</option>
+  <option value="宜蘭縣"  {% if prefill.destination == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+  <option value="花蓮縣"  {% if prefill.destination == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+  <option value="台東縣"  {% if prefill.destination == '台東縣' %}selected{% endif %}>台東縣</option>
+  <option value="澎湖縣"  {% if prefill.destination == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+  <option value="金門縣"  {% if prefill.destination == '金門縣' %}selected{% endif %}>金門縣</option>
+  <option value="連江縣"  {% if prefill.destination == '連江縣' %}selected{% endif %}>連江縣</option>
+</select>
 
-  <label for="return_date">回程日期 (可留空)</label>
-  <input type="date" name="return_date" id="return_date">
+<input type="text"
+       id="customDestination"
+       name="destination_custom"
+       value="{{ prefill.destination_custom|default:'' }}"
+       style="display:{% if prefill.destination == '自填' or prefill.destination_custom %}block{% else %}none{% endif %};"
+       placeholder="輸入自訂目的地" />
 
-  <label for="note">備註</label>
-  <textarea name="note" id="note"></textarea>
 
-  <button type="submit">✅ 送出</button>
-</form>
+    <label for="driver-fare-note">酌收費用（選填）</label>
+    <input type="text" id="driver-fare-note" name="fare_note"
+           value="{{ prefill.fare_note|default:'' }}"
+           placeholder="例如：每人 200、油錢均攤、視里程而定…" />
 
+    <label for="driver-date" class="required">出發日期</label>
+    <input type="date" name="date" id="driver-date" value="{{ prefill.date|default:'' }}" required />
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+    <label for="driver-return">回程日期（選填）</label>
+    <input type="date" name="return_date" id="driver-return" value="{{ prefill.return_date|default:'' }}" />
+
+    <label for="note">備註</label>
+    <textarea name="note" id="note">{{ prefill.note|default:'' }}</textarea>
+
+    <button type="submit">✅ 送出</button>
+  </form>
 
   <script>
-    function checkCustomDeparture(select) {
-      const customInput = document.getElementById("customDeparture");
-      if (select.value === "自填") {
-        customInput.style.display = "block";
-        customInput.required = true;
-      } else {
-        customInput.style.display = "none";
-        customInput.required = false;
-      }
+    // 出發地為「自填」時顯示自訂輸入框
+    function checkCustomDeparture(select){
+      const customInput = document.getElementById('customDeparture');
+      if (!customInput) return;
+      const show = (select.value === '自填');
+      customInput.style.display = show ? 'block' : 'none';
+      customInput.required = show;
+      if (!show) customInput.value = '';
     }
+    function checkCustomDestination(select){
+    const input = document.getElementById('customDestination');
+    if (!input) return;
+    const show = (select.value === '自填');
+    input.style.display = show ? 'block' : 'none';
+    input.required = show;
+    if (!show) input.value = '';
+  }
+
+    // 回程日期不可早於出發日期（前端即時防呆）
+    document.addEventListener('DOMContentLoaded', () => {
+      const dep = document.getElementById('driver-date');
+      const ret = document.getElementById('driver-return');
+      if (!dep || !ret) return;
+
+      function syncMin(){
+        ret.min = dep.value || '';
+        if (ret.value && dep.value && ret.value < dep.value) ret.value = '';
+      }
+      dep.addEventListener('change', syncMin);
+      syncMin();
+    });
+    // 進頁初始化（若預設就選到自填要展開）
+  (function(){
+    const depSel = document.getElementById('departure');
+    const desSel = document.getElementById('destination');
+    if (depSel) checkCustomDeparture(depSel);
+    if (desSel) checkCustomDestination(desSel);
+  })();
   </script>
 </body>
 </html>

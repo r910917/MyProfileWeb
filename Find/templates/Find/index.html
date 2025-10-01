@@ -64,7 +64,12 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .driver-card::before{ background:#2196f3; }
 .passenger-card::before{ background:#f44336; }
 
+
+
+
+
 /* 1) 取消 UL 預設縮排：卡片不要被推到右側 */
+
 #driver-list,
 #passenger-list {
   list-style: none;
@@ -77,6 +82,11 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 #passenger-list > li {
   margin-left: 0;
 }
+
+.filterbar{display:flex;gap:12px;align-items:center;margin:10px 0 14px}
+.filter-item label{font-weight:600;margin-right:6px}
+.filter-item select{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
+
 
 /* ==========================================================================
    司機卡片三欄排版（左：暱稱座位 / 中：三行 / 右：操作與箭頭）
@@ -291,6 +301,20 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .driver-kv .v{
   color:#111827;
   word-break:break-word;
+}
+
+.filterbar {
+  position: sticky;   /* 吸附在頁面上方 */
+  top: 0;             /* 貼頂 */
+  z-index: 3;         /* 在卡片之上 */
+  background: #fff;   /* 背景要實色，避免透明蓋住底下 */
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+#driver-list,
+#passenger-list {
+  position: relative; /* 確保 z-index 正常 */
+  z-index: 1;
 }
 
 /* 小分隔線群組：讓資訊區塊更乾淨 */
@@ -846,10 +870,32 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
     {% endfor %}
   </ul>
 
+
+
+
 <h2>找車需求（乘客需要司機）</h2>
+
+<form method="get" id="filterForm">
+  <div class="filterbar">
+    <div class="filter-item">
+      <label for="sort">排序</label>
+      <select id="sort" name="sort" onchange="this.form.submit()">
+        {% with sort=request.GET.sort|default:'date_desc' %}
+          <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>出發日期（新→舊）</option>
+          <option value="date_asc"  {% if sort == 'date_asc'  %}selected{% endif %}>出發日期（舊→新）</option>
+          <option value="dep_n2s"   {% if sort == 'dep_n2s'   %}selected{% endif %}>出發地（北→南）</option>
+          <option value="dep_s2n"   {% if sort == 'dep_s2n'   %}selected{% endif %}>出發地（南→北）</option>
+        {% endwith %}
+      </select>
+    </div>
+  </div>
+</form>
+
 <ul id="driver-list">
+
   {% include "Find/_driver_list.html" %}
 </ul>
+ 
 
 
   <!-- 回到頂端 -->
@@ -1225,37 +1271,51 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   socket.addEventListener('error', (err) => console.error('⚠️ WebSocket 發生錯誤', err));
 
   socket.addEventListener('message', (event) => {
-    let data;
-    try { data = JSON.parse(event.data); } catch { return; }
+  let data;
+  try { data = JSON.parse(event.data); } catch { return; }
+  })
 
-    // 單一卡片更新
-    if (data.type === 'driver_partial') {
-      // 期待 payload: { type, driver_id, driver_html, active }
-      patchDriverCard(data.driver_id, data.driver_html, data.active);
-      return;
+  // 單一卡片（已經有 patchDriverCard，保留）
+  if (data.type === 'driver_partial') {
+    patchDriverCard(data.driver_id, data.driver_html, data.active);
+    return;
+  }
+
+  // 全量更新
+  if (data && data.type === 'update') {
+    // 目前使用者選擇的排序
+    const currentSort = (document.getElementById('sort')?.value || 'date_desc');
+
+    // 乘客清單：直接套用（或保留原做法）
+    if (typeof data.passengers_html === 'string') {
+      const plist = document.getElementById('passenger-list');
+      if (plist) plist.innerHTML = data.passengers_html;
     }
 
-    // 全量更新（保留乘客清單）
-    if (data.type === 'update') {
-      if (data.passengers_html) {
-        const plist = $id('passenger-list');
-        if (plist) plist.innerHTML = data.passengers_html;
+    // 司機清單：只有當「伺服端 sort 與目前選擇一致」時才覆蓋
+    if (typeof data.drivers_html === 'string') {
+      if (data.sort && data.sort === currentSort) {
+        if (typeof replaceDriverListSafely === 'function') {
+          replaceDriverListSafely(data.drivers_html);
+        } else {
+          const dlist = document.getElementById('driver-list');
+          if (dlist) dlist.innerHTML = data.drivers_html;
+        }
+      } else {
+        // 不同排序就忽略（避免洗掉使用者的排序）
+        // console.debug('Skip drivers_html due to sort mismatch:', data.sort, currentSort);
       }
-      // drivers_html 建議改走 driver_partial；如仍傳入，可視需求處理
-      return;
     }
+    return;
+  }
+});
 
-    if (data.type === 'join_result') {
-      if (data.success) showToastSafe('✅ 成功加入乘客行程！', 'success');
-      else showToastSafe('⚠️ 加入失敗：' + (data.message || '沒有可用的司機'), 'error');
-    }
-  });
-})();
 
 /* =========================================================================
  * 2) Driver 列表：全量替換（保留展開與卷軸） & 單卡片替換
  * ========================================================================= */
 // 記住目前展開的 driver ids
+
 function snapshotOpenDrivers () {
   return Array
     .from(document.querySelectorAll('#driver-list .details.open'))
@@ -1288,14 +1348,29 @@ function replaceDriverListSafely (newHtml) {
   window.scrollTo(0, prevScrollY);
 }
 // 同時處理 drivers / passengers
-function replaceLists (data) {
+function replaceLists(data){
   if (!data || typeof data !== 'object') return;
-  if (typeof data.drivers_html === 'string') replaceDriverListSafely(data.drivers_html);
+
+  // 乘客列表可直接更新
   if (typeof data.passengers_html === 'string') {
     const p = document.getElementById('passenger-list');
     if (p) p.innerHTML = data.passengers_html;
   }
+
+  // 司機清單：只有當廣播的 sort 與目前頁面一致時才替換
+  if (typeof data.drivers_html === 'string') {
+    const incomingSort = data.sort || 'date_desc';
+    if (incomingSort === CURRENT_SORT) {
+      replaceDriverListSafely(data.drivers_html);
+    } else {
+      // 排序不同就忽略，避免把使用者的排序打回預設
+      // console.debug('skip drivers_html, sort mismatch', {incomingSort, CURRENT_SORT});
+    }
+  }
 }
+
+
+
 
 // 取得卡片狀態
 function snapshotCardState(li) {

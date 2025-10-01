@@ -56,19 +56,57 @@
     }
     @media (max-width:480px){ .pax-grid{grid-template-columns:1fr} }
     /* 靚版「是否開放」switch */
-    .switch {
-      display:flex;align-items:center;gap:10px;margin:8px 0 14px;
-    }
-    .switch input { display:none; }
-    .toggle {
-      width:48px;height:28px;background:#d1d5db;border-radius:999px;position:relative;cursor:pointer;transition:background .25s ease;
-    }
-    .toggle::after{
-      content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .25s ease;
-    }
-    .switch input:checked + .toggle{ background:#34d399; }
-    .switch input:checked + .toggle::after{ transform:translateX(20px); }
-    .switch label { font-weight:600;color:#374151; }
+    /* Switch 容器：水平置中、對齊好看 */
+.switch{
+  display:flex; align-items:center; justify-content:center;
+  gap:12px; margin:10px 0;
+}
+
+/* 隱藏原生 checkbox（仍可被 label 點擊） */
+.switch input[type="checkbox"]{
+  position:absolute; opacity:0; width:0; height:0;
+}
+
+/* 自訂 toggle 外觀（軌道） */
+.switch .toggle{
+  position:relative; width:52px; height:30px; border-radius:999px;
+  background:#e5e7eb; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+  transition:background .2s ease;
+  cursor:pointer; display:inline-block;
+}
+
+/* 圓形把手 */
+.switch .toggle::after{
+  content:""; position:absolute; top:3px; left:3px;
+  width:24px; height:24px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
+  transition:transform .2s ease;
+}
+
+/* 勾選狀態：變色 + 把手右移 */
+.switch input[type="checkbox"]:checked + .toggle{
+  background:#10b981; /* 綠色 */
+}
+.switch input[type="checkbox"]:checked + .toggle::after{
+  transform:translateX(22px);
+}
+
+/* Label 文字 */
+.switch label{
+  font-weight:600; color:#374151; cursor:pointer;
+}
+
+/* 額外狀態提示（可選） */
+.switch .hint{
+  display:block; font-size:12px; color:#6b7280; margin-top:2px; text-align:center;
+}
+
+/* 手機加大可點區域 */
+@media (max-width:640px){
+  .switch .toggle{ width:56px; height:34px; }
+  .switch .toggle::after{ width:26px; height:26px; top:4px; left:4px; transform:none; }
+  .switch input[type="checkbox"]:checked + .toggle::after{ transform:translateX(22px); }
+}
   </style>
 </head>
 <body>
@@ -227,9 +265,9 @@
   </form>
   <!-- B) 刪除司機（獨立 form，避免誤觸送到上面） -->
   <form method="POST" action="{% url 'delete_driver' driver.id %}" style="max-width:600px;margin:14px auto 0;"
-        onsubmit="return confirm('⚠️ 確定要刪除此司機？相關乘客也會被解除關聯！')">
+        onsubmit="return confirm('⚠️ 確定要取消出車嗎？相關乘客也會被解除關聯！')">
     {% csrf_token %}
-    <button class="btn btn-danger" type="submit">🗑️ 刪除司機</button>
+    <button class="btn btn-danger" type="submit">🗑️ 取消出車</button>
   </form>
 
   <!-- C) 已登記乘客 -->
@@ -342,5 +380,89 @@
       if (desSel) checkCustomDestination(desSel);
     })();
   </script>
+  <script>
+(function () {
+  const elActive = document.getElementById('is_active');
+  const elToggle = document.querySelector('.switch .toggle');
+  const elLabel  = document.querySelector('.switch label');
+  if (!elActive || !elToggle || !elLabel) return;
+
+  // 建立/取得提示節點 <span class="hint" id="active-hint">
+  let hint = document.getElementById('active-hint');
+  if (!hint) {
+    hint = document.createElement('span');
+    hint.id = 'active-hint';
+    hint.className = 'hint';
+    // 置於 label 下面（和你的結構兼容）
+    elLabel.insertAdjacentElement('afterend', hint);
+  }
+
+  // 取得 seats_filled：用 hidden 或 data 任一；兩者都沒有就 0
+  function getFilled() {
+    const h = document.getElementById('seats_filled_val');
+    if (h && h.value !== undefined) {
+      const n = parseInt(h.value, 10);
+      return Number.isFinite(n) ? n : 0;
+    }
+    const meta = document.getElementById('driver-meta'); // <div id="driver-meta" data-seats-filled="3">
+    if (meta && meta.dataset && meta.dataset.seatsFilled !== undefined) {
+      const n = parseInt(meta.dataset.seatsFilled, 10);
+      return Number.isFinite(n) ? n : 0;
+    }
+    return 0;
+  }
+
+  // 總座位欄位（用來即時判斷是否可開放）
+  const elTotal = document.getElementById('seats_total');
+
+  function setHint(text, tone){
+    hint.textContent = text || '';
+    hint.style.color = (tone === 'warn') ? '#9a6b00'
+                    : (tone === 'ok')   ? '#206b3a'
+                    : '#6b7280';
+  }
+
+  function refreshLock() {
+    const filled = getFilled();
+    const total  = parseInt(elTotal && elTotal.value, 10);
+    const totalSafe = Number.isFinite(total) ? Math.max(1, total) : 1;
+
+    if (filled >= totalSafe) {
+      // 滿座 → 強制關閉且鎖住
+      elActive.checked = false;
+      elActive.disabled = true;
+      elToggle.style.opacity = .6;
+      elToggle.style.cursor = 'not-allowed';
+      setHint(`座位已滿（${filled}/${totalSafe}），已自動關閉`, 'warn');
+      elActive.title = '座位已滿時不可開放';
+    } else {
+      // 可切換
+      elActive.disabled = false;
+      elToggle.style.opacity = 1;
+      elToggle.style.cursor = 'pointer';
+      elActive.title = '';
+      setHint(elActive.checked ? '目前狀態：已開放' : '目前狀態：未開放', elActive.checked ? 'ok' : '');
+    }
+  }
+
+  // 讓點擊綠色滑桿也能切換
+  elToggle.addEventListener('click', () => {
+    if (elActive.disabled) return;
+    elActive.checked = !elActive.checked;
+    refreshLock();
+  });
+
+  elActive.addEventListener('change', refreshLock);
+
+  if (elTotal) {
+    elTotal.addEventListener('input', refreshLock);
+    elTotal.addEventListener('change', refreshLock);
+  }
+
+  // 初始跑一次
+  refreshLock();
+})();
+</script>
+
 </body>
 </html>

@@ -334,23 +334,63 @@ def pax_delete(request, pid: int):
     
     return JsonResponse({"ok": True})
 
+def broadcast_full_update():
+    """把 drivers / passengers 兩個片段一起廣播出去（所有使用者即時更新）"""
+    channel_layer = get_channel_layer()
+
+    # 乘客快取 queryset
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("-id")
+
+    # 只有上架中的司機要顯示
+    drivers = (
+        DriverTrip.objects.using("find_db")
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+        )
+        .order_by("-id")
+    )
+
+    # 尚未媒合、未指派司機的乘客
+    passengers = (
+        PassengerRequest.objects.using("find_db")
+        .filter(is_matched=False, driver__isnull=True)
+        .order_by("-id")
+    )
+
+    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+
+    # 傳給同一個 group（你的 consumer 會把它包成 {"type":"update", ...} 給前端）
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.update",          # 對應 consumer 的 handler，例如 async def send_update(...)
+            "drivers_html": drivers_html,
+            "passengers_html": passengers_html,
+        },
+    )
+
 @transaction.atomic
 def delete_driver(request, driver_id):
     if request.method != "POST":
-        return JsonResponse({"ok": False, "error": "只允許 POST 請求"}, status=405)
+        return redirect("find_index")
 
-    driver = get_object_or_404(DriverTrip.objects.using("find_db"), pk=driver_id)
+    with transaction.atomic(using="find_db"):
+        d = get_object_or_404(DriverTrip.objects.using("find_db"), id=driver_id)
 
-    # 解除乘客關聯
-    PassengerRequest.objects.using("find_db").filter(driver=driver).update(driver=None)
+        # 解除關聯（如果有外鍵）
+        PassengerRequest.objects.using("find_db").filter(driver_id=d.id).update(driver=None, is_matched=False)
 
-    # 刪掉司機
-    driver.delete(using="find_db")
+        # 刪除司機
+        d.delete(using="find_db")
 
-    transaction.on_commit(lambda: broadcast_driver_card(driver.id))
-    # 可回到首頁或回傳 JSON 讓前端 toast 與關閉 modal
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"ok": True})
+        broadcast_full_update()
+        # 交易提交後再廣播（避免 rollback 卻已推播）
+        transaction.on_commit(lambda: broadcast_full_update())
+
     return redirect("find_index")
 
 @require_POST

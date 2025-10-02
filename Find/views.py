@@ -83,6 +83,169 @@ def _manage_payload(driver, pax):
     html = render_to_string("Find/_driver_manage_pax_item.html", {"p": pax})
     return {"ok": True, "driver_id": driver.id, "pax_id": pax.id, "status": status, "html": html}
 
+def broadcast_full_lists():
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
+
+    drivers = (
+        DriverTrip.objects.using("find_db")
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
+        )
+    )
+
+    passengers = PassengerRequest.objects.using("find_db").filter(
+        is_matched=False, driver__isnull=True
+    ).order_by("-id")
+
+    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
+    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.update",
+            "drivers_html": drivers_html,
+            "passengers_html": passengers_html,
+        },
+    )
+def broadcast_driver_card(driver_id: int):
+    channel_layer = get_channel_layer()
+    d = DriverTrip.objects.using("find_db").filter(id=driver_id).first()
+    driver = (driver_cards_qs(only_active=False)
+              .filter(id=driver_id)
+              .first())
+    if not driver:
+        # 可回傳移除卡片的訊息（如果被下架/刪除）
+        async_to_sync(channel_layer.group_send)("find_group", {
+            "payload": {
+                    "type": "driver_partial",
+                    "driver_id": driver_id,
+                    "driver_html": "",
+                    "active": False,
+                },
+        })
+        return
+    # 準備這張卡片需要的 pending / accepted
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=True ).order_by("-id")
+
+    # 兩種作法：要嘛 prefetch 到 driver，要嘛直接掛暫時屬性給模板用
+    driver.pending  = list(pending_qs)
+    driver.accepted = list(accepted_qs)
+
+    # 準備這張卡片需要的兩個清單（對應模板的 d.pending_list / d.accepted_list）
+    d.pending_list  = list(
+        PassengerRequest.objects.using("find_db")
+        .filter(driver_id=driver_id, is_matched=False)
+        .order_by("-id")
+    )
+    d.accepted_list = list(
+        PassengerRequest.objects.using("find_db")
+        .filter(driver_id=driver_id, is_matched=True)
+        .order_by("-id")
+    )
+
+    # 渲染「單一卡片模板」(下一節會給)
+    driver_html = render_to_string("Find/_driver_card.html", {"d": d})
+
+    # 廣播
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.partial",
+            "payload": {
+                "type": "driver_partial",
+                "driver_id": d.id,
+                "driver_html": driver_html,
+                "active": bool(d.is_active),
+            },
+        },
+    )
+
+    html = render_to_string("Find/_driver_card.html", {"d": driver})
+    async_to_sync(channel_layer.group_send)("find_group", {
+        "type": "send.partial",
+        "driver_id": driver_id,
+        "html": html,
+    })
+
+
+def _broadcast_lists():
+    channel_layer = get_channel_layer()
+
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
+
+    drivers = (
+        DriverTrip.objects.using("find_db")
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
+        )
+    )
+
+    passengers = PassengerRequest.objects.using("find_db").filter(
+        is_matched=False, driver__isnull=True
+    ).order_by("-id")
+
+    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
+    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {"type": "send.update", "drivers_html": drivers_html, "passengers_html": passengers_html},
+    )
+def broadcast_full_update():
+    """把 drivers / passengers 兩個片段一起廣播出去（所有使用者即時更新）"""
+    channel_layer = get_channel_layer()
+
+    # 乘客快取 queryset
+    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("-id")
+
+    # 只有上架中的司機要顯示
+    drivers = (
+        DriverTrip.objects.using("find_db")
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+        )
+        .order_by("-id")
+    )
+
+    # 尚未媒合、未指派司機的乘客
+    passengers = (
+        PassengerRequest.objects.using("find_db")
+        .filter(is_matched=False, driver__isnull=True)
+        .order_by("-id")
+    )
+
+    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+
+    # 傳給同一個 group（你的 consumer 會把它包成 {"type":"update", ...} 給前端）
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {
+            "type": "send.update",          # 對應 consumer 的 handler，例如 async def send_update(...)
+            "drivers_html": drivers_html,
+            "passengers_html": passengers_html,
+        },
+    )
+def broadcast_update(message):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "find_updates",
+        {"type": "send_update", "message": message}
+    )
+
+
 def _broadcast_manage(driver, pax):
     channel_layer = get_channel_layer()
     payload = _manage_payload(driver, pax)
@@ -413,35 +576,7 @@ def create_driver(request):
     driver = DriverTrip.objects.using("find_db").create(...)
     broadcast_driver_card(driver.id)  # or broadcast_full_lists()
     return redirect("find_index")
-def broadcast_full_lists():
-    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
-    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
 
-    drivers = (
-        DriverTrip.objects.using("find_db")
-        .filter(is_active=True)
-        .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
-        )
-    )
-
-    passengers = PassengerRequest.objects.using("find_db").filter(
-        is_matched=False, driver__isnull=True
-    ).order_by("-id")
-
-    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
-    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        "find_group",
-        {
-            "type": "send.update",
-            "drivers_html": drivers_html,
-            "passengers_html": passengers_html,
-        },
-    )
 
 def driver_cards_qs(
     *, 
@@ -573,94 +708,6 @@ def fetch_driver_with_lists(driver_id: int):
     accepted_list = list(getattr(d, "accepted", []))
     return d, pending_list, accepted_list
 
-def broadcast_driver_card(driver_id: int):
-    channel_layer = get_channel_layer()
-    d = DriverTrip.objects.using("find_db").filter(id=driver_id).first()
-    driver = (driver_cards_qs(only_active=False)
-              .filter(id=driver_id)
-              .first())
-    if not driver:
-        # 可回傳移除卡片的訊息（如果被下架/刪除）
-        async_to_sync(channel_layer.group_send)("find_group", {
-            "payload": {
-                    "type": "driver_partial",
-                    "driver_id": driver_id,
-                    "driver_html": "",
-                    "active": False,
-                },
-        })
-        return
-    # 準備這張卡片需要的 pending / accepted
-    pending_qs  = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=False).order_by("-id")
-    accepted_qs = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=True ).order_by("-id")
-
-    # 兩種作法：要嘛 prefetch 到 driver，要嘛直接掛暫時屬性給模板用
-    driver.pending  = list(pending_qs)
-    driver.accepted = list(accepted_qs)
-
-    # 準備這張卡片需要的兩個清單（對應模板的 d.pending_list / d.accepted_list）
-    d.pending_list  = list(
-        PassengerRequest.objects.using("find_db")
-        .filter(driver_id=driver_id, is_matched=False)
-        .order_by("-id")
-    )
-    d.accepted_list = list(
-        PassengerRequest.objects.using("find_db")
-        .filter(driver_id=driver_id, is_matched=True)
-        .order_by("-id")
-    )
-
-    # 渲染「單一卡片模板」(下一節會給)
-    driver_html = render_to_string("Find/_driver_card.html", {"d": d})
-
-    # 廣播
-    async_to_sync(channel_layer.group_send)(
-        "find_group",
-        {
-            "type": "send.partial",
-            "payload": {
-                "type": "driver_partial",
-                "driver_id": d.id,
-                "driver_html": driver_html,
-                "active": bool(d.is_active),
-            },
-        },
-    )
-
-    html = render_to_string("Find/_driver_card.html", {"d": driver})
-    async_to_sync(channel_layer.group_send)("find_group", {
-        "type": "send.partial",
-        "driver_id": driver_id,
-        "html": html,
-    })
-
-
-def _broadcast_lists():
-    channel_layer = get_channel_layer()
-
-    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
-    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
-
-    drivers = (
-        DriverTrip.objects.using("find_db")
-        .filter(is_active=True)
-        .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
-        )
-    )
-
-    passengers = PassengerRequest.objects.using("find_db").filter(
-        is_matched=False, driver__isnull=True
-    ).order_by("-id")
-
-    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
-    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-
-    async_to_sync(channel_layer.group_send)(
-        "find_group",
-        {"type": "send.update", "drivers_html": drivers_html, "passengers_html": passengers_html},
-    )
 
 
 # 統一的 session key
@@ -857,44 +904,6 @@ def pax_delete(request, pid: int):
     
     return JsonResponse({"ok": True})
 
-def broadcast_full_update():
-    """把 drivers / passengers 兩個片段一起廣播出去（所有使用者即時更新）"""
-    channel_layer = get_channel_layer()
-
-    # 乘客快取 queryset
-    pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
-    accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("-id")
-
-    # 只有上架中的司機要顯示
-    drivers = (
-        DriverTrip.objects.using("find_db")
-        .filter(is_active=True)
-        .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
-        )
-        .order_by("-id")
-    )
-
-    # 尚未媒合、未指派司機的乘客
-    passengers = (
-        PassengerRequest.objects.using("find_db")
-        .filter(is_matched=False, driver__isnull=True)
-        .order_by("-id")
-    )
-
-    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
-    passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
-
-    # 傳給同一個 group（你的 consumer 會把它包成 {"type":"update", ...} 給前端）
-    async_to_sync(channel_layer.group_send)(
-        "find_group",
-        {
-            "type": "send.update",          # 對應 consumer 的 handler，例如 async def send_update(...)
-            "drivers_html": drivers_html,
-            "passengers_html": passengers_html,
-        },
-    )
 
 @transaction.atomic
 def delete_driver(request, driver_id):
@@ -910,6 +919,7 @@ def delete_driver(request, driver_id):
         # 刪除司機
         d.delete(using="find_db")
 
+        broadcast_driver_card(driver_id)
         broadcast_full_update()
         # 交易提交後再廣播（避免 rollback 卻已推播）
         transaction.on_commit(lambda: broadcast_full_update())
@@ -1545,11 +1555,3 @@ def attach_passenger_lists(driver: DriverTrip):
     driver.pending  = [p for p in plist if not p.is_matched]
     driver.accepted = [p for p in plist if p.is_matched]
     return driver.pending, driver.accepted
-
-
-def broadcast_update(message):
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        "find_updates",
-        {"type": "send_update", "message": message}
-    )

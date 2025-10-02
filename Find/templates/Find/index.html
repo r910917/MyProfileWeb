@@ -6,17 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-  <link
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- <link
   href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
   rel="stylesheet"
   integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
   crossorigin="anonymous"
-/>
-<script
+/> -->
+<!-- <script
   src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
   integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
   crossorigin="anonymous"
-></script>
+></script> -->
 <style>
 /* ==========================================================================
    全站基礎：字體、背景、主標題/小標題
@@ -159,7 +161,6 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
     -webkit-overflow-scrolling: touch;
   }
 }
-
 
 /* =============================================================================
    A. 乘客清單（待確認 / 已接受）卡片樣式
@@ -1138,6 +1139,33 @@ input.ctl{ padding:.45rem .6rem; }
 .chip{display:inline-flex;align-items:center;gap:.45rem;padding:.28rem .6rem;border-radius:999px;border:1px solid #e1e4ea;background:#f7f8fb;font-size:.87rem;color:#333;}
 .chip .x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e9ecf3;color:#333;cursor:pointer;font-size:.8rem;line-height:1;}
 .chip .x:hover{ background:#dfe4ee; }
+
+/* =============== 說明按鈕（和你現有藍色系一致） =============== */
+/* 說明區縮排（徽章左、文字右；換行自動對齊） */
+.intro-list { margin: 0; padding-left: 0; }
+.intro-row {
+  display: grid;
+  grid-template-columns: auto 1fr; /* 徽章固定寬、文字佔滿 */
+  column-gap: .5rem;
+  row-gap: .25rem;
+  align-items: start;
+  margin-bottom: .5rem;            /* 每條之間間距 */
+}
+.intro-row .badge {
+  white-space: nowrap;             /* 徽章不換行 */
+  font-weight: 600;
+}
+.intro-row span:last-child {
+  line-height: 1.7;                /* 文字行距舒適 */
+}
+
+
+
+
+
+
+
+
 </style>
 
 </head>
@@ -1148,6 +1176,10 @@ input.ctl{ padding:.45rem .6rem; }
     <a href="{% url 'find_car' %}">
       <button class="btn-main btn-driver">🚗 我要出車（找乘客）</button>
     </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm ms-2"
+        data-bs-toggle="modal" data-bs-target="#introModal">
+  說明
+</button>
     <a href="{% url 'find_people' %}">
       <button class="btn-main btn-passenger">🧍 我要搭車（找車）</button>
     </a>
@@ -1850,6 +1882,137 @@ function clearFilters(){
     </div>
   </div>
 </div>
+
+<!-- -- 使用說明/個資隱私 -- -->
+
+<div id="siteIntroModal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+  <div class="intro-modal__card" tabindex="-1">
+    <div class="intro-modal__head">
+      <h3 id="introTitle" class="intro-title"><span class="emoji">ℹ️</span>使用說明 & 個資聲明</h3>
+      <button class="intro-close" data-intro-close aria-label="關閉">✕</button>
+    </div>
+    <div class="intro-modal__body">
+  <!-- 使用說明 -->
+  <div class="intro-section">
+    <h4>如何使用</h4>
+    <ul class="intro-list">
+      <li><strong>司機</strong>：點「我要出車」，填寫行程後等待乘客報名。有人加入會寄出 Email 通知司機；司機可選擇「接受／拒絕」。座位滿額後，系統會依規則把聯絡方式寄給需要的一方。</li>
+      <li><strong>乘客</strong>：點「我要搭車」，填寫需求後會出現在列表。司機可依條件是否符合，選擇直接邀請或接受你的報名。</li>
+    </ul>
+  </div>
+
+  <!-- 個資與通知規則 -->
+  <div class="intro-section">
+    <h4>個資與通知規則</h4>
+    <ul class="intro-list">
+      <li>可勾選「<strong>隱藏個資（聯絡方式）</strong>」。若勾選，<strong>需提供 Email</strong> 以便系統私訊通知；Email 不公開。</li>
+      <li><strong>若司機未提供 Email</strong>：司機的聯絡方式將可能公開在卡片上，供乘客聯繫。</li>
+      <li><strong>通知寄送邏輯</strong>：
+        <ul>
+          <li>司機公開、乘客隱藏 → 系統把乘客聯絡方式 Email 給司機。</li>
+          <li>司機隱藏、乘客公開 → 系統把司機聯絡方式 Email 給乘客。</li>
+          <li>兩邊都公開 → 不另外寄信。</li>
+        </ul>
+      </li>
+      <li>本網站收集的 Email 僅用於媒合通知，不做其他用途。</li>
+    </ul>
+  </div>
+
+  <!-- 資訊公開／免責 -->
+  <<!-- ③ 說明 Modal -->
+<div class="modal fade" id="introModal"
+     data-bs-backdrop="false" data-bs-keyboard="true"
+     tabindex="-1" aria-labelledby="introModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="introModalLabel">使用說明與個資聲明</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 使用說明 -->
+        <div class="card border-0 mb-4">
+          <div class="card-header bg-primary text-white">
+            <strong>如何使用</strong>
+          </div>
+          <div class="card-body">
+            <ul class="intro-list list-unstyled">
+            <li class="intro-row">
+              <span class="badge bg-primary rounded-pill px-2 py-1">司機</span>
+              <span>點「我要出車」，填寫行程後等候乘客報名；有人加入會寄出 Email 通知司機；司機可選擇「接受／拒絕」。座位滿額後，系統會依規則把聯絡方式寄給需要的一方。</span>
+            </li>
+            <li class="intro-row">
+              <span class="badge bg-danger rounded-pill px-2 py-1">乘客</span>
+              <span>點「我要搭車」，填寫需求後會出現在列表。司機可依條件是否符合，選擇直接邀請或接受你的報名。</span>
+            </li>
+          </ul>
+          </div>
+        </div>
+
+        <!-- 個資與通知規則 -->
+        <div class="card border-0 mb-4">
+          <div class="card-header bg-info text-white">
+            <strong>個資與通知規則</strong>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info py-2">
+              可勾選 <strong>「隱藏個資（聯絡方式）」</strong>。若勾選，<strong>需提供 Email</strong> 以便系統私訊通知；Email 不公開。
+            </div>
+            <ul class="list-group list-group-numbered">
+              <li class="list-group-item">
+                <strong>司機未提供 Email</strong>：司機聯絡方式可能公開在卡片上供乘客聯繫。
+              </li>
+              <li class="list-group-item">
+                <strong>通知寄送邏輯</strong>
+                <ul class="mt-2 mb-0 ps-3">
+                  <li>司機公開、乘客隱藏 → 系統把乘客聯絡方式 Email 給司機。</li>
+                  <li>司機隱藏、乘客公開 → 系統把司機聯絡方式 Email 給乘客。</li>
+                  <li>兩邊都公開 → 不另外寄信。</li>
+                </ul>
+              </li>
+              <li class="list-group-item">本網站收集的 Email 僅用於媒合通知，不做其他用途。</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 資訊公開／免責 -->
+        <div class="card border-0 mb-4">
+          <div class="card-header bg-secondary text-white">
+            <strong>資訊公開聲明與免責</strong>
+          </div>
+          <div class="card-body">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item">本平台為「花蓮光復救災 交通媒合」之自助工具，協助乘客與司機互相找到資訊。</li>
+              <li class="list-group-item">平台不參與金錢往來、不介入雙方交易及行為管理。</li>
+              <li class="list-group-item">使用者應自行評估風險並負責自身安全與行為；平台不對任何糾紛、損害、失竊、受傷或其他法律責任負責。</li>
+              <li class="list-group-item">若有不當行為或爭議，請立即向警方或主管機關報案。</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 個資保護建議 -->
+        <div class="card border-0">
+          <div class="card-header bg-light">
+            <strong>個資保護建議</strong>
+          </div>
+          <div class="card-body">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item">僅提供必要聯絡方式；在意隱私可使用 IG、Line ID 等社群帳號聯絡。</li>
+              <li class="list-group-item">勿在公開欄位填寫身分證字號、住址、銀行帳號等敏感資訊。</li>
+              <li class="list-group-item">遇到不尋常要求（匯款、傳檔、下載 APP 等）請立即停止並求證。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -3094,6 +3257,60 @@ window.initPaxPrivacyBinding = initPaxPrivacyBinding;
 })();
 
 
+</script>
+<script>
+(function () {
+  const MODAL_ID = 'siteIntroModal';   // 你的說明對話框 id
+  function $id(id){ return document.getElementById(id); }
+
+  function openIntro() {
+    const m = $id(MODAL_ID);
+    if (!m) return;
+    m.classList.add('is-open');
+    document.body.classList.add('body--intro-open');
+    const card = m.querySelector('.intro-modal__card');
+    card && card.focus();
+  }
+  function closeIntro() {
+    const m = $id(MODAL_ID);
+    if (!m) return;
+    m.classList.remove('is-open');
+    document.body.classList.remove('body--intro-open');
+  }
+
+  function bindIntro() {
+    // 按鈕開啟
+    const btn = $id('introHelpBtn');
+    btn && btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openIntro();
+    });
+
+    // Modal 關閉（遮罩、關閉鈕）
+    const modal = $id(MODAL_ID);
+    if (!modal) return;
+
+    modal.addEventListener('click', (e) => {
+      if (e.target.matches('[data-intro-close]')) {
+        e.preventDefault();
+        closeIntro();
+      }
+    });
+
+    // ESC 關閉
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeIntro();
+      }
+    });
+
+    // 需要時可手動呼叫
+    window.showIntroModalNow = openIntro;
+    window.closeIntroModal   = closeIntro;
+  }
+
+  document.addEventListener('DOMContentLoaded', bindIntro);
+})();
 </script>
 
 

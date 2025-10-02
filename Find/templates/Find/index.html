@@ -92,24 +92,18 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 }
 
 /* =============== 說明按鈕（和你現有藍色系一致） =============== */
-/* 說明區縮排（徽章左、文字右；換行自動對齊） */
-.intro-list { margin: 0; padding-left: 0; }
-.intro-row {
-  display: grid;
-  grid-template-columns: auto 1fr; /* 徽章固定寬、文字佔滿 */
-  column-gap: .5rem;
-  row-gap: .25rem;
-  align-items: start;
-  margin-bottom: .5rem;            /* 每條之間間距 */
+/* 說明清單縮排：徽章左、文字右 */
+.intro-list { margin:0; padding:0; }
+.intro-row{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  column-gap:.5rem;
+  row-gap:.25rem;
+  align-items:start;
+  margin-bottom:.5rem;
 }
-.intro-row .badge {
-  white-space: nowrap;             /* 徽章不換行 */
-  font-weight: 600;
-}
-.intro-row span:last-child {
-  line-height: 1.7;                /* 文字行距舒適 */
-}
-
+.intro-row .badge{ white-space:nowrap; }
+.intro-row span:last-child{ line-height:1.7; }
 /* ==========================================================================
    卡片（Driver/Passenger 列表）＋ 左側色條
    ========================================================================== */
@@ -1065,11 +1059,7 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
    排序篩選 美化
    ========================================================================== */
 /* 司機/乘客兩個清單底部做一塊不可見的 spacer */
-#driver-list::after{
-  content: "";
-  display: block;
-  height: calc(20dvh + var(--safe-bottom)); /* 留一段可視高度 + 固定值 */
-}
+
 #passenger-list::after {
   content: "";
   display: block;
@@ -1122,6 +1112,52 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .panel[aria-expanded="true"] .panel-toggle svg { transform:rotate(180deg); }
 .panel-bd { padding:12px 12px 14px; display:none; }
 .panel[aria-expanded="true"] .panel-bd{ display:block; }
+
+/* 標題 + 筆數選單 */
+.section-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:10px 0 8px;
+}
+.pager-tools{ display:inline-flex; align-items:center; gap:6px; color:#475569; }
+.pager-size{
+  min-width:72px; padding:.35rem .5rem; border:1px solid #dbe1ea; border-radius:8px;
+  background:#fff;
+}
+
+/* 分頁按鈕 */
+.pager{
+  display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:center;
+  margin:12px 0 0;   /* 靠近清單 */
+}
+.pager button{
+  appearance:none; border:1px solid #dbe1ea; background:#fff; color:#334155;
+  padding:.38rem .65rem; border-radius:8px; cursor:pointer; min-width:38px;
+  transition:background .15s, color .15s, border-color .15s, transform .05s;
+}
+.pager button:hover{ background:#f3f6fb; }
+.pager button[disabled]{ opacity:.55; cursor:not-allowed; }
+.pager .is-active{ background:#2563eb; color:#fff; border-color:#2563eb; }
+.pager .ellipsis{ border:0; background:transparent; color:#94a3b8; }
+
+/* ✅ 分頁時關閉你原本加在 #driver-list 的大 spacer */
+#driver-list.paged::after{ height:0 !important; }
+
+/* 乘客清單分頁列 */
+.pager{
+  display:flex; flex-wrap:wrap; gap:8px;
+  justify-content:center; align-items:center;
+  padding:12px 0 20px;
+}
+.pager .page-btn{
+  border:1px solid #d8dee8; background:#fff; border-radius:8px;
+  padding:6px 10px; min-width:34px; cursor:pointer;
+}
+.pager .page-btn.active{ background:#2563eb; color:#fff; border-color:#2563eb; }
+.pager .page-btn[disabled]{ opacity:.5; cursor:not-allowed; }
+.pager .page-info{ margin-left:8px; color:#64748b; font-size:.9rem; }
+
+/* 若你的清單有 ::after spacer，分頁時把它關掉避免大空白 */
+#passenger-list.paged::after { height:0 !important; }
 
 /* ====== 排序：膠囊 Segmented Switch ====== */
 .sort-wrap{
@@ -1271,34 +1307,207 @@ input.ctl{ padding:.45rem .6rem; }
   </button>
 
   <!-- 說明按鈕 -->
-  <button id="btnIntro" class="btn-main btn-ghost" type="button" aria-haspopup="dialog" aria-controls="introModal">
-    <span class="ico">❔</span>
-    <span>說明</span>
-  </button>
+  <button id="btnIntro"
+        class="btn-main btn-ghost"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="introModal"
+        data-bs-toggle="modal"
+        data-bs-target="#introModal">
+  <span class="ico">❔</span>
+  <span>說明</span>
+</button>
 
   <button class="btn-main btn-passenger" onclick="openJoinModal && openJoinModal()">
     🧍‍♀️　我要搭車（找車）
   </button>
 </div>
 
+<div class="section-head">
   <h2>找人資訊（司機提供座位）</h2>
-  <ul id="passenger-list">
-    {% for p in passengers %}
-      {% if not p.is_matched %}
-        <li class="card passenger-card">
-          <span><b>{{ p.passenger_name }}</b> - 需要 {{ p.seats_needed }} 人
-            ({{ p.departure }} → {{ p.destination }}, {{ p.date }})</span>
-          <div class="actions">
-            <button onclick="openPassengerModal('{{ p.id }}')">編輯</button>
-            <button onclick="openJoinModal('{{ p.id }}')">參加</button>
-          </div>
-        </li>
-      {% endif %}
-    {% empty %}
-      <li class="card passenger-card">目前沒有需求</li>
-    {% endfor %}
-  </ul>
+  <div class="pager-tools">
+    <label for="passengerPageSize">每頁</label>
+    <select id="passengerPageSize" class="pager-size">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+      <option value="20">20</option>
+    </select>
+    <span>筆</span>
+  </div>
+</div>
+<ul id="passenger-list" class="paged">
+  {% for p in passengers %}
+    {% if not p.is_matched %}
+      <li class="card passenger-card">
+        <span><b>{{ p.passenger_name }}</b> - 需要 {{ p.seats_needed }} 人
+          ({{ p.departure }} → {{ p.destination }}, {{ p.date }})</span>
+        <div class="actions">
+          <button onclick="openPassengerModal('{{ p.id }}')">編輯</button>
+          <button onclick="openJoinModal('{{ p.id }}')">參加</button>
+        </div>
+      </li>
+    {% endif %}
+  {% empty %}
+    <li class="card passenger-card">目前沒有需求</li>
+  {% endfor %}
+</ul>
+<nav id="passengerPager" class="pager"></nav>
+
+
+  
+<script>
+(function () {
+  const K_SIZE = 'find.pager.passenger.size';
+  const K_PAGE = 'find.pager.passenger.page';
+
+  let state, elList, elSize, elPager, mo;
+
+  // 重新抓節點
+  function wireElements() {
+    elList  = document.getElementById('passenger-list');
+    elSize  = document.getElementById('passengerPageSize');
+    elPager = document.getElementById('passengerPager');
+    return !!(elList && elSize && elPager);
+  }
+
+  function readDom() {
+    state.items = Array.from(elList.querySelectorAll(':scope > li'));
+    state.total = state.items.length;
+  }
+
+  function clampPage() {
+    const last = Math.max(1, Math.ceil(state.total / state.size));
+    if (state.page > last) state.page = last;
+    if (state.page < 1)   state.page = 1;
+    return last;
+  }
+
+  function applyPage() {
+    const start = (state.page - 1) * state.size;
+    const end   = start + state.size;
+    state.items.forEach((li, idx) => {
+      li.style.display = (idx >= start && idx < end) ? '' : 'none';
+    });
+  }
+
+  function renderPager() {
+    const lastPage = clampPage();
+
+    const mkBtn = (label, page, disabled = false, active = false) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pager-btn' + (active ? ' active' : '') + (disabled ? ' disabled' : '');
+      btn.textContent = label;
+      if (!disabled) {
+        btn.addEventListener('click', () => {
+          state.page = page;
+          localStorage.setItem(K_PAGE, String(state.page));
+          applyPage();
+          renderPager();
+          elList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      return btn;
+    };
+
+    elPager.innerHTML = '';
+    elPager.append(
+      mkBtn('«', 1, state.page === 1),
+      mkBtn('‹', state.page - 1, state.page === 1),
+    );
+
+    const windowSize = 5;
+    let start = Math.max(1, state.page - Math.floor(windowSize / 2));
+    let end   = Math.min(lastPage, start + windowSize - 1);
+    start = Math.max(1, Math.min(start, end - windowSize + 1));
+    for (let p = start; p <= end; p++) {
+      elPager.append(mkBtn(String(p), p, false, p === state.page));
+    }
+
+    elPager.append(
+      mkBtn('›', state.page + 1, state.page === lastPage),
+      mkBtn('»', lastPage,      state.page === lastPage),
+    );
+
+    const info = document.createElement('span');
+    info.className = 'pager-info';
+    info.textContent = ` 第 ${state.page}/${lastPage} 頁，共 ${state.total} 筆`;
+    elPager.append(info);
+  }
+
+  function rerender(keepPage = true) {
+    readDom();
+    if (!keepPage) state.page = 1;
+    clampPage();
+    applyPage();
+    renderPager();
+  }
+
+  function initPassengerPager() {
+    if (!wireElements()) return;
+
+    state = {
+      size: parseInt(localStorage.getItem(K_SIZE) || elSize.value || '10', 10),
+      page: parseInt(localStorage.getItem(K_PAGE) || '1', 10),
+      total: 0,
+      items: []
+    };
+
+    elSize.value = String(state.size);
+    elSize.onchange = () => {
+      state.size = parseInt(elSize.value || '10', 10);
+      localStorage.setItem(K_SIZE, String(state.size));
+      state.page = 1;
+      localStorage.setItem(K_PAGE, '1');
+      rerender(false);
+    };
+
+    // 先清乾淨舊觀察器
+    mo && mo.disconnect();
+    mo = new MutationObserver(() => {
+      // 若 #passenger-list 被整個換掉，重綁一次
+      if (!document.getElementById('passenger-list')) {
+        mo.disconnect();
+        initPassengerPager(); // rebind
+      } else {
+        // 只是內容變動，重算即可
+        requestAnimationFrame(() => rerender(true));
+      }
+    });
+
+    // 兩個層級都監看：清單本身的子節點、以及清單的父層（用來抓被替換的情況）
+    mo.observe(elList, { childList: true });
+    if (elList.parentNode) {
+      mo.observe(elList.parentNode, { childList: true });
+    }
+
+    rerender(true);
+  }
+
+  // 對外：內容改變後（只改 innerHTML）呼叫這個就會重算
+  window.repagePassengerList = () => rerender(true);
+  // 對外：如果你是把 #passenger-list 整個外層換掉（outerHTML），呼叫這個重綁
+  window.initPassengerPager = initPassengerPager;
+
+  // DOM Ready 後啟動
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPassengerPager);
+  } else {
+    initPassengerPager();
+  }
+  window.repagePassengerList()
+})();
+</script>
+
+
+
+
+
+
+
+
 <h2>找車需求（乘客需要司機）</h2>
+
 
 
 {{ filters|json_script:"filtersData" }}
@@ -1489,7 +1698,91 @@ input.ctl{ padding:.45rem .6rem; }
       setSort(btn.dataset.sort);
     });
   });
+(function(){
+  function setupDriverPagination(){
+    const list  = document.getElementById('driver-list');
+    const pager = document.getElementById('driverPager');
+    const sizeSel = document.getElementById('driverPageSize');
+    if (!list || !pager || !sizeSel) return;
 
+    // 標記為分頁狀態：關閉 spacer
+    list.classList.add('paged');
+
+    // 讀偏好
+    const key = 'driverPageSize';
+    const saved = localStorage.getItem(key);
+    if (saved && [...sizeSel.options].some(o=>o.value===saved)) sizeSel.value = saved;
+
+    let items = Array.from(list.children).filter(li => li.tagName === 'LI');
+    let page = 1;
+
+    function pages(){
+      const size = parseInt(sizeSel.value,10) || 10;
+      return Math.max(1, Math.ceil(items.length / size));
+    }
+
+    function render(){
+      // 清單可能被 WS 重繪，重抓
+      items = Array.from(list.children).filter(li => li.tagName === 'LI');
+
+      const size = parseInt(sizeSel.value,10) || 10;
+      const total = pages();
+      if (page > total) page = total;
+
+      const start = (page-1)*size, end = start + size;
+      items.forEach((li, i) => li.style.display = (i>=start && i<end) ? '' : 'none');
+
+      drawPager(total);
+      localStorage.setItem(key, sizeSel.value);
+    }
+
+    function drawPager(total){
+      pager.innerHTML = '';
+      if (total <= 1) return;
+
+      const mk = (label, goto, opts={})=>{
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        if (opts.disabled) b.disabled = true;
+        if (opts.active)   b.classList.add('is-active');
+        b.addEventListener('click', ()=>{ if (goto && page!==goto){ page = goto; render(); }});
+        return b;
+      };
+
+      pager.appendChild(mk('‹', page-1, {disabled: page===1}));
+
+      if (total <= 9){
+        for (let p=1; p<=total; p++) pager.appendChild(mk(String(p), p, {active:p===page}));
+      } else {
+        const set = [1,2, page-2,page-1,page,page+1,page+2, total-1,total]
+          .filter((v,i,a)=> v>=1 && v<=total && a.indexOf(v)===i)
+          .sort((a,b)=>a-b);
+        let last = 0;
+        for (const p of set){
+          if (p - last > 1){
+            const ell = document.createElement('span');
+            ell.className = 'ellipsis'; ell.textContent = '…';
+            pager.appendChild(ell);
+          }
+          pager.appendChild(mk(String(p), p, {active:p===page}));
+          last = p;
+        }
+      }
+
+      pager.appendChild(mk('›', page+1, {disabled: page===total}));
+    }
+
+    sizeSel.addEventListener('change', ()=>{ page = 1; render(); });
+
+    // 對外提供「清單被動態重繪後」刷新
+    window.refreshDriverPagination = ()=>{ page = 1; render(); };
+
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', setupDriverPagination);
+})();
   /* ---------- 篩選、晶片（與你現有後端相容） ---------- */
   const depSel   = document.getElementById('f-dep');
   const desSel   = document.getElementById('f-des');
@@ -1979,7 +2272,7 @@ function clearFilters(){
   </div>
 </div>
 
-<!-- ③ 說明 Modal -->
+<!-- ③ 說明 Modal（ID 保持 introModal） -->
 <div class="modal fade" id="introModal"
      data-bs-backdrop="false" data-bs-keyboard="true"
      tabindex="-1" aria-labelledby="introModalLabel" aria-hidden="true">
@@ -1998,15 +2291,15 @@ function clearFilters(){
           </div>
           <div class="card-body">
             <ul class="intro-list list-unstyled">
-            <li class="intro-row">
-              <span class="badge bg-primary rounded-pill px-2 py-1">司機</span>
-              <span>點「我要出車」，填寫行程後等候乘客報名；有人加入會寄出 Email 通知司機；司機可選擇「接受／拒絕」。座位滿額後，系統會依規則把聯絡方式寄給需要的一方。</span>
-            </li>
-            <li class="intro-row">
-              <span class="badge bg-danger rounded-pill px-2 py-1">乘客</span>
-              <span>點「我要搭車」，填寫需求後會出現在列表。司機可依條件是否符合，選擇直接邀請或接受你的報名。</span>
-            </li>
-          </ul>
+              <li class="intro-row">
+                <span class="badge bg-primary rounded-pill px-2 py-1">司機</span>
+                <span>點「我要出車」，填寫行程後等候乘客報名；有人加入會寄出 Email 通知司機；司機可選擇「接受／拒絕」。座位滿額後，系統會依規則把聯絡方式寄給需要的一方。</span>
+              </li>
+              <li class="intro-row">
+                <span class="badge bg-danger rounded-pill px-2 py-1">乘客</span>
+                <span>點「我要搭車」，填寫需求後會出現在列表。司機可依條件是否符合，選擇直接邀請或接受你的報名。</span>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -2065,6 +2358,13 @@ function clearFilters(){
           </div>
         </div>
       </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+      </div>
+    </div>
+  </div>
+</div>
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>

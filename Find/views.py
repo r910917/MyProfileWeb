@@ -919,7 +919,7 @@ def delete_driver(request, driver_id):
         # 刪除司機
         d.delete(using="find_db")
 
-        broadcast_driver_card(driver_id)
+        
         broadcast_full_update()
         # 交易提交後再廣播（避免 rollback 卻已推播）
         transaction.on_commit(lambda: broadcast_full_update())

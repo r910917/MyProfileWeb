@@ -21,6 +21,27 @@ class DriverManageConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        await self.channel_layer.group_discard("find_group", self.channel_name)
+
+    # 對應 type: "send.update"
+    async def send_update(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "send.update",
+            "drivers_html": event.get("drivers_html"),
+            "passengers_html": event.get("passengers_html"),
+        }))
+
+    # 對應 type: "send.partial"
+    async def send_partial(self, event):
+        payload = event.get("payload")
+        if payload is not None:
+            await self.send(text_data=json.dumps({"type": "send.partial", "payload": payload}))
+        else:
+            await self.send(text_data=json.dumps({
+                "type": "send.partial",
+                "driver_id": event.get("driver_id"),
+                "html": event.get("html"),
+            }))
 
     # 你後端廣播時用的 type，要對應這個 handler 名稱
     async def manage_panels_update(self, event):
@@ -54,10 +75,10 @@ class FindConsumer(AsyncWebsocketConsumer):
     # 刪掉重複/舊的 send_update，只保留這個版本：
     async def send_update(self, event):
         await self.send(text_data=json.dumps({
-            "type": "update",
+            "type": "send.update",             # ← 改這行
             "drivers_html": event.get("drivers_html", ""),
             "passengers_html": event.get("passengers_html", ""),
-            "sort": event.get("sort"),   # ★ 重要：把 sort 往前端帶
+            "sort": event.get("sort"),
         }))
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -150,7 +171,7 @@ class FindConsumer(AsyncWebsocketConsumer):
     async def send_current_data(self):
         passengers_html, drivers_html = await self.render_lists()
         await self.send(text_data=json.dumps({
-            "type": "update",
+            "type": "send.update",             # ← 也改這行
             "passengers_html": passengers_html,
             "drivers_html": drivers_html,
         }))

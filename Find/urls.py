@@ -31,4 +31,5 @@ urlpatterns = [
 urlpatterns += [
     path("driver/<int:driver_id>/privacy/", views.driver_toggle_privacy, name="driver_toggle_privacy"),
     path("pax/<int:pax_id>/privacy/", views.pax_toggle_privacy, name="pax_toggle_privacy"),
+    path("driver/<int:driver_id>/delete/", views.delete_driver, name="delete_driver"),
 ]

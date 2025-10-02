@@ -87,7 +87,7 @@ def broadcast_full_lists():
     pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
     accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
 
-    drivers = (
+    d = (
         DriverTrip.objects.using("find_db")
         .filter(is_active=True)
         .prefetch_related(
@@ -100,7 +100,7 @@ def broadcast_full_lists():
         is_matched=False, driver__isnull=True
     ).order_by("-id")
 
-    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
+    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": d})
     passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
 
     channel_layer = get_channel_layer()
@@ -180,7 +180,7 @@ def _broadcast_lists():
     pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
     accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
 
-    drivers = (
+    d = (
         DriverTrip.objects.using("find_db")
         .filter(is_active=True)
         .prefetch_related(
@@ -193,7 +193,7 @@ def _broadcast_lists():
         is_matched=False, driver__isnull=True
     ).order_by("-id")
 
-    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": drivers})
+    drivers_html    = render_to_string("Find/_driver_list.html",    {"drivers": d})
     passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
 
     async_to_sync(channel_layer.group_send)(
@@ -209,12 +209,12 @@ def broadcast_full_update():
     accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True).order_by("-id")
 
     # 只有上架中的司機要顯示
-    drivers = (
+    d = (
         DriverTrip.objects.using("find_db")
         .filter(is_active=True)
         .prefetch_related(
-            Prefetch("passengers", queryset=pending_qs,  to_attr="pending"),
-            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted"),
+            Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
+            Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
         )
         .order_by("-id")
     )
@@ -226,7 +226,7 @@ def broadcast_full_update():
         .order_by("-id")
     )
 
-    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+    drivers_html = render_to_string("Find/_driver_list.html", {"drivers": d})
     passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
 
     # 傳給同一個 group（你的 consumer 會把它包成 {"type":"update", ...} 給前端）
@@ -905,25 +905,33 @@ def pax_delete(request, pid: int):
     return JsonResponse({"ok": True})
 
 
-@transaction.atomic
-def delete_driver(request, driver_id):
+@transaction.atomic(using="find_db")
+def delete_driver(request, driver_id: int):
     if request.method != "POST":
-        return redirect("find_index")
+        raise Http404()
 
-    with transaction.atomic(using="find_db"):
-        d = get_object_or_404(DriverTrip.objects.using("find_db"), id=driver_id)
+    d = (DriverTrip.objects.using("find_db")
+         .select_for_update()
+         .filter(pk=driver_id)
+         .first())
+    if not d:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"ok": False, "error": "Driver not found"}, status=404)
+        raise Http404("Driver not found")
 
-        # 解除關聯（如果有外鍵）
-        PassengerRequest.objects.using("find_db").filter(driver_id=d.id).update(driver=None, is_matched=False)
+    # 釋放該司機底下的乘客
+    PassengerRequest.objects.using("find_db").filter(driver_id=driver_id).update(
+        driver=None,
+        is_matched=False,
+    )
+    # 硬刪除
+    d.delete(using="find_db")
 
-        # 刪除司機
-        d.delete(using="find_db")
+    # ✅ 讓所有人同步到最新清單（這是「交易外」或「交易完成後」也 OK）
+    broadcast_full_update()
 
-        
-        broadcast_full_update()
-        # 交易提交後再廣播（避免 rollback 卻已推播）
-        transaction.on_commit(lambda: broadcast_full_update())
-
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": True, "deleted_id": driver_id})
     return redirect("find_index")
 
 @csrf_protect

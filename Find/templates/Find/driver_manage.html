@@ -320,11 +320,15 @@ textarea{min-height:80px;resize:vertical}
     </div>
   </form>
 
-  <!-- 刪除司機表單（原樣） -->
-  <form id="deleteDriverForm" method="POST" action="{% url 'delete_driver' driver.id %}" style="max-width:600px;margin:14px auto 0;" onsubmit="return handleDeleteDriverSubmit(event)">
-    {% csrf_token %}
-    <button id="deleteDriverBtn" class="btn btn-danger" type="submit">🗑️ 取消出車</button>
-  </form>
+  <!-- 刪除司機表單（保留 CSRF 與 action） -->
+<form id="deleteDriverForm"
+      method="POST"
+      action="{% url 'delete_driver' driver.id %}"
+      style="max-width:600px;margin:14px auto 0;"
+      onsubmit="return handleDeleteDriverSubmit(event)">
+  {% csrf_token %}
+  <button id="deleteDriverBtn" class="btn btn-danger" type="submit">🗑️ 取消出車</button>
+</form>
 
   <!-- 乘客清單（原樣） -->
 <!-- C) 已登記乘客（升級：接受 / 拒絕 / 司機備忘錄） -->
@@ -382,13 +386,11 @@ textarea{min-height:80px;resize:vertical}
       if (desSel) checkCustomDestination(desSel);
     })();
 
-    // 刪除確認（原樣）
-    function handleDeleteDriverSubmit(e){
-      if (!confirm('⚠️ 確定要取消出車嗎？相關乘客也會被解除關聯！')) return false;
-      const btn = document.getElementById('deleteDriverBtn');
-      if (btn) { btn.disabled = true; btn.textContent = '處理中…'; }
-      return true;
-    }
+    function getCsrfToken() {
+    // 從表單 hidden input 拿 CSRF
+    const tokenInput = document.querySelector('#deleteDriverForm input[name=csrfmiddlewaretoken]');
+    return tokenInput ? tokenInput.value : '';
+  }
 
     // ✅ 隱私開關：需要 Email 才能啟用
 (function () {
@@ -622,7 +624,7 @@ document.addEventListener('click', async (e) => {
 
 
   // 司機備忘錄（prompt 版本）
-  document.addEventListener('click', async (e) => {
+document.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action="memo"]');
     if (!btn) return;
 
@@ -704,6 +706,105 @@ document.addEventListener('click', async (e) => {
   };
 })();
 </script>
+<script>
+async function handleDeleteDriverSubmit(e){
+  e.preventDefault();
+  if (!confirm('⚠️ 確定要取消出車嗎？相關乘客也會被解除關聯！')) return false;
+
+  const btn  = document.getElementById('deleteDriverBtn');
+  const form = document.getElementById('deleteDriverForm');
+  const url  = form.action;
+  const csrf = form.querySelector('input[name=csrfmiddlewaretoken]')?.value || '';
+
+  btn.disabled = true; btn.textContent = '處理中…';
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrf,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || !data.ok) {
+      alert(data.error || '刪除失敗'); 
+      btn.disabled = false; btn.textContent = '🗑️ 取消出車';
+      return false;
+    }
+
+    // ✅ 成功：這頁沒有 onmessage，就手動跳回列表（或改成 location.reload()）
+    window.location.href = "{% url 'find_index' %}";
+    return true;
+  } catch (err) {
+    console.error(err);
+    alert('網路錯誤');
+    btn.disabled = false; btn.textContent = '🗑️ 取消出車';
+    return false;
+  }
+}
+</script>
+<script>
+(function () {
+  const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsUrl    = `${wsScheme}://${location.host}/ws/find/`; // ← 路由見第2步
+  let socket;
+
+  function connect() {
+    socket = new WebSocket(wsUrl);
+    socket.onopen  = () => console.log('[WS] connected');
+    socket.onclose = () => setTimeout(connect, 2000);
+    socket.onerror = (e) => { console.error('[WS] error', e); socket.close(); };
+
+    socket.onmessage = (e) => {
+      let msg; try { msg = JSON.parse(e.data); } catch { return; }
+
+      if (msg.type === "send.update") {
+        const dList = document.getElementById("driver-list");
+        const pList = document.getElementById("passenger-list");
+        if (msg.drivers_html && dList)    dList.innerHTML    = msg.drivers_html;
+        if (msg.passengers_html && pList) pList.innerHTML = msg.passengers_html;
+        return;
+      }
+
+      if (msg.type === "send.partial") {
+        if (msg.payload && msg.payload.type === "driver_partial") {
+          upsertDriverCard(msg.payload.driver_id, msg.payload.driver_html, msg.payload.active !== false);
+          return;
+        }
+        if (msg.driver_id && msg.html) {
+          upsertDriverCard(msg.driver_id, msg.html, true);
+          return;
+        }
+      }
+
+      if (msg.type === "manage.panels" && msg.html) {
+        const el = document.getElementById("managePanels");
+        if (el) el.innerHTML = msg.html;
+      }
+    };
+  }
+  connect();
+
+  function upsertDriverCard(driverId, html, active = true) {
+    const list = document.getElementById("driver-list");
+    if (!list) return;
+    const existing = list.querySelector(`[data-driver-id="${driverId}"]`);
+
+    if (active === false) { if (existing) existing.remove(); return; }
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = (html || '').trim();
+    const node = tmp.firstElementChild;
+    if (!node) return;
+
+    if (existing) existing.replaceWith(node);
+    else list.prepend(node);
+  }
+})();
+</script>
+
 
 
 </body>

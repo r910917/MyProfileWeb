@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <title>🌐 花蓮光復救災交通媒合</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+  <link
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+  integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+  crossorigin="anonymous"
+/>
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+  crossorigin="anonymous"
+></script>
 <style>
 /* ==========================================================================
    全站基礎：字體、背景、主標題/小標題
@@ -127,6 +140,26 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .driver-card .btn-manage:hover{ background:#0056b3; }
 .driver-card .btn-join{ background:#28a745; color:#fff; border:0; border-radius:6px; padding:6px 10px; }
 .driver-card .btn-join:hover{ background:#1e7e34; }
+
+/* 手機上：展開面板本身可捲，兩個乘客清單也各自可捲 */
+@media (max-width: 640px) {
+  .driver-card .details.open {
+    /* JS 會塞 max-height，這裡保一個保底值 */
+    max-height: 72svh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 12px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  }
+  .driver-card .pax-scroll {
+    max-height: 28svh;         /* 每欄各自上限，避免撐破 */
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 
 /* =============================================================================
    A. 乘客清單（待確認 / 已接受）卡片樣式
@@ -329,10 +362,103 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 /* ==========================================================================
    Modal：通用（遮罩/容器/關閉鈕/區塊）
    ========================================================================== */
+/* ===== Passenger Auth Modal (scoped) ===== */
+#paxAuthModal{
+  /* 用 grid 置中，無視外層任何 margin/padding 影響 */
+  display: grid;
+  place-items: center;
+  position: fixed;
+  inset: 0;
+  padding: 0;            /* 避免視覺上看起來略上緣 */
+  z-index: 1000;
+  background: rgba(0,0,0,.55);
+}
+
+#paxAuthModal .pax-modal-card{
+  margin-top: 50%;
+}
+
+#paxAuthModal .pax-desc{
+  text-align: center;     /* 說明置中 */
+}
+
+/* 小螢幕也維持置中 */
+@media (max-width: 520px){
+  #paxAuthModal{ padding: 0; /* 用 grid 置中，無視外層任何 margin/padding 影響 */
+  display: grid;
+  place-items: center;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.55);}
+  #paxAuthModal .pax-modal-card{ width: min(520px, 92vw); }
+}
+#paxAuthModal .pax-modal-card {
+  width:min(520px, 92vw);
+  background:#fff; border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.28);
+  display:flex; flex-direction:column; overflow:hidden; animation:fadeIn .18s ease-out;
+}
+#paxAuthModal .pax-modal-head {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:16px 18px; border-bottom:1px solid #eee;
+}
+#paxAuthModal .pax-title-wrap { display:flex; align-items:center; gap:10px; }
+#paxAuthModal .pax-lock { font-size:18px; line-height:1; }
+#paxAuthModal .pax-title { margin:0; font-size:18px; font-weight:700; color:#222; }
+
+#paxAuthModal .pax-close {
+  appearance:none; border:0; background:transparent; cursor:pointer;
+  font-size:22px; line-height:1; color:#888; padding:2px 6px; border-radius:8px;
+}
+#paxAuthModal .pax-close:hover { background:#f2f3f5; color:#222; }
+
+#paxAuthModal .pax-desc { margin:0 0 14px; font-size:14px; color:#666; }
+
+#paxAuthModal .pax-form { margin:0; }
+#paxAuthModal .pax-form-row { display:grid; grid-template-columns:94px 1fr; gap:10px 14px; align-items:center; }
+#paxAuthModal .pax-form-row label { font-size:14px; color:#333; text-align:right; }
+#paxAuthModal .pax-form-row input {
+  width:75%; padding:10px 12px; border:1px solid #dcdfe6; border-radius:10px; font-size:15px;
+  transition:border-color .15s, box-shadow .15s;
+}
+#paxAuthModal .pax-form-row input:focus {
+  outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15);
+}
+
+#paxAuthModal .pax-modal-foot {
+  display:flex; justify-content:flex-end; gap:8px;
+  padding:12px 18px 16px; border-top:1px solid #eee;
+}
+
+#paxAuthModal .btn {
+  min-width:88px; height:38px; padding:0 14px; border-radius:10px; border:1px solid transparent;
+  font-size:14px; cursor:pointer; transition:background .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+#paxAuthModal .btn.primary { background:#2563eb; color:#fff; }
+#paxAuthModal .btn.primary:hover { background:#1e4fd6; }
+#paxAuthModal .btn.ghost { background:#f3f4f6; color:#111827; border-color:#e5e7eb; }
+#paxAuthModal .btn.ghost:hover { background:#ebeef2; }
+
+@media (max-width:520px){
+  #paxAuthModal .pax-form-row { grid-template-columns:1fr; }
+  #paxAuthModal .pax-form-row label { text-align:left; }
+}
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
 .modal{
   position:fixed; inset:0; z-index:1000;left: 0; top: 0; background:rgba(0,0,0,.55);
   display:none;justify-content: center; align-items: center;
 }
+
+/* ---- 統一卡片樣式（和司機管理一致的圓角/陰影） ---- */
+.modal-card{
+  width:min(520px, 94vw);
+  border-radius:16px;
+  box-shadow:0 16px 40px rgba(0,0,0,.18);
+  overflow:hidden;
+}
+
 .modal-content {
   background: #fff;
   border-radius: 12px;
@@ -346,42 +472,51 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 }
 .modal .modal-content{
   display:flex; flex-direction:column;
-  width:min(520px,94vw); max-height:min(92svh,640px);
+  width:min(520px,94vw);max-width:640px;; max-height:min(92svh,640px);
   margin:6svh auto; background:#fff; border-radius:12px;
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
-.modal-header, .modal-footer{
-  flex:0 0 auto; padding:14px 16px; border-bottom:1px solid #eee;
+/* header / footer */
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 18px; border-bottom:1px solid #eee;
 }
-.modal-footer{ border-top:1px solid #eee; border-bottom:0; display:flex; justify-content:flex-end; gap:8px; }
+.modal-footer{
+  display:flex; justify-content:flex-end; gap:10px;
+  padding:14px 18px; border-top:1px solid #eee;
+}
 .modal-body{ flex:1 1 auto; overflow-y:auto; padding:14px 16px; }
 .close{ background:transparent; border:0; font-size:20px; cursor:pointer; }
-/* 背景頁在 modal 開啟時不要捲動（可選） */
+.modal-title-row{ display:flex; align-items:center; gap:10px; }
+.modal-emoji{ font-size:20px; line-height:1; }
+.modal-title{ margin:0; font-size:18px; font-weight:700; letter-spacing:.5px; }
+
 .body-modal-open{ overflow:hidden; }
-/* 標題與描述 */
-.modal-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-}
 .modal-desc {
   font-size: 14px;
   color: #666;
   margin: 8px 0 20px;
 }
 
-/* 關閉按鈕 */
-.close {
-  position: absolute;
-  top: 12px; right: 16px;
-  font-size: 22px;
-  font-weight: bold;
-  color: #888;
-  cursor: pointer;
+/* close button */
+.close{
+  background:transparent; border:0; font-size:22px; color:#8a8f98; cursor:pointer; line-height:1;
 }
-.close:hover { color: #000; }
+.close:hover{ color:#333; }
 
+/* inline error */
+.form-error{
+  margin:6px 0 0 120px; color:#d33; font-size:13px; min-height:1em; display:none;
+}
+.form-error.show{ display:block; }
+
+/* RWD：手機改為上下排列 */
+@media (max-width: 480px){
+  .form-vertical .form-row{
+    grid-template-columns:1fr; gap:6px;
+  }
+  .form-error{ margin-left:0; }
+}
 /* 表單欄位 */
 .form-group {
   margin-bottom: 20px;
@@ -667,152 +802,342 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
    Pax Edit Modal 美化（只影響 #paxEditModal）
    ========================================================================== */
 
-/* 背景：半透明＋輕微模糊 */
-#paxEditModal.modal{
-  position: fixed; inset: 0; z-index: 1200;
-  background: rgba(15, 23, 42, .45);
-  backdrop-filter: blur(2px);
-  display: none; /* 用 JS 控制 show/hide */
+/* 彈窗寬度與可卷動 */
+.modal .modal-content{ max-width:640px; }
+.modal .modal-body{ max-height:72vh; overflow:auto; }
+/* 3) 內容區底部加內距，避免被底部按鈕蓋住 */
+#paxEditModal .modal-body {
+  padding-bottom: 80px; /* 可依喜好 64~96px */
 }
-
-/* 容器：置中、圓角、陰影、flex 直向 */
-#paxEditModal .modal-content{
-  width: min(560px, 94vw);
-  max-height: min(88svh, 680px);
-  margin: 5svh auto;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgba(2, 6, 23, .25);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header / Footer 黏住頂底，內容區可捲動 */
-#paxEditModal .modal-header,
-#paxEditModal .modal-footer{
-  flex: 0 0 auto;
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #eef2f7;
-}
-#paxEditModal .modal-footer{
-  border-top: 1px solid #eef2f7;
-  border-bottom: 0;
-  display: flex;
-  justify-content: flex-end;
+/* 4) 底部按鈕：尺寸加大、靠右對齊 */
+#paxEditModal .modal-footer {
+  position: sticky;        /* 捲動時固定在底部 */
+  bottom: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   gap: 10px;
+  justify-content: flex-end;
+  background: #fff;        /* 與內容分層 */
+  border-top: 1px solid #eef2f7;
+}
+#paxEditModal .btn-submit,
+#paxEditModal .btn-cancel {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+/* 1) 表單欄位填滿一欄（把原本 50% 覆寫成 100%） */
+#paxEditModal .join-field input,
+#paxEditModal .join-field select,
+#paxEditModal .join-field textarea {
+  width: 100%;
 }
 
-/* 標題與關閉鈕 */
-#paxEditModal .modal-header{
-  position: sticky; top: 0; z-index: 2;
-  display: flex; align-items: center; justify-content: center;
+/* 控制項寬度 */
+#paxEditForm input,
+#paxEditForm select,
+#paxEditForm textarea{ width:100%; }
+
+/* 2) 備註：加大高度、可拉伸，且橫跨兩欄 */
+#paxEditModal #paxEditForm textarea {
+  grid-column: 1 / -1;
+  min-height: 120px;
+  resize: vertical;
 }
-#paxEditModal .modal-header .title{
-  font-weight: 800; color: #0f172a; font-size: 16px;
-  display: inline-flex; gap: 8px; align-items: center;
-}
-#paxEditModal .modal-header .close{
-  position: absolute; right: 10px; top: 8px;
-  width: 32px; height: 32px;
-  border: 0; border-radius: 8px;
-  display: inline-grid; place-items: center;
-  font-size: 18px; line-height: 1; color: #6b7280;
-  background: transparent; cursor: pointer;
-  transition: color .15s ease;
-}
-#paxEditModal .modal-header .close:hover{
-  background: #f3f4f6; color: #111827;
+.switch{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border:1px solid #e9eef5; border-radius:10px; background:#f8fbff;
 }
 
-/* 內容可捲動 + 內距 */
-#paxEditModal .modal-body{
-  flex: 1 1 auto; overflow: auto;
-  padding: 14px 16px;
+/* 隱藏真正的 checkbox */
+.switch input[type="checkbox"]{
+  position:absolute; opacity:0; width:0; height:0;
 }
 
-/* 表單：桌機兩欄、手機單欄 */
-#paxEditModal #paxEditForm{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 14px;
+/* 這裡改：讓 label.toggle 當滑軌 */
+.switch label.toggle{
+  position:relative; width:48px; height:26px; border-radius:999px;
+  background:#d1d5db; transition:background .2s; cursor:pointer; display:inline-block;
 }
-@media (max-width: 640px){
-  #paxEditModal #paxEditForm{ grid-template-columns: 1fr; }
-}
-
-/* 單欄欄位（原本的 .join-field）統一視覺 */
-#paxEditModal .join-field{
-  display: flex; flex-direction: column; gap: 6px;
+.switch label.toggle::after{
+  content:""; position:absolute; top:3px; left:3px; width:20px; height:20px;
+  background:#fff; border-radius:50%; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:transform .2s;
 }
 
-/* 讓較長的欄位（備註）自動佔兩欄 */
-#paxEditModal textarea{ grid-column: 1 / -1; }
-
-/* Label */
-#paxEditModal .join-field > label{
-  font-weight: 600; color: #1f2937; line-height: 1.2;
+/* 勾選後變色與推動圓點 */
+.switch input[type="checkbox"]:checked + label.toggle{
+  background:#22c55e;
+}
+.switch input[type="checkbox"]:checked + label.toggle::after{
+  transform:translateX(22px);
 }
 
-/* Input / Select / Textarea 一致化 */
+/* 讓文字也可點 */
+.switch .switch-text{ font-weight:600; color:#374151; cursor:pointer; }
+
+/* 禁用狀態（如果你用 JS 設置 disabled） */
+.switch input[type="checkbox"]:disabled + label.toggle{
+  opacity:.55; cursor:not-allowed; background:#e5e7eb;
+}
+.switch input[type="checkbox"]:disabled ~ .switch-text{
+  color:#9ca3af; cursor:not-allowed;
+}
+
+#paxPrivacyHint{ margin-top:6px; font-size:12px; color:#6b7280; }
+#paxPrivacyHint.hint-error{ color:#b91c1c; }
+
+/* === Pax Edit 膠囊格子風格 === */
 #paxEditModal .join-field input,
 #paxEditModal .join-field select,
 #paxEditModal .join-field textarea{
-  width: 50%;
+  width: 100%;
+  height: 42px;                 /* textarea 下面會覆寫成自動高度 */
   padding: 10px 12px;
-  border: 1px solid #d7dde6;
-  border-radius: 10px;
-  font-size: 14px; line-height: 1.25;
-  transition: border-color .18s ease, box-shadow .18s ease;
+  border: 1px solid #d9dee7;    /* 淺灰外框 */
+  border-radius: 12px;          /* 圓角膠囊 */
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+  transition: border-color .15s, box-shadow .15s, background .15s;
 }
 
-/* Focus ring */
+#paxEditModal .join-field textarea{
+  min-height: 110px;
+  height: auto;                 /* 文字區域不要固定高度 */
+  resize: vertical;
+}
+
 #paxEditModal .join-field input:focus,
 #paxEditModal .join-field select:focus,
 #paxEditModal .join-field textarea:focus{
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+  border-color: #94b5ff;        /* 你也可改 #3b82f6 */
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
 }
 
-/* placeholder 淡一點 */
-#paxEditModal ::placeholder{ color: #9ca3af; }
-
-/* number 小箭頭隱藏（一致高度） */
-#paxEditModal input[type="number"]::-webkit-inner-spin-button,
-#paxEditModal input[type="number"]::-webkit-outer-spin-button{
-  -webkit-appearance: none; margin: 0;
+#paxEditModal .join-field ::placeholder{
+  color:#9aa3b2;
 }
-#paxEditModal input[type="number"]{ -moz-appearance: textfield; }
 
-/* 按鈕 */
-#paxEditModal .btn-cancel,
-#paxEditModal .btn-submit{
-  border: 0; border-radius: 10px;
-  padding: 10px 16px; font-weight: 700; cursor: pointer;
-  transition: transform .06s ease, box-shadow .2s ease;
+/* 選單的原生箭頭隱藏 + 自訂間距（可選） */
+#paxEditModal .join-field select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding-right: 34px;
+  background-image: none;       /* 如果想加下拉箭頭可以再放 data-URI 圖 */
 }
-#paxEditModal .btn-cancel{ background: #eef2f7; color: #111827; }
-#paxEditModal .btn-cancel:hover{ background: #e5eaf2; }
-#paxEditModal .btn-submit{ background: #2563eb; color: #fff; }
-#paxEditModal .btn-submit:hover{ background: #1e4fd6; }
-#paxEditModal .btn-cancel:active,
-#paxEditModal .btn-submit:active{ transform: translateY(1px); }
+/* 表單標題（label）置中、字大一點、間距加大 */
+#paxEditModal .join-field > label{
+  font-weight: 700;
+  font-size: 16px;         /* 原本 14 → 16 */
+  color: #1f2937;
+  text-align: center;      /* 置中 */
+  margin-bottom: 8px;      /* 與輸入框距離 */
+}
 
-/* 小螢幕微調 */
-@media (max-width: 640px){
-  #paxEditModal .modal-content{
-    width: 94vw; max-height: min(92svh, 700px); margin: 4svh auto;
+/* 欄位格子：字體加大、上下 padding 更厚、圓角維持 */
+#paxEditModal .join-field input,
+#paxEditModal .join-field select,
+#paxEditModal .join-field textarea{
+  font-size: 16px;         /* 原本 14 → 16 */
+  line-height: 1.4;
+  padding: 14px 14px;      /* 上下間距加大 */
+  height: auto;            /* 讓高度由 padding 撐開 */
+  border: 1px solid #d9dee7;
+  border-radius: 12px;
+}
+
+/* 文字區塊高度再放鬆一些 */
+#paxEditModal .join-field textarea{
+  min-height: 120px;
+}
+
+/* 隱私設定 switch：整塊置中、字加大 */
+#paxEditModal .privacy-switch,
+#paxEditModal .switch{
+  justify-content: center; /* 水平置中 */
+}
+#paxEditModal .switch label{
+  font-size: 16px;
+}
+
+/* Modal 標題本來就置中，這裡再微調字重與字級 */
+#paxEditModal .modal-header .title{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* 儲存/取消按鈕字更大、觸控面積更好按 */
+#paxEditModal .btn-submit,
+#paxEditModal .btn-cancel{
+  font-size: 16px;
+  padding: 12px 18px;
+}
+
+@media (max-width: 560px){
+  /* 小螢幕下，欄位全寬看起來更舒服 */
+  #paxEditModal .join-field input,
+  #paxEditModal .join-field select,
+  #paxEditModal .join-field textarea{
+    width: 100%;
   }
-  #paxEditModal .modal-body{ padding: 12px 14px; }
-  #paxEditModal .modal-footer{ padding: 10px 14px; }
 }
 
- #paxDelModal .btn-cancel{background:#d1d5db;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
- #paxDelModal .btn-delete{background:#dc2626;color:#fff;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
- #paxDelModal .btn-delete:hover{background:#b91c1c;}
 
+/* 小螢幕改一欄 */
+@media (max-width:560px){
+  #paxEditForm{ grid-template-columns:1fr; }
+/* 5) 手機：按鈕滿版、改直向排列 */
+@media (max-width: 560px) {
+  #paxEditModal .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #paxEditModal .btn-submit,
+  #paxEditModal .btn-cancel {
+    width: 100%;
+  }
+}
+}
+/* ==========================================================================
+   排序篩選 美化
+   ========================================================================== */
+/* 司機/乘客兩個清單底部做一塊不可見的 spacer */
+#driver-list::after{
+  content: "";
+  display: block;
+  height: calc(20dvh + var(--safe-bottom)); /* 留一段可視高度 + 固定值 */
+}
+#passenger-list::after {
+  content: "";
+  display: block;
+  height: calc(1vh + var(--safe-bottom)); /* 留一段可視高度 + 固定值 */
+}
+
+/* 若清單外有頁面容器，也建議留 padding-bottom，雙重保險 */
+.page,
+.container,
+.main {
+  padding-bottom: calc(10vh + 64px + var(--safe-bottom));
+}
+
+:root{ --collapse-ms: 240ms;--safe-bottom: env(safe-area-inset-bottom, 0px); }
+
+.panel{
+  border:1px solid #e6e8ec; border-radius:14px; background:#fff; overflow:hidden;
+  box-shadow:0 2px 10px rgba(30,41,59,.06);
+  margin:.75rem 0 1rem;
+}
+.panel-hd{
+  display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+  padding:.8rem 1rem; background:linear-gradient(#f8fafc,#f3f6fb);
+  cursor:pointer; user-select:none;
+}
+.panel-title{ display:flex; align-items:center; gap:.55rem; font-weight:600; color:#0f172a; }
+.panel-title .dot{ width:10px; height:10px; border-radius:999px; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+.panel-ops{ display:flex; align-items:center; gap:.5rem; }
+.panel-toggle{ width:34px; height:34px; border-radius:10px; border:1px solid #dbe0e8; background:#fff; display:grid; place-items:center; }
+.panel-toggle svg{ width:18px; height:18px; transition:transform .22s ease; color:#334155; }
+.panel[aria-expanded="true"] .panel-toggle svg{ transform:rotate(180deg); }
+
+/* ✅ 只用 max-height/opacity 做動畫—不要再用 display:none/block */
+.panel .panel-bd{
+  padding:12px 12px 14px;     /* 這裡保留 padding，但不要再加 display:none */
+  overflow:hidden;
+  max-height:0;
+  opacity:0;
+  transition:
+    max-height var(--collapse-ms) ease,
+    opacity    var(--collapse-ms) ease;
+}
+.panel[aria-expanded="true"] .panel-bd{ opacity:1; }
+
+.panel-title { display:flex; align-items:center; gap:.55rem; font-weight:600; color:#0f172a; }
+.panel-title .dot { width:10px; height:10px; border-radius:999px; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+.panel-ops { display:flex; align-items:center; gap:.5rem; }
+.panel-toggle { width:34px; height:34px; border-radius:10px; border:1px solid #dbe0e8; background:#fff; display:grid; place-items:center; }
+.panel-toggle svg { width:18px; height:18px; transition:transform .22s ease; color:#334155; }
+.panel[aria-expanded="true"] .panel-toggle svg { transform:rotate(180deg); }
+.panel-bd { padding:12px 12px 14px; display:none; }
+.panel[aria-expanded="true"] .panel-bd{ display:block; }
+
+/* ====== 排序：膠囊 Segmented Switch ====== */
+.sort-wrap{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr)); /* ✅ 三欄 */
+  gap:10px;
+  align-items:center;
+}
+/* 小螢幕時自動堆疊成一欄（避免擠不下）—如果你想維持三欄可刪掉這段 */
+@media (max-width: 768px){
+  .sort-wrap{ grid-template-columns: 1fr; }
+}
+.seg-box{ flex:1; }     /* 保持每欄等寬 */
+.seg-title{ font-size:.9rem; color:#475569; margin:2px 0 4px 6px; }
+
+.seg-switch {
+  --h:40px; position:relative; background:#f4f6fb; border:1px solid #e4e8f0;
+  border-radius:999px; display:flex; padding:4px; height:var(--h);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.04);
+}
+.seg-switch .pill {
+  position:absolute; top:4px; left:4px; height:calc(var(--h) - 8px); width:calc(50% - 4px);
+  background:#fff; border-radius:999px; box-shadow:0 2px 10px rgba(0,0,0,.08);
+  transition:left .22s cubic-bezier(.4,0,.2,1), width .22s cubic-bezier(.4,0,.2,1);
+}
+.seg-switch .opt {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:.4rem;
+  z-index:1; color:#475569; font-weight:600; cursor:pointer; user-select:none;
+}
+.seg-switch .opt .ico{ width:16px; height:16px; }
+.seg-switch[data-state="right"] .pill { left:calc(50% + 0px); }
+.seg-title { font-size:.9rem; color:#475569; margin:2px 0 4px 6px; }
+
+/* 次級分組（出發地排序） */
+.seg-group { display:flex; gap:10px; }
+.seg-box { flex:1; }
+
+/* ====== 隱藏 select（保相容） ====== */
+#sort{ display:none; }
+
+/* ====== 篩選格線 ====== */
+.filt-grid{
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px 12px; align-items:end; margin-top:6px;
+}
+@media (max-width:768px){ .filt-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .only-desktop-spacer{ display:none; } }
+
+.filt-item{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.filt-item label{ font-size:.86rem; color:#666; }
+.ctl{ width:100%; box-sizing:border-box; }
+select.ctl{ min-height: 2.6rem; padding:.35rem .55rem; }
+input.ctl{ padding:.45rem .6rem; }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:10px 16px; border-radius:10px; border:0; cursor:pointer; font-weight:600;
+  transition:transform .02s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn.primary{ background:#111; color:#fff; border-color:#111; }
+.btn.ghost{ background:#f5f6f8; }
+
+/* ====== 酌收費用 Toggle（≥ / ≤） ====== */
+.fare-toggle{ display:flex; align-items:center; gap:.5rem; }
+.toggle{
+  position:relative; width:160px; height:36px; border-radius:999px; background:#e9edf3; border:1px solid #d8dee8; cursor:pointer;
+}
+.toggle .knob{
+  position:absolute; top:3px; left:3px; width:30px; height:30px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.12);
+  transition:left .22s cubic-bezier(.4,0,.2,1), transform .12s ease;
+}
+.toggle[data-mode="gte"] .knob{ left:127px; }
+.toggle .label{ position:absolute; top:50%; transform:translateY(-50%); font-size:.82rem; color:#5a6372; }
+.toggle .label.lte{ left:42px; } .toggle .label.gte{ right:42px; }
+
+/* 晶片 */
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.25rem 0 1rem;}
+.chip{display:inline-flex;align-items:center;gap:.45rem;padding:.28rem .6rem;border-radius:999px;border:1px solid #e1e4ea;background:#f7f8fb;font-size:.87rem;color:#333;}
+.chip .x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e9ecf3;color:#333;cursor:pointer;font-size:.8rem;line-height:1;}
+.chip .x:hover{ background:#dfe4ee; }
 </style>
 
 </head>
@@ -845,11 +1170,335 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
       <li class="card passenger-card">目前沒有需求</li>
     {% endfor %}
   </ul>
-
 <h2>找車需求（乘客需要司機）</h2>
+
+
+{{ filters|json_script:"filtersData" }}
+
+{# 後端 filters 以合法 JSON 注入（供 JS 使用） #}
+{{ filters|json_script:"filtersData" }}
+<div id="filterPanel" class="panel" aria-expanded="false">
+  <div class="panel-hd" id="panelHead">
+      <div class="panel-title">
+      <span class="dot" aria-hidden="true"></span>
+      <span>條件與排序（快速找到你要的車）</span>
+    </div>
+    <div class="panel-ops">
+      <button type="button" class="panel-toggle" aria-label="展開/收合">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="panel-bd">
+    <!-- ===== 排序（膠囊） ===== -->
+    <div class="sort-wrap" role="group" aria-label="排序選擇">
+      <!-- 日期：遠→近 / 近→遠 -->
+      <div class="seg-box">
+        <div class="seg-title">出發日期</div>
+        <div id="segDate" class="seg-switch" data-state="{% if sort == 'date_asc' %}right{% else %}left{% endif %}">
+          <div class="pill" aria-hidden="true"></div>
+          <button class="opt" type="button" data-sort="date_desc" aria-pressed="{% if sort == 'date_desc' %}true{% else %}false{% endif %}">
+            <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M7 3v4M17 3v4M3 11h18M7 15h5m-5 4h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            遠→近
+          </button>
+          <button class="opt" type="button" data-sort="date_asc" aria-pressed="{% if sort == 'date_asc' %}true{% else %}false{% endif %}">
+            <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M7 3v4M17 3v4M3 11h18M7 19h5m-5-4h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            近→遠
+          </button>
+        </div>
+      </div>
+
+      <!-- 出發地：北→南 / 南→北（下方另有 A→Z / Z→A 小組） -->
+      <div class="seg-box">
+        <div class="seg-title">出發地（地理）</div>
+        <div id="segGeo" class="seg-switch" data-state="{% if sort == 'dep_s2n' %}right{% else %}left{% endif %}">
+          <div class="pill"></div>
+          <button class="opt" type="button" data-sort="dep_n2s" aria-pressed="{% if sort == 'dep_n2s' %}true{% else %}false{% endif %}">北→南</button>
+          <button class="opt" type="button" data-sort="dep_s2n" aria-pressed="{% if sort == 'dep_s2n' %}true{% else %}false{% endif %}">南→北</button>
+        </div>
+      </div>
+
+      <div class="seg-box">
+        <div class="seg-title">出發地（字母）</div>
+        <div id="segAlpha" class="seg-switch" data-state="{% if sort == 'dep_desc' %}right{% else %}left{% endif %}">
+          <div class="pill"></div>
+          <button class="opt" type="button" data-sort="dep_asc"  aria-pressed="{% if sort == 'dep_asc' %}true{% else %}false{% endif %}">A→Z</button>
+          <button class="opt" type="button" data-sort="dep_desc" aria-pressed="{% if sort == 'dep_desc' %}true{% else %}false{% endif %}">Z→A</button>
+        </div>
+      </div>
+
+      <!-- 隱藏 select（保相容） -->
+      <select id="sort" name="sort" hidden>
+        <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>日期 新→舊</option>
+        <option value="date_asc"  {% if sort == 'date_asc'  %}selected{% endif %}>日期 舊→新</option>
+        <option value="dep_n2s"   {% if sort == 'dep_n2s'   %}selected{% endif %}>出發 北→南</option>
+        <option value="dep_s2n"   {% if sort == 'dep_s2n'   %}selected{% endif %}>出發 南→北</option>
+        <option value="dep_asc"   {% if sort == 'dep_asc'   %}selected{% endif %}>出發地 A→Z</option>
+        <option value="dep_desc"  {% if sort == 'dep_desc'  %}selected{% endif %}>出發地 Z→A</option>
+      </select>
+    </div>
+
+    <!-- ===== 篩選格線 ===== -->
+    <form id="filtersForm" class="filt-grid" onsubmit="return false;">
+      <!-- row 1 -->
+      <div class="filt-item">
+        <label for="f-dep">出發地</label>
+        <!-- 出發地（多選） -->
+          <select id="f-dep" class="ctl" multiple>
+            {% for name, n in DEP_WITH_COUNT %}
+              <option value="{{ name }}" {% if filters.dep_in and name in filters.dep_in %}selected{% endif %}>
+                {{ name }}（{{ n }}）
+              </option>
+            {% endfor %}
+          </select>
+      </div>
+      <div class="filt-item">
+        <label for="f-des">目的地</label>
+        <select id="f-des" class="ctl" multiple>
+          {% for name, n in DES_WITH_COUNT %}
+            <option value="{{ name }}" {% if filters.des_in and name in filters.des_in %}selected{% endif %}>
+              {{ name }}（{{ n }}）
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filt-item">
+        <label for="f-date">出發日期</label>
+        <select id="f-date" class="ctl" multiple>
+          {% for ds in DATE_CHOICES %}<option value="{{ ds }}" {% if filters.date_in and ds in filters.date_in %}selected{% endif %}>{{ ds }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="filt-item">
+        <label for="f-ret">回程日期</label>
+        <select id="f-ret" class="ctl" multiple>
+          {% for rs in RET_CHOICES %}<option value="{{ rs }}" {% if filters.ret_in and rs in filters.ret_in %}selected{% endif %}>{{ rs }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <!-- row 2 -->
+      <div class="filt-item">
+        <label for="f-fare-num">金額</label>
+        <input id="f-fare-num" class="ctl" type="number" min="0" step="1"
+               value="{% if filters.fare_num %}{{ filters.fare_num }}{% endif %}" placeholder="數字金額">
+      </div>
+      <!-- <div class="filt-item">
+        <label for="f-fare-text">關鍵字</label>
+        <input id="f-fare-text" class="ctl" type="text" value="{{ filters.fare_q|default:'' }}" placeholder="如：免費、AA">
+      </div> -->
+      <div class="filt-item">
+        <label for="f-q">關鍵字</label>
+        <input id="f-q" class="ctl" type="text" placeholder="搜尋整張卡片（姓名、路線、備註…）"
+              value="{{ filters.q|default:'' }}">
+      </div>
+      <div class="filt-item">
+        <label for="f-seats">可用座位</label>
+        <input id="f-seats" class="ctl" type="number" min="1" step="1" value="{{ filters.need_seats|default_if_none:'' }}" placeholder="例如 2">
+      </div>
+      <div class="filt-item">
+        <label for="f-gender">司機性別</label>
+        <select id="f-gender" class="ctl" multiple>
+          <option value="M" {% if filters.gender_in and 'M' in filters.gender_in %}selected{% endif %}>男</option>
+          <option value="F" {% if filters.gender_in and 'F' in filters.gender_in %}selected{% endif %}>女</option>
+          <option value="X" {% if filters.gender_in and 'X' in filters.gender_in %}selected{% endif %}>不透露</option>
+        </select>
+      </div>
+
+      <!-- row 3 -->
+      <div class="filt-item">
+        <label>酌收費用</label>
+        <div class="fare-toggle">
+          <div id="fareToggle" class="toggle" role="switch" tabindex="0"
+               aria-checked="{% if filters.fare_mode == 'gte' %}true{% else %}false{% endif %}"
+               data-mode="{% if filters.fare_mode == 'gte' %}gte{% else %}lte{% endif %}">
+            <span class="label lte">小於等於</span>
+            <span class="label gte">大於等於</span>
+            <span class="knob"></span>
+          </div>
+          <input type="hidden" id="f-fare-mode" value="{% if filters.fare_mode %}{{ filters.fare_mode }}{% else %}lte{% endif %}">
+        </div>
+      </div>
+
+      <div class="filt-item only-desktop-spacer"></div>
+
+      <div class="filt-item">
+        <label class="sr-only">套用篩選</label>
+        <button type="button" class="btn primary ctl" id="applyFilters">套用篩選</button>
+      </div>
+      <div class="filt-item">
+        <label class="sr-only">清除</label>
+        <button type="button" class="btn ghost ctl" id="clearFilters">清除</button>
+      </div>
+    </form>
+
+    <div class="chips" id="activeChips"></div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  /* ---------- 工具 ---------- */
+  const $ = (s,r)=> (r||document).querySelector(s);
+  const $$= (s,r)=> Array.from((r||document).querySelectorAll(s));
+  const getSelVals = (sel)=> Array.from(sel?.selectedOptions||[]).map(o=>o.value).filter(Boolean);
+  const saveScrollAndGo = (url)=>{ try{sessionStorage.setItem('scrollY', String(window.scrollY||0));}catch{} location.href=url; };
+  const restoreScroll = ()=>{ try{const y=parseInt(sessionStorage.getItem('scrollY')||'0',10); if(!Number.isNaN(y)&&y>0) window.scrollTo({top:y,behavior:'auto'}); sessionStorage.removeItem('scrollY');}catch{} };
+  document.addEventListener('DOMContentLoaded', restoreScroll);
+
+  /* ---------- Sorting：膠囊切換 ---------- */
+  const selectSort = document.getElementById('sort');
+  function setSort(val){
+    if (selectSort){ selectSort.value = val; selectSort.dispatchEvent(new Event('change',{bubbles:true})); }
+    const url = new URL(location.href); url.searchParams.set('sort', val); saveScrollAndGo(url.toString());
+  }
+  // 三個雙向膠囊都能切換排序
+  $$('#segDate .opt, #segGeo .opt, #segAlpha .opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const sw = btn.closest('.seg-switch');
+      // 切換膠囊視覺
+      sw.setAttribute('data-state', btn.nextElementSibling ? 'left' : 'right'); // 簡單判斷：第一顆在左
+      setSort(btn.dataset.sort);
+    });
+  });
+
+  /* ---------- 篩選、晶片（與你現有後端相容） ---------- */
+  const depSel   = document.getElementById('f-dep');
+  const desSel   = document.getElementById('f-des');
+  const dateSel  = document.getElementById('f-date');
+  const retSel   = document.getElementById('f-ret');
+  const genderSel= document.getElementById('f-gender');
+  const seatsInp = document.getElementById('f-seats');
+  const fareNum  = document.getElementById('f-fare-num');
+  const fareText = document.getElementById('f-fare-text');
+  const fareMode = document.getElementById('f-fare-mode');
+  const fareToggle = document.getElementById('fareToggle');
+  const chipsBox = document.getElementById('activeChips');
+
+  const FILTERS = (function(){
+    try{ const el=document.getElementById('filtersData'); if(el) return JSON.parse(el.textContent||'{}')||{}; }catch{}
+    // fallback：從 URL
+    const u=new URL(location.href), g=k=>u.searchParams.getAll(k), gi=k=>{const v=u.searchParams.get(k); return v==null?null:(/^\d+$/.test(v)?parseInt(v,10):v);};
+    return { dep_in:g('dep'), des_in:g('des'), date_in:g('date'), ret_in:g('ret'), gender_in:g('gender'),
+             need_seats:gi('need_seats'), fare_mode:u.searchParams.get('fare_mode')||'', fare_num:gi('fare_num'), fare_q:u.searchParams.get('fare')||'' };
+  })();
+
+  function syncFareToggleUI(){
+    const mode = (fareMode.value === 'gte') ? 'gte' : 'lte';
+    fareToggle.dataset.mode = mode;
+    fareToggle.setAttribute('aria-checked', mode==='gte'?'true':'false');
+  }
+  function toggleFareMode(){
+    fareMode.value = (fareMode.value === 'gte') ? 'lte' : 'gte';
+    syncFareToggleUI();
+  }
+  if(fareToggle){ fareToggle.addEventListener('click', toggleFareMode); fareToggle.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleFareMode(); }}); }
+  if(!fareMode.value) fareMode.value='lte'; syncFareToggleUI();
+
+  function applyFilters(){
+  const url   = new URL(location.href);
+  const qInp  = document.getElementById('f-q');        // ★ 關鍵字輸入框
+  url.searchParams.set('sort', selectSort?.value || 'date_desc');
+
+  // 先清舊參數（含 q）
+  ['q','dep','des','fare','fare_mode','fare_num','date','ret','gender','need_seats']
+    .forEach(k => { url.searchParams.delete(k); url.searchParams.delete(k+'[]'); });
+
+  // 多選
+  getSelVals(depSel).forEach(v => url.searchParams.append('dep', v));
+  getSelVals(desSel).forEach(v => url.searchParams.append('des', v));
+  getSelVals(dateSel).forEach(v => url.searchParams.append('date', v));
+  getSelVals(retSel ).forEach(v => url.searchParams.append('ret', v));
+  getSelVals(genderSel).forEach(v => url.searchParams.append('gender', v));
+
+  // 酌收費用：數字優先，其次文字
+  const nr = (fareNum?.value || '').trim();
+  const nv = nr ? parseInt(nr, 10) : NaN;
+  if (!Number.isNaN(nv)) {
+    url.searchParams.set('fare_num', String(nv));
+    url.searchParams.set('fare_mode', (fareMode?.value === 'gte') ? 'gte' : 'lte');
+  } else if (fareText && fareText.value.trim()) {
+    url.searchParams.set('fare', fareText.value.trim());
+  }
+
+  // 可用座位
+  if (seatsInp && seatsInp.value && Number(seatsInp.value) > 0) {
+    url.searchParams.set('need_seats', String(parseInt(seatsInp.value, 10)));
+  }
+
+  // ★ 整卡片關鍵字
+  if (qInp && qInp.value.trim()) {
+    url.searchParams.set('q', qInp.value.trim());
+  }
+
+  saveScrollAndGo(url.toString());
+}
+
+function clearFilters(){
+  // 清多選
+  [depSel, desSel, dateSel, retSel, genderSel].forEach(sel => { if (sel) sel.selectedIndex = -1; });
+
+  // 清數字/文字
+  if (fareNum)  fareNum.value = '';
+  if (fareText) fareText.value = '';
+  if (seatsInp) seatsInp.value = '';
+
+  // 清關鍵字 ★
+  const qInp = document.getElementById('f-q');
+  if (qInp) qInp.value = '';
+
+  // 重置費用模式 → lte
+  if (fareMode) fareMode.value = 'lte';
+  if (typeof syncFareToggleUI === 'function') syncFareToggleUI();
+
+  applyFilters();
+}
+
+  document.getElementById('applyFilters')?.addEventListener('click', applyFilters);
+  document.getElementById('clearFilters')?.addEventListener('click', clearFilters);
+  document.getElementById('filtersForm')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyFilters(); } });
+
+  function makeChip(label, key, value){
+    const el=document.createElement('span'); el.className='chip'; el.dataset.key=key; el.dataset.value=value;
+    el.innerHTML=`${label}<span class="x" aria-label="移除">×</span>`;
+    el.querySelector('.x').addEventListener('click', ()=> {
+      const url=new URL(location.href);
+      if(['dep','des','date','ret','gender'].includes(key)){
+        const all=url.searchParams.getAll(key); url.searchParams.delete(key);
+        all.filter(v=>v!==value).forEach(v=> url.searchParams.append(key,v));
+      }else{
+        if (key==='fare_num') url.searchParams.delete('fare_mode');
+        url.searchParams.delete(key);
+      }
+      saveScrollAndGo(url.toString());
+    });
+    chipsBox.appendChild(el);
+  }
+  (function renderChips(){
+    const f=FILTERS||{}, m={M:'男',F:'女',X:'不透露'};
+    if(!chipsBox) return; chipsBox.innerHTML='';
+    (f.dep_in||[]).forEach(v=> makeChip(`出發：${v}`, 'dep', v));
+    (f.des_in||[]).forEach(v=> makeChip(`目的：${v}`, 'des', v));
+    (f.date_in||[]).forEach(v=> makeChip(`出發日：${v}`, 'date', v));
+    (f.ret_in ||[]).forEach(v=> makeChip(`回程日：${v}`, 'ret', v));
+    (f.gender_in||[]).forEach(v=> makeChip(`性別：${m[v]||v}`, 'gender', v));
+    if (f.q) makeChip(`關鍵字：${f.q}`, 'q', f.q);
+    if (f.need_seats) makeChip(`可用座位≥${f.need_seats}`, 'need_seats', String(f.need_seats));
+    if (f.fare_num !== null && f.fare_num !== undefined) makeChip(`費用 ${(f.fare_mode==='gte')?'≥':'≤'} ${f.fare_num}`, 'fare_num', String(f.fare_num));
+    else if (f.fare_q) makeChip(`費用含：${f.fare_q}`, 'fare', f.fare_q);
+  })();
+})();
+</script>
+
+
 <ul id="driver-list">
   {% include "Find/_driver_list.html" %}
 </ul>
+
+
+
+
+
 
 
   <!-- 回到頂端 -->
@@ -941,7 +1590,9 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 
         <div class="join-field">
           <label>上車人數</label>
-          <input type="number" name="seats_needed" min="1" value="1" required>
+          <!-- 保留 input；JS 會視情況把它換成 select -->
+          <input id="join-seats" type="number" name="seats_needed" min="1" value="1" required>
+          <small id="seats-hint" class="muted"></small>
         </div>
 
         <div class="join-field">
@@ -1043,25 +1694,39 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 </div>
 
 <!-- 乘客編輯授權 Modal -->
-<div id="paxAuthModal" class="modal" style="display:none;">
-  <div class="modal-content" style="max-width:420px;">
-    <div class="modal-header">
-      <span class="title">🔐 編輯授權</span>
-      <button class="close" onclick="closePaxAuth()">&times;</button>
+<div id="paxAuthModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="paxAuthTitle" style="display:none;">
+  <div class="pax-modal-card">
+    <div class="pax-modal-head">
+      <div class="pax-title-wrap">
+        <span class="pax-lock">🔒</span>
+        <h3 id="paxAuthTitle" class="pax-title">管理授權</h3>
+      </div>
+      <button type="button" class="pax-close" aria-label="關閉" onclick="closePaxAuth()">×</button>
     </div>
-    <div class="modal-body">
-      <form id="paxAuthForm" method="POST">
+
+    <div class="pax-modal-body">
+      <p class="pax-desc">請輸入管理密碼以繼續</p>
+
+      <form id="paxAuthForm" method="POST" class="pax-form">
         {% csrf_token %}
         <input type="hidden" id="paxAuthId" name="id">
-        <div class="join-field">
-          <label>管理密碼</label>
-          <input type="password" id="paxAuthPassword" name="password" placeholder="請輸入乘客管理密碼" required>
+        <div class="pax-form-row">
+          <label for="paxAuthPassword">管理密碼</label>
+          <input
+            type="password"
+            id="paxAuthPassword"
+            name="password"
+            placeholder="輸入管理密碼"
+            required
+            autocomplete="current-password"
+          >
         </div>
       </form>
     </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closePaxAuth()">取消</button>
-      <button class="btn-submit" onclick="submitPaxAuth()">確認</button>
+
+    <div class="pax-modal-foot">
+      <button type="button" class="btn ghost" onclick="closePaxAuth()">取消</button>
+      <button type="button" class="btn primary" onclick="submitPaxAuth()">確認</button>
     </div>
   </div>
 </div>
@@ -1074,77 +1739,92 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
     </div>
     <div class="modal-body">
       <form id="paxEditForm">
-        {% csrf_token %}
-        <input type="hidden" id="paxEditId" name="id">
+  {% csrf_token %}
+  <input type="hidden" id="paxEditId" name="id">
 
-        <div class="join-field">
-          <label>暱稱</label>
-          <input type="text" id="paxName" name="passenger_name" required>
-        </div>
+  <div class="join-field">
+    <label>暱稱</label>
+    <input type="text" id="paxName" name="passenger_name" required>
+  </div>
 
-        <div class="join-field">
-          <label>性別</label>
-          <select id="paxGender" name="gender">
-            <option value="X">不方便透漏</option>
-            <option value="M">男生</option>
-            <option value="F">女生</option>
-          </select>
-        </div>
+  <div class="join-field">
+    <label>性別</label>
+    <select id="paxGender" name="gender">
+      <option value="X">不方便透漏</option>
+      <option value="M">男生</option>
+      <option value="F">女生</option>
+    </select>
+  </div>
 
-        <div class="join-field">
-          <label>Email（不公開）</label>
-          <input type="email" id="paxEmail" name="email" placeholder="可空白">
-        </div>
+  <!-- Email：全寬 -->
+  <div class="join-field full">
+    <label>Email（不公開）</label>
+    <input type="email" id="paxEmail" name="email" placeholder="可空白">
+  </div>
 
-        <div class="join-field">
-          <label>聯絡方式</label>
-          <input type="text" id="paxContact" name="contact" placeholder="LINE / IG / Phone">
-        </div>
+  <!-- 隱私設定：Switch，需 Email 才能啟用（全寬） -->
+  <div class="join-field full">
+    <label>隱私設定</label>
+    <div class="switch">
+  <input type="checkbox" id="paxHideContact" name="hide_contact">
+  <!-- 原本是 <span class="toggle"></span> -->
+  <label class="toggle" for="paxHideContact"></label>
+  <label class="switch-text" for="paxHideContact">隱藏個資（聯絡方式）</label>
+</div>
+<small id="paxPrivacyHint" class="muted">※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</small>
+  </div>
 
-        <div class="join-field">
-          <label>上車人數</label>
-          <input type="number" id="paxSeats" name="seats_needed" min="1" value="1">
-        </div>
+  <div class="join-field">
+    <label>聯絡方式</label>
+    <input type="text" id="paxContact" name="contact" placeholder="LINE / IG / Phone">
+  </div>
 
-        <div class="join-field">
-          <label>願付金額（可空）</label>
-          <input type="text" id="paxPay" name="willing_to_pay" placeholder="例如 300">
-        </div>
+  <div class="join-field">
+    <label>上車人數</label>
+    <input type="number" id="paxSeats" name="seats_needed" min="1" value="1">
+  </div>
 
-        <div class="join-field">
-          <label>上車地點</label>
-          <input type="text" id="paxDeparture" name="departure">
-        </div>
+  <div class="join-field">
+    <label>願付金額（可空）</label>
+    <input type="text" id="paxPay" name="willing_to_pay" placeholder="例如 300">
+  </div>
 
-        <div class="join-field">
-          <label>目的地</label>
-          <input type="text" id="paxDestination" name="destination">
-        </div>
+  <div class="join-field">
+    <label>上車地點</label>
+    <input type="text" id="paxDeparture" name="departure">
+  </div>
 
-        <div class="join-field">
-          <label>出發日期</label>
-          <input type="date" id="paxDate" name="date">
-        </div>
+  <div class="join-field">
+    <label>目的地</label>
+    <input type="text" id="paxDestination" name="destination">
+  </div>
 
-        <div class="join-field">
-          <label>回程日期（選填）</label>
-          <input type="date" id="paxReturn" name="return_date">
-        </div>
+  <div class="join-field">
+    <label>出發日期</label>
+    <input type="date" id="paxDate" name="date">
+  </div>
 
-        <div class="join-field">
-          <label>是否一起回程</label>
-          <select id="paxTogether" name="together_return">
-            <option value="">未指定</option>
-            <option value="true">是</option>
-            <option value="false">否</option>
-          </select>
-        </div>
+  <div class="join-field">
+    <label>回程日期（選填）</label>
+    <input type="date" id="paxReturn" name="return_date">
+  </div>
 
-        <div class="join-field">
-          <label>備註</label>
-          <textarea id="paxNote" name="note" rows="3"></textarea>
-        </div>
-      </form>
+  <div class="join-field">
+    <label>是否一起回程</label>
+    <select id="paxTogether" name="together_return">
+      <option value="">未指定</option>
+      <option value="true">是</option>
+      <option value="false">否</option>
+    </select>
+  </div>
+
+  <!-- 備註：全寬 -->
+  <div class="join-field full">
+    <label>備註</label>
+    <textarea id="paxNote" name="note" rows="3"></textarea>
+  </div>
+</form>
+
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closePaxEdit()">取消</button>
@@ -1171,13 +1851,12 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   </div>
 </div>
 
-
-
 <script>
 /* =========================================================================
  * 0) 公用小工具（單一來源）
  * ========================================================================= */
-(function initUtils(){
+
+ (function initUtils(){
   if (window.__UTILS_READY__) return;
   window.__UTILS_READY__ = true;
 
@@ -1255,7 +1934,9 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 /* =========================================================================
  * 2) Driver 列表：全量替換（保留展開與卷軸） & 單卡片替換
  * ========================================================================= */
-// 記住目前展開的 driver ids
+
+
+ // 記住目前展開的 driver ids
 function snapshotOpenDrivers () {
   return Array
     .from(document.querySelectorAll('#driver-list .details.open'))
@@ -1355,6 +2036,93 @@ function patchDriverCard(driverId, driverHTML, active = true) {
   oldLi.replaceWith(newLi);
   restoreCardState(newLi, state);
 }
+/* ========= 讓展開面板在手機上成為可捲容器 ========= */
+function setDetailsMaxHeight(li){
+  if (!li) return;
+  const details = li.querySelector('.details');
+  if (!details || !details.classList.contains('open')) return;
+
+  // 可見窗口剩餘高度：視窗高 - 卡片目前到視窗頂端距離 - 底部緩衝
+  const rect   = li.getBoundingClientRect();
+  const topGap = Math.max(0, rect.top);
+  const safe   = 16; // 底部留白
+  const avail  = Math.max(240, window.innerHeight - topGap - safe);
+
+  details.style.maxHeight = avail + 'px';
+  details.style.overflow  = 'auto';
+  details.style.webkitOverflowScrolling = 'touch';
+}
+
+// ---- 單一來源：卡片展開/收合（防重複）----
+(function () {
+  if (window.__BIND_CARD_TOGGLE__) return;
+  window.__BIND_CARD_TOGGLE__ = true;
+
+  // 可捲高度計算（跟你之前的一樣，這裡包成函式）
+  function setDetailsMaxHeightByArrow(arrowEl){
+    const li = arrowEl.closest('.driver-card');
+    if (!li) return;
+    const details = li.querySelector('.details');
+    if (!details || !details.classList.contains('open')) return;
+
+    const rect   = li.getBoundingClientRect();
+    const topGap = Math.max(0, rect.top);
+    const safe   = 16; // 底部留白
+    const avail  = Math.max(240, window.innerHeight - topGap - safe);
+
+    details.style.maxHeight = avail + 'px';
+    details.style.overflow  = 'auto';
+    details.style.webkitOverflowScrolling = 'touch';
+  }
+
+  let lastToggleAt = 0;
+
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-action="toggle"]');
+    if (!btn) return;
+
+    // 防雙觸發：擋住後續同一輪 listener、也做個 150ms 節流
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    const now = Date.now();
+    if (now - lastToggleAt < 150) return;
+    lastToggleAt = now;
+
+    const driverId = btn.dataset.id;
+    const details  = document.getElementById('details-' + driverId);
+    const arrow    = document.getElementById('arrow-' + driverId) || btn;
+    if (!details) return;
+
+    // 改用「顯式狀態」避免 toggle 兩次相互抵銷
+    const willOpen = !details.classList.contains('open');
+    details.classList.toggle('open', willOpen);
+    details.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+    if (arrow) {
+      arrow.classList.toggle('open', willOpen);
+      arrow.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
+
+    // 打開時設定可捲高度；關閉時清除高度
+    if (willOpen) {
+      setDetailsMaxHeightByArrow(arrow || details);
+    } else {
+      details.style.maxHeight = '';
+      details.style.overflow  = '';
+    }
+  }, true); // 用捕獲階段，能先於其他 document click 處理並阻斷
+
+  // 旋轉/縮放時，重算所有打開中的
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('#driver-list .driver-card .details.open')
+      .forEach(d => {
+        const arrow = d.closest('.driver-card')?.querySelector('.arrow');
+        if (arrow) setDetailsMaxHeightByArrow(arrow);
+      });
+  });
+})();
+
+
 
 /* =========================================================================
  * 3) Driver 管理授權（密碼驗證 → 成功跳轉）
@@ -1495,14 +2263,14 @@ function openCancelModal(passengerId){
   }
 })();
 
-/* =========================================================================
- * 5) Join Modal 行為（帶入司機日期、控制回程欄位、最小日期限制）
- *    - openJoinModal(driverId, driverDate?, driverReturn?)
- *    - resetReturnDate()（可選）
- * ========================================================================= */
+</script>
+<script>
 (function joinModalBehavior(){
   let currentDriverDate   = "";
   let currentDriverReturn = "";
+
+  // 小工具
+  const $id = (id)=> document.getElementById(id);
 
   function grabJoinEls() {
     return {
@@ -1515,13 +2283,16 @@ function openCancelModal(passengerId){
     };
   }
 
+  // 是否一起回程 → 顯示/隱藏回程欄位 + min
   function handleTogetherChange() {
     const { togetherSel, departInput, returnWrap, returnInput } = grabJoinEls();
     const v = togetherSel ? togetherSel.value : "";
+
     if (returnInput) {
       const minBase = (departInput && departInput.value) || currentDriverDate || "";
       returnInput.min = minBase;
     }
+
     if (v === "false") {
       if (returnWrap) returnWrap.style.display = "block";
       if (returnInput) {
@@ -1541,6 +2312,7 @@ function openCancelModal(passengerId){
     }
   }
 
+  // 回程 min ≧ 出發
   function syncReturnMin() {
     const { departInput, returnInput } = grabJoinEls();
     if (!departInput || !returnInput) return;
@@ -1550,17 +2322,97 @@ function openCancelModal(passengerId){
     }
   }
 
-  window.openJoinModal = function (driverId, driverDate = "", driverReturn = "") {
+  // 依剩餘座位動態限制 seats（支援 <input> 或 <select>）
+  function setupSeatsControl(remaining){
+    let field = $id("join-seats") || document.querySelector('[name="seats_needed"]');
+    if (!field) return;
+    if (!field.id) field.id = "join-seats";
+
+    const hint  = $id("seats-hint");
+    const submitBtn = document.querySelector('#joinForm .btn-submit');
+
+    const rm = parseInt(remaining || 0, 10);
+    if (hint) hint.textContent = rm > 0 ? `剩餘 ${rm} 位` : '此行程座位已滿，無法申請';
+    if (submitBtn) submitBtn.disabled = rm <= 0;
+
+    const isSelect = field.tagName.toLowerCase() === 'select';
+
+    const coerce = (val) => {
+      let n = parseInt(val || "1", 10);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      if (rm > 0 && n > rm) n = rm;
+      return String(n);
+    };
+
+    if (rm <= 0) {
+      field.value = isSelect ? "0" : "";
+      field.setAttribute('disabled','disabled');
+      field.setCustomValidity('此行程座位已滿');
+      return;
+    }
+
+    // 有位子 → 解鎖 + 驗證
+    field.removeAttribute('disabled');
+    field.setCustomValidity('');
+
+    if (isSelect) {
+      field.innerHTML = "";
+      for (let i = 1; i <= rm; i++) {
+        const opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = String(i);
+        field.appendChild(opt);
+      }
+      field.value = coerce(field.value);
+    } else {
+      field.type = "number";
+      field.min  = "1";
+      field.step = "1";
+      field.max  = String(rm);
+      field.value = coerce(field.value);
+
+      const validate = () => {
+        const v = parseInt(field.value || "0", 10);
+        if (!Number.isFinite(v) || v < 1) field.setCustomValidity('人數至少為 1');
+        else if (v > rm)            field.setCustomValidity(`最多可選 ${rm} 位`);
+        else                        field.setCustomValidity('');
+      };
+      field.oninput = validate;
+      field.onchange = validate;
+      validate();
+    }
+  }
+
+  // === 對外 API：開啟 Join Modal（嚴格使用傳入的 remaining） ===
+  window.openJoinModal = function (driverId, driverDate = "", driverReturn = "", driverRemaining = 0, _seq = null) {
+    if (_seq !== null && _seq !== window.__joinOpenSeq) {
+      // 舊的/無效呼叫，直接忽略
+      return;
+    }
+    
     const { togetherSel, departInput, returnWrap, returnInput, joinModal, joinForm } = grabJoinEls();
+
+    // 日期/回程預填
     currentDriverDate   = driverDate || "";
     currentDriverReturn = driverReturn || "";
     if (departInput && currentDriverDate) departInput.value = currentDriverDate;
     if (togetherSel) togetherSel.value = "";
     if (returnInput) { returnInput.value = ""; returnInput.readOnly = false; }
-    if (returnWrap) returnWrap.style.display = "none";
+    if (returnWrap)  returnWrap.style.display = "none";
     syncReturnMin();
-    if (joinForm)  joinForm.action  = `/find/driver/${driverId}/join/`;
+
+    // 表單 action + debug 標記
+    if (joinForm)  joinForm.action = `/find/driver/${driverId}/join/`;
+    if (joinModal) joinModal.dataset.remaining = String(driverRemaining);
+
+    // 依剩餘座位限制 seats
+    setupSeatsControl(driverRemaining);
+
+    // 開窗
     if (joinModal) joinModal.style.display = "block";
+
+    // debug
+    console.log('[openJoinModal] args', { driverId, driverDate, driverReturn, driverRemaining });
   };
 
   window.resetReturnDate = function () {
@@ -1569,22 +2421,49 @@ function openCancelModal(passengerId){
     syncReturnMin();
   };
 
-  // 綁定（一次）
-  if (!window.__JOIN_MODAL_BOUND__) {
-    window.__JOIN_MODAL_BOUND__ = true;
+  // === 單一全域 click handler：計算 remaining 後呼叫 openJoinModal ===
+  if (!window.__BIND_JOIN_CLICK__) {
+    window.__BIND_JOIN_CLICK__ = true;
+
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-action="join"]');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      const id     = btn.dataset.id;
+      const date   = btn.dataset.date   || '';
+      const ret    = btn.dataset.return || '';
+      const total  = parseInt(btn.dataset.total  || '0', 10) || 0;
+      const filled = parseInt(btn.dataset.filled || '0', 10) || 0;
+      const remaining = Math.max(0, total - filled);
+
+      // 存一份到全域方便除錯
+      window.__lastJoinBtn = btn;
+      window.__lastRemaining = remaining;
+      // 建立「此次點擊」的序號並存到全域
+      const seq = Date.now() + Math.random();
+      window.__joinOpenSeq = seq;
+
+      // 也寫回 dataset（你在 Console 會看得到 data-remaining）
+      btn.dataset.remaining = String(remaining);
+
+      console.log('[join-click]', { id, remaining, total: btn.dataset.total, filled: btn.dataset.filled });
+
+      openJoinModal(id, date, ret, remaining,seq);
+    });
+
+    // 同步回程欄位的聯動
     document.addEventListener("change", function (e) {
       if (e.target && e.target.id === "join-together") handleTogetherChange();
       if (e.target && e.target.id === "join-date")     syncReturnMin();
     });
-    // 讓 data-action="join" 的按鈕可將 data-date / data-return 帶入
-    document.addEventListener("click", function (e) {
-      const btn = e.target.closest('[data-action="join"]');
-      if (!btn) return;
-      e.preventDefault();
-      openJoinModal(btn.dataset.id, btn.dataset.date || "", btn.dataset.return || "");
-    });
   }
 })();
+</script>
+
+<script>
 
 /* =========================================================================
  * 6) 參加表單：上車地點（下拉＋自填）→ 同步到隱藏欄位 name="departure"
@@ -1702,7 +2581,7 @@ async function submitPaxAuth () {
     if (__paxNextAction === 'edit')   { await loadPaxAndOpenEdit(pid); return; }
   } catch (err) {
     console.error(err);
-    showToastSafe('伺服器錯誤，稍後再試', 'error');
+    showToastSafe('伺服器錯誤，稍後再試'+err, 'error');
   } finally {
     __paxNextAction = null;
   }
@@ -1713,53 +2592,47 @@ async function loadPaxAndOpenEdit (pid) {
   const { res, data } = await jsonFetch(`/find/pax/${pid}/get/`, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   });
-  if (!res.ok || !data.ok) { showToastSafe(data.error || '讀取資料失敗', 'error'); return; }
+  if (!res.ok || !data.ok) {
+    showToastSafe(data.error || '讀取資料失敗', 'error');
+    return;
+  }
   const p = data.p || {};
-  ($id('paxEditId')       || {}).value = p.id ?? '';
-  ($id('paxName')         || {}).value = p.passenger_name ?? '';
-  ($id('paxGender')       || {}).value = p.gender ?? 'X';
-  ($id('paxEmail')        || {}).value = p.email ?? '';
-  ($id('paxContact')      || {}).value = p.contact ?? '';
-  ($id('paxSeats')        || {}).value = p.seats_needed ?? 1;
-  ($id('paxPay')          || {}).value = p.willing_to_pay ?? '';
-  ($id('paxDeparture')    || {}).value = p.departure ?? '';
-  ($id('paxDestination')  || {}).value = p.destination ?? '';
-  ($id('paxDate')         || {}).value = p.date ?? '';
-  ($id('paxReturn')       || {}).value = p.return_date ?? '';
-  ($id('paxTogether')     || {}).value = p.together_return ?? '';
-  ($id('paxNote')         || {}).value = p.note ?? '';
+
+  (document.getElementById('paxEditId')      || {}).value = p.id ?? '';
+  (document.getElementById('paxName')        || {}).value = p.passenger_name ?? '';
+  (document.getElementById('paxGender')      || {}).value = p.gender ?? 'X';
+  (document.getElementById('paxEmail')       || {}).value = p.email ?? '';
+  (document.getElementById('paxContact')     || {}).value = p.contact ?? '';
+  (document.getElementById('paxSeats')       || {}).value = p.seats_needed ?? 1;
+  (document.getElementById('paxPay')         || {}).value = p.willing_to_pay ?? '';
+  (document.getElementById('paxDeparture')   || {}).value = p.departure ?? '';
+  (document.getElementById('paxDestination') || {}).value = p.destination ?? '';
+  (document.getElementById('paxDate')        || {}).value = p.date ?? '';
+  (document.getElementById('paxReturn')      || {}).value = p.return_date ?? '';
+  (document.getElementById('paxTogether')    || {}).value =
+      (p.together_return === true ? 'true' : p.together_return === false ? 'false' : '');
+  (document.getElementById('paxNote')        || {}).value = p.note ?? '';
+
+  const hide = document.getElementById('paxHideContact');
+  if (hide) hide.checked = !!(p.hide_contact && p.email);
+
+  initPaxPrivacyBinding();  // 依現在欄位值決定開關可用/提示
   openPaxEdit();
 }
+window.loadPaxAndOpenEdit = loadPaxAndOpenEdit;
 
-async function submitPaxEdit () {
-  const form = $id('paxEditForm');
-  const pid  = $id('paxEditId')?.value;
-  if (!form || !pid) return;
-  const btn = form.querySelector('[type="button"],[type="submit"]');
-  if (btn) btn.disabled = true;
-  try {
-    const body = new URLSearchParams(new FormData(form));
-    const { res, data } = await jsonFetch(`/find/pax/${pid}/update/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': getCSRF(),
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      },
-      body
-    });
-    if (!res.ok || !data.ok) { showToastSafe(data.error || '更新失敗', 'error'); return; }
-    showToastSafe('✅ 已更新乘客資料', 'success');
-    closePaxEdit();
-    window.afterPaxChanged && window.afterPaxChanged({ action: 'update', id: Number(pid) });
-  } catch (err) {
-    console.error(err);
-    showToastSafe('伺服器錯誤，稍後再試', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
+
+function openPaxEdit () {
+  const m = document.getElementById('paxEditModal');
+  if (m) m.style.display = 'block';
 }
-window.submitPaxEdit = submitPaxEdit;
+window.openPaxEdit = openPaxEdit;
+
+function closePaxEdit () {
+  const m = document.getElementById('paxEditModal');
+  if (m) m.style.display = 'none';
+}
+window.closePaxEdit = closePaxEdit;
 
 async function doPaxDelete (pid) {
   if (!confirm('確定要刪除這位乘客嗎？此動作無法復原。')) return;
@@ -1778,7 +2651,7 @@ async function doPaxDelete (pid) {
     window.afterPaxChanged && window.afterPaxChanged({ action: 'delete', id: Number(pid) });
   } catch (err) {
     console.error(err);
-    showToastSafe('伺服器錯誤，稍後再試', 'error');
+    showToastSafe('伺服器錯誤，稍後再試'+err, 'error');
   }
 }
 
@@ -1846,7 +2719,21 @@ document.addEventListener('click', function (e) {
 /* =========================================================================
  * 10) 其他：後端事件（可選）。例：透過 WS 主動告知「管理某司機」
  * ========================================================================= */
-window.manageDriver = function (driverId) {
+// 即時檢查 join 人數是否超過剩餘座位
+document.addEventListener('input', function(e){
+  if (e.target && e.target.id === 'join-seats') {     // 如果你的 input id 不同，請改這裡
+    const wanted = parseInt((e.target.value || '1'), 10);
+    const rm = parseInt(($id('joinModal')?.dataset.remaining || '0'), 10);
+
+    if (Number.isFinite(rm) && rm > 0 && wanted > rm) {
+      e.target.setCustomValidity(`人數超過剩餘座位（剩 ${rm} 位）`);
+    } else {
+      e.target.setCustomValidity('');
+    }
+  }
+});
+
+ window.manageDriver = function (driverId) {
   try { socket.send(JSON.stringify({ action: 'driver_manage', driver_id: driverId })); }
   catch (e) { console.warn('WS send 失敗', e); }
 };
@@ -1896,6 +2783,261 @@ function bindDateGuard({ depart, ret, form, msg }){
   });
 });
 }
+
+</script>
+<script>
+(function(){
+  const KEY = 'filterPanelOpen';
+  const DURATION_MS = 1500; // 想調整動畫速度就改這裡（同時也改你的 CSS 變數更一致）
+
+  // 1) 統一用事件委派，避免抓不到節點
+  document.addEventListener('click', function(e){
+    const toggleBtn = e.target.closest('.panel-toggle');
+    const headBar   = e.target.closest('#panelHead');
+    if (!toggleBtn && !headBar) return;
+
+    const panel = document.getElementById('filterPanel');
+    if (!panel) { console.warn('[panel] not found'); return; }
+
+    // 避免點到表單控件時誤觸收合
+    if (headBar) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (['select','input','button','textarea','label'].includes(tag)) return;
+    }
+    e.stopPropagation();
+    e.preventDefault();
+
+    __toggleFilterPanel(true); // 帶 true 代表來源於點擊
+  });
+
+  // 2) 初始化（等 DOM ready）
+  document.addEventListener('DOMContentLoaded', function(){
+    const panel = document.getElementById('filterPanel');
+    if (!panel) { console.warn('[panel] not found on DOMContentLoaded'); return; }
+
+    const body = panel.querySelector('.panel-bd');
+    if (!body) { console.warn('[panel-bd] not found'); return; }
+
+    // ⛏️ 清除任何會破壞動畫的 inline/computed display
+    body.style.removeProperty('display');
+
+    // 若有外部 CSS 設了 display:none，這裡強制覆蓋
+    const cs = getComputedStyle(body);
+    if (cs.display === 'none') {
+      body.style.display = 'block';
+    }
+
+    // 讀取 localStorage 狀態；沒有就沿用 HTML 的 aria-expanded
+    try{
+      const saved = localStorage.getItem(KEY);
+      if (saved === '1' || saved === '0') {
+        panel.setAttribute('aria-expanded', saved === '1' ? 'true' : 'false');
+      }
+    }catch{}
+
+    const open = panel.getAttribute('aria-expanded') === 'true';
+    if (open) {
+      body.style.maxHeight = 'none';
+      body.style.opacity = '1';
+    } else {
+      body.style.maxHeight = '0px';
+      body.style.opacity = '0';
+    }
+
+    console.log('[filterPanel] init',
+      { open, aria: panel.getAttribute('aria-expanded'), display: getComputedStyle(body).display });
+  });
+
+  // 3) 真正的切換函式（也丟到全域方便 debug）
+  function __toggleFilterPanel(fromClick){
+    const panel = document.getElementById('filterPanel');
+    if (!panel) return;
+    const body = panel.querySelector('.panel-bd');
+    if (!body) return;
+
+    // 再次保險：移除會干擾動畫的 display 設定
+    body.style.removeProperty('display');
+    if (getComputedStyle(body).display === 'none') {
+      body.style.display = 'block';
+    }
+
+    const willOpen = panel.getAttribute('aria-expanded') !== 'true';
+    panel.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+
+    // 動畫：用 max-height 從 0 → scrollHeight，或反向
+    body.style.transition = 'none';
+    if (willOpen) {
+      body.style.maxHeight = '0px';
+      body.style.opacity = '0';
+      requestAnimationFrame(()=>{
+        const h = body.scrollHeight;
+        body.style.transition = `max-height ${DURATION_MS}ms ease, opacity ${DURATION_MS}ms ease`;
+        body.style.maxHeight = h + 'px';
+        body.style.opacity = '1';
+      });
+    } else {
+      const h = body.scrollHeight;
+      body.style.maxHeight = h + 'px';
+      body.style.opacity = '1';
+      requestAnimationFrame(()=>{
+        body.style.transition = `max-height ${DURATION_MS}ms ease, opacity ${DURATION_MS}ms ease`;
+        body.style.maxHeight = '0px';
+        body.style.opacity = '0';
+      });
+    }
+
+    try{ localStorage.setItem(KEY, willOpen ? '1' : '0'); }catch{}
+
+    console.log('[filterPanel] toggle',
+      { fromClick: !!fromClick, willOpen,
+        aria: panel.getAttribute('aria-expanded'),
+        display: getComputedStyle(body).display });
+  }
+  window.__toggleFilterPanel = __toggleFilterPanel;
+
+  // 4) 動畫結束後如果是展開就清 max-height，保持自適應高度
+  document.addEventListener('transitionend', function(e){
+    const el = e.target;
+    if (!el.classList || !el.classList.contains('panel-bd')) return;
+    if (e.propertyName !== 'max-height') return;
+
+    const panel = document.getElementById('filterPanel');
+    if (!panel) return;
+    const open = panel.getAttribute('aria-expanded') === 'true';
+    if (open) {
+      el.style.transition = 'none';
+      el.style.maxHeight = 'none';
+      requestAnimationFrame(()=>{ el.style.transition = ''; });
+    }
+  });
+})();
+
+
+async function submitPaxEdit() {
+  try {
+    const form = document.getElementById('paxEditForm');
+    const fd   = new FormData(form);
+
+    // 後端會用 on/true/1/yes 判斷，checkbox 未勾不會出現在 FormData → 不用特別處理
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || "";
+
+    const url = form.dataset.postUrl || form.getAttribute('action') || `/find/pax/${document.getElementById('paxEditId').value}/update/`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "X-CSRFToken": csrftoken
+      },
+      body: fd
+    });
+
+    const raw = await res.text();
+    let data; try { data = JSON.parse(raw); } catch { data = null; }
+    console.log("[pax-update] status:", res.status, "body:", raw);
+
+    if (!res.ok || !data || data.ok !== true) {
+      alert(`更新失敗${!res.ok ? `（HTTP ${res.status}）` : ''}`);
+      return;
+    }
+
+    // 成功：關掉 modal，等 WebSocket 廣播把列表與管理頁兩側刷新
+    closePaxEdit();
+  } catch (e) {
+    console.error(e);
+    alert("更新失敗（前端例外）");
+  }
+}
+
+
+function initPaxPrivacyBinding () {
+  const email = document.getElementById('paxEmail');
+  const hide  = document.getElementById('paxHideContact');
+  const hint  = document.getElementById('paxPrivacyHint');
+
+  function sync() {
+    const hasEmail = !!(email && email.value && email.value.includes('@'));
+    if (hide) {
+      hide.disabled = !hasEmail;
+      if (!hasEmail) hide.checked = false;
+    }
+    if (hint) {
+      if (hasEmail) {
+        hint.classList.remove('hint-error');
+        hint.textContent = '※ 需填寫 Email 才能隱私；Email 僅供系統通知，不會公開。';
+      } else {
+        hint.classList.add('hint-error');
+        hint.textContent = '※ 尚未填寫 Email，無法隱藏聯絡方式。';
+      }
+    }
+  }
+
+  // 解除舊的監聽，避免重複綁定
+  if (email && email._syncPrivacy) email.removeEventListener('input', email._syncPrivacy);
+  if (email) {
+    email._syncPrivacy = sync;
+    email.addEventListener('input', sync);
+  }
+  sync();
+}
+window.initPaxPrivacyBinding = initPaxPrivacyBinding;
+
+// --- Email 與隱藏開關的可用性連動 (司機) ---
+(function bindDriverPrivacy(){
+  const mail = document.getElementById('driverEmail');
+  const sw   = document.getElementById('driverHide');
+  if (!mail || !sw) return;
+
+  const sync = ()=> {
+    const hasEmail = !!(mail.value && mail.value.includes('@'));
+    sw.disabled = !hasEmail;
+    if (!hasEmail) sw.checked = false;
+  };
+  mail.addEventListener('input', sync);
+  sync();
+
+  // 可選：立即送出到後端（若你是分開的儲存鈕，就略過這段）
+  sw.addEventListener('change', async ()=>{
+    const driverId = document.getElementById('driverIdHidden')?.value || '{{ d.id }}';
+    const {res, data} = await jsonFetch(`/find/driver/${driverId}/privacy/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCSRF(), 'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+      body: new URLSearchParams({ hide: sw.checked ? 'true' : 'false' })
+    });
+    if (res.ok && data?.ok) showToastSafe(sw.checked?'🔒 已隱藏聯絡方式':'👁️ 已顯示聯絡方式','success');
+    else { showToastSafe(data?.error||'切換失敗','error'); sw.checked = !sw.checked; }
+  });
+})();
+
+// --- 乘客（編輯 Modal） ---
+(function bindPaxPrivacy(){
+  const mail = document.getElementById('paxEmail');
+  const sw   = document.getElementById('paxHide');
+  if (!mail || !sw) return;
+
+  const sync = ()=> {
+    const hasEmail = !!(mail.value && mail.value.includes('@'));
+    sw.disabled = !hasEmail;
+    if (!hasEmail) sw.checked = false;
+  };
+  mail.addEventListener('input', sync);
+  sync();
+
+  // 送出
+  sw.addEventListener('change', async ()=>{
+    const paxId = document.getElementById('paxEditId')?.value;
+    if (!paxId){ sw.checked = !sw.checked; return; }
+    const {res, data} = await jsonFetch(`/find/pax/${paxId}/privacy/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCSRF(), 'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+      body: new URLSearchParams({ hide: sw.checked ? 'true' : 'false' })
+    });
+    if (res.ok && data?.ok) showToastSafe(sw.checked?'🔒 已隱藏聯絡方式':'👁️ 已顯示聯絡方式','success');
+    else { showToastSafe(data?.error||'切換失敗','error'); sw.checked = !sw.checked; }
+  });
+})();
+
+
 </script>
 
 

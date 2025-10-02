@@ -1,0 +1,88 @@
+{# Find/_driver_manage_pax_item.html #}
+<li class="pax-item {% if p.is_matched %}pax-accepted{% else %}pax-pending{% endif %}" data-pax="{{ p.id }}">
+  <div class="pax-row">
+    <div class="pax-head">
+      <span class="pax-name">{% if p.is_matched %}✔ {% endif %}{{ p.passenger_name }}</span>
+      <span class="badge gender">{{ p.get_gender_display }}</span>
+      {% if p.together_return is not None %}
+        <span class="badge rt">回程：{{ p.together_return|yesno:"一起,不一起" }}</span>
+      {% endif %}
+    </div>
+
+    <div class="pax-grid">
+      <div class="pax-cell"><label>出發地</label><div>{{ p.departure|default:"未填" }}</div></div>
+      <div class="pax-cell"><label>目的地</label><div>{{ p.destination|default:"未填" }}</div></div>
+      <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
+      <div class="pax-cell">
+        <label>願付</label>
+        <div>{% if p.willing_to_pay %}NT$ {{ p.willing_to_pay|floatformat:0 }}{% else %}未填{% endif %}</div>
+      </div>
+      <div class="pax-cell"><label>日期</label><div>{{ p.date }}</div></div>
+      <div class="pax-cell"><label>回程</label><div>{{ p.return_date|default:"未定" }}</div></div>
+
+      <div class="pax-cell span-2">
+        <label>聯絡方式</label>
+        <div>
+          {% if p.hide_contact and p.email %}
+            <span class="muted">已隱藏（僅透過系統通知）</span>
+          {% else %}
+            {{ p.contact|default:"未填" }}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 乘客備註（有填才顯示） #}
+    {% if p.note %}
+    <div class="pax-note">
+        <div class="label">乘客備註</div>
+        <div class="text">{{ p.note }}</div>
+    </div>
+    {% endif %}
+
+    {# 司機備忘錄（永遠顯示，未填時顯示「（未填）」） #}
+    <div class="pax-memo" data-pax="{{ p.id }}">
+    <div class="label">司機備忘錄</div>
+    <div class="memo-text" data-memo-for="{{ p.id }}">{{ p.driver_memo|default:"（未填）" }}</div>
+    <div class="memo-actions">
+        <button type="button"
+                class="btn-mini memo"
+                data-action="memo"
+                data-id="{{ p.id }}"
+                data-url-base="{% url 'pax_memo' 0 %}"
+                data-current="{{ p.driver_memo|default_if_none:'' }}">
+        編輯司機備忘錄
+        </button>
+    </div>
+    </div>
+
+    <div class="pax-actions">
+      {% if p.is_matched %}
+        {# 已接受：只有取消 #}
+        <button type="button"
+                class="btn-mini danger"
+                data-action="reject"
+                data-id="{{ p.id }}"
+                data-url="{% url 'pax_reject' p.id %}">
+          取消
+        </button>
+      {% else %}
+        {# 待確認：接受/拒絕 #}
+        <button type="button"
+                class="btn-mini ok"
+                data-action="accept"
+                data-id="{{ p.id }}"
+                data-url="{% url 'pax_accept' p.id %}">
+          接受
+        </button>
+        <button type="button"
+                class="btn-mini danger"
+                data-action="reject"
+                data-id="{{ p.id }}"
+                data-url="{% url 'pax_reject' p.id %}">
+          拒絕
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</li>

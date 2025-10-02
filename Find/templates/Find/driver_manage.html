@@ -2,112 +2,157 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>🛠 司機管理</title>
   <style>
-    body { font-family:"Microsoft JhengHei",sans-serif; background:linear-gradient(to right,#f0f9ff,#fefefe); margin:0; padding:40px 20px; }
-    h2 { text-align:center; color:#005c4b; margin-bottom:25px; font-size:26px; }
-    form { max-width:600px; margin:0 auto; background:#fff; padding:25px 30px; border-radius:16px; box-shadow:0 6px 12px rgba(0,0,0,.1); animation:fadeIn .5s ease-in-out; }
-    label { font-weight:700; display:block; margin-top:12px; margin-bottom:6px; color:#444; }
-    input,textarea,select { width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #ccc; transition:border-color .3s, box-shadow .3s; font-size:15px; }
-    input:focus,textarea:focus,select:focus { border-color:#007bff; box-shadow:0 0 8px rgba(0,123,255,.3); outline:none; }
-    textarea { min-height:80px; resize:vertical; }
-    .btn { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s; }
-    .btn:hover { background:linear-gradient(45deg,#0056b3,#009e77); transform:scale(1.02); }
-    .btn-danger { background:linear-gradient(45deg,#ef4444,#f97316); }
-    .btn-danger:hover { background:linear-gradient(45deg,#b91c1c,#ea580c); }
-    .btn-ghost { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s;}
-    .btn-ghost:hover { background:linear-gradient(45deg,#0fbfd2,#402fc7); transform:scale(1.02); }
+/* ========== Base ========== */
+:root{
+  --clr-primary:#007bff;
+  --clr-primary-2:#0056b3;
+  --clr-accent:#00b894;
+}
+*{box-sizing:border-box}
+body{
+  font-family:"Microsoft JhengHei",sans-serif;
+  background:linear-gradient(to right,#f0f9ff,#fefefe);
+  margin:0; padding:40px 20px;
+}
+h2{ text-align:center; color:#005c4b; margin-bottom:25px; font-size:26px; }
+@keyframes fadeIn{ from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 
-    .alert { max-width:600px; margin:0 auto 12px; padding:12px 14px; border-radius:10px; }
-    .alert-ok { background:#e8f8ef; color:#206b3a; border:1px solid #a7e2bf; }
-    .alert-warn { background:#fff7e6; color:#9a6b00; border:1px solid #f7d7a3; }
-    .required::after{ content:" *"; color:red; }
+/* ========== Forms ========== */
+form{
+  max-width:600px;margin:0 auto;background:#fff;
+  padding:25px 30px;border-radius:16px;
+  box-shadow:0 6px 12px rgba(0,0,0,.1);animation:fadeIn .5s ease-in-out;
+}
+label{font-weight:700;display:block;margin:12px 0 6px;color:#444}
+input,textarea,select{
+  width:100%;padding:12px;margin-bottom:10px;border-radius:10px;
+  border:1px solid #ccc;transition:border-color .3s,box-shadow .3s;font-size:15px;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--clr-primary);
+  box-shadow:0 0 8px rgba(0,123,255,.3); outline:none;
+}
+textarea{min-height:80px;resize:vertical}
+.required::after{content:" *";color:red}
 
-    @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
+/* ========== Buttons ========== */
+.btn{
+  width:100%;padding:14px;border:0;border-radius:10px;
+  background:linear-gradient(45deg,var(--clr-primary),var(--clr-accent));
+  color:#fff;font-size:18px;font-weight:700;cursor:pointer;
+  transition:background .3s,transform .2s;
+}
+.btn:hover{background:linear-gradient(45deg,var(--clr-primary-2),#009e77);transform:scale(1.02)}
+.btn-danger{background:linear-gradient(45deg,#ef4444,#f97316)}
+.btn-danger:hover{background:linear-gradient(45deg,#b91c1c,#ea580c)}
+.btn-ghost{
+  width:100%;padding:14px;border:0;border-radius:10px;
+  background:linear-gradient(45deg,var(--clr-primary),var(--clr-accent));
+  color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:background .3s,transform .2s;
+}
+.btn-ghost:hover{background:linear-gradient(45deg,#0fbfd2,#402fc7);transform:scale(1.02)}
+.btn-mini{
+  padding:8px 12px;border:0;border-radius:8px;line-height:1;font-weight:600;cursor:pointer;
+}
+.btn-mini:hover{filter:brightness(.97)}
+.btn-mini.ok{background:#dcfce7;color:#065f46}
+.btn-mini.danger{background:#fee2e2;color:#7f1d1d}
+.btn-mini.memo{background:#e0e7ff;color:#3730a3}
 
-    /* 乘客清單 */
-    .panel { max-width:900px; margin:18px auto; }
-    .pax-list{list-style:none;margin:10px auto 0;padding:0;max-width:900px}
-    .pax-item{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin:10px 0;box-shadow:0 3px 8px rgba(0,0,0,.05)}
-    .pax-row{display:grid;grid-template-columns:1fr auto;grid-row-gap:10px;align-items:start}
-    .pax-head{grid-column:1/-1;display:flex;align-items:center;gap:8px}
-    .pax-name{font-weight:700;font-size:15px}
-    .badge{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4338ca}
-    .badge.gender{background:#e0f2fe;color:#0369a1}
-    .badge.rt{background:#fef3c7;color:#92400e}
-    .pax-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px 14px}
-    .pax-cell label{display:block;font-size:12px;color:#6b7280;margin-bottom:4px;letter-spacing:.02em}
-    .pax-cell div{font-size:14px;color:#111827}
-    .pax-cell.span-2{grid-column:span 2}
-    .pax-note{grid-column:1/-1;background:#f9fafb;border-radius:10px;padding:8px 10px;font-size:13px;color:#374151}
-    .pax-actions{display:flex;gap:8px;align-self:center}
-    .btn-mini{border:0;border-radius:8px;padding:7px 12px;background:#e5e7eb;cursor:pointer;font-weight:600}
-    .btn-mini:hover{background:#d1d5db}
-    .btn-mini.danger{background:#fecaca;color:#7f1d1d}
-    .btn-mini.danger:hover{background:#fca5a5}
+/* ========== Alerts ========== */
+.alert{max-width:600px;margin:0 auto 12px;padding:12px 14px;border-radius:10px}
+.alert-ok{background:#e8f8ef;color:#206b3a;border:1px solid #a7e2bf}
+.alert-warn{background:#fff7e6;color:#9a6b00;border:1px solid #f7d7a3}
 
-    @media (max-width:1024px){ .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
-    @media (max-width:768px){
-      form { padding:18px 16px; }
-      .pax-row{grid-template-columns:1fr}
-      .pax-actions{justify-content:flex-end}
-      .pax-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .pax-cell.span-2{grid-column:1/-1}
-    }
-    @media (max-width:480px){ .pax-grid{grid-template-columns:1fr} }
-    /* 靚版「是否開放」switch */
-    /* Switch 容器：水平置中、對齊好看 */
+/* ========== Passenger cards ========== */
+.panel{max-width:900px;margin:18px auto}
+.pax-list{list-style:none;margin:10px auto 0;padding:0;max-width:900px}
+.pax-item{
+  background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+  padding:14px 16px;margin:10px 0;box-shadow:0 3px 8px rgba(0,0,0,.05)
+}
+.pax-row{display:grid;grid-template-columns:1fr auto;grid-row-gap:10px;align-items:start}
+.pax-head{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.pax-name{font-weight:700;font-size:15px}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4338ca}
+.badge.gender{background:#e0f2fe;color:#0369a1}
+.badge.rt{background:#fef3c7;color:#92400e}
+.pax-grid{
+  grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:10px 14px
+}
+.pax-cell label{display:block;font-size:12px;color:#6b7280;margin-bottom:4px;letter-spacing:.02em}
+.pax-cell div{font-size:14px;color:#111827}
+.pax-cell.span-2{grid-column:span 2}
+.pax-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end; /* 內容向右 */
+  align-self:end;           /* 在 grid 列中靠下 */
+  justify-self:end;         /* 在 grid 欄位靠右 */
+  grid-column: 1 / -1;      /* 需要時讓整列橫跨，才能貼到最右邊 */
+}
+
+/* ========== Note & Memo ribbons ========== */
+.pax-note, .pax-memo{
+  grid-column: 1 / -1;
+  position:relative;
+  display:grid; grid-template-columns:92px 1fr auto;
+  align-items:center; gap:10px 14px; padding:10px 12px;
+  border-radius:10px; margin:10px 0 8px; border:1px solid transparent;
+}
+.pax-note{ background:#fff7ed; border-color:#ffe6c7; }
+.pax-note .label{ font-weight:700; color:#9a6700; }
+.pax-memo{ background:#eef6ff; border-color:#dbeafe; }
+.pax-memo .label{ font-weight:700; color:#1d4ed8; }
+.pax-memo .memo-text{ color:#0f172a; word-break:break-word; }
+.pax-memo .memo-actions{ display:flex; gap:8px; justify-self:end; }
+/* 左側色條 */
+.pax-note::before, .pax-memo::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:6px; border-radius:10px 0 0 10px;
+}
+.pax-note::before{ background:#f59e0b; }
+.pax-memo::before{ background:#3b82f6; }
+
+/* ========== Switch (toggle) ========== */
 .switch{
-  display:flex; align-items:center; justify-content:center;
-  gap:12px; margin:10px 0;
+  display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0;
 }
-
-/* 隱藏原生 checkbox（仍可被 label 點擊） */
-.switch input[type="checkbox"]{
-  position:absolute; opacity:0; width:0; height:0;
-}
-
-/* 自訂 toggle 外觀（軌道） */
+.switch input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0}
 .switch .toggle{
-  position:relative; width:52px; height:30px; border-radius:999px;
-  background:#e5e7eb; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
-  transition:background .2s ease;
-  cursor:pointer; display:inline-block;
+  position:relative;width:52px;height:30px;border-radius:999px;background:#e5e7eb;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);transition:background .2s ease;cursor:pointer;display:inline-block;
 }
-
-/* 圓形把手 */
 .switch .toggle::after{
-  content:""; position:absolute; top:3px; left:3px;
-  width:24px; height:24px; border-radius:50%;
-  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
-  transition:transform .2s ease;
+  content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .2s ease;
 }
+.switch input[type="checkbox"]:checked + .toggle{ background:#10b981 }
+.switch input[type="checkbox"]:checked + .toggle::after{ transform:translateX(22px) }
+.switch .toggle.is-disabled{opacity:.6;cursor:not-allowed}
+.switch label{font-weight:600;color:#374151;cursor:pointer}
+.switch .hint{display:block;font-size:12px;color:#6b7280;margin-top:2px;text-align:center}
 
-/* 勾選狀態：變色 + 把手右移 */
-.switch input[type="checkbox"]:checked + .toggle{
-  background:#10b981; /* 綠色 */
+/* ========== Responsive ========== */
+@media (max-width:1024px){ .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@media (max-width:768px){
+  form{padding:18px 16px}
+  .pax-row{grid-template-columns:1fr}
+  .pax-actions{justify-content:flex-end}
+  .pax-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pax-cell.span-2{grid-column:1/-1}
+  .pax-note, .pax-memo{grid-template-columns:1fr;gap:6px}
+  .pax-memo .memo-actions{justify-self:start}
+  .switch .toggle{width:56px;height:34px}
+  .switch .toggle::after{width:26px;height:26px;top:4px;left:4px;transform:none}
+  .switch input[type="checkbox"]:checked + .toggle::after{transform:translateX(22px)}
 }
-.switch input[type="checkbox"]:checked + .toggle::after{
-  transform:translateX(22px);
-}
+@media (max-width:480px){ .pax-grid{grid-template-columns:1fr} }
+</style>
 
-/* Label 文字 */
-.switch label{
-  font-weight:600; color:#374151; cursor:pointer;
-}
-
-/* 額外狀態提示（可選） */
-.switch .hint{
-  display:block; font-size:12px; color:#6b7280; margin-top:2px; text-align:center;
-}
-
-/* 手機加大可點區域 */
-@media (max-width:640px){
-  .switch .toggle{ width:56px; height:34px; }
-  .switch .toggle::after{ width:26px; height:26px; top:4px; left:4px; transform:none; }
-  .switch input[type="checkbox"]:checked + .toggle::after{ transform:translateX(22px); }
-}
-  </style>
 </head>
 <body>
   <h2>🛠 司機管理</h2>
@@ -115,6 +160,9 @@
   {% if saved_msg %}<div class="alert alert-ok">{{ saved_msg }}</div>{% endif %}
   {% if matched_msg %}<div class="alert alert-ok">{{ matched_msg }}</div>{% endif %}
   {% if full_msg %}<div class="alert alert-warn">{{ full_msg }}</div>{% endif %}
+
+  <!-- A) 編輯司機資料 -->
+  <!-- 省略前段相同 CSS 與 <body> 開頭 -->
 
   <!-- A) 編輯司機資料 -->
   <form method="POST">
@@ -132,16 +180,27 @@
     </select>
 
     <label>Email（選填）</label>
-    <input type="email" name="email" value="{{ driver.email|default_if_none:'' }}" />
+    <input type="email" id="email" name="email" value="{{ driver.email|default_if_none:'' }}" />
 
-    <label class="required">聯絡方式</label>
+    <!-- 🔒 隱私：需要 Email 才能啟用 -->
+    <div class="switch" id="privacy-switch" style="margin-top:6px;">
+      <input type="checkbox"
+             id="hide_contact"
+             name="hide_contact"
+             {% if driver.hide_contact %}checked{% endif %} />
+      <span class="toggle"></span>
+      <label for="hide_contact">隱藏個資（聯絡方式）</label>
+    </div>
+    <span id="privacyHint" class="hint">需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</span>
+
+    <label class="required" style="margin-top:14px;">聯絡方式</label>
     <input type="text" name="contact" value="{{ driver.contact }}" placeholder="LINE / IG / Phone Number" required />
 
     <label>管理密碼（留空不變更）</label>
-    <input type="password" name="password" placeholder="留空不修改" />
+    <input type="password" name="passwordf" placeholder="留空不修改" />
 
     <label class="required">總座位</label>
-    <input type="number" name="seats_total" min="1" value="{{ driver.seats_total }}" required />
+    <input type="number" id="seats_total" name="seats_total" min="1" value="{{ driver.seats_total }}" required />
 
     <!-- 出發地（下拉 + 自填） -->
     {% with has_dep_custom=driver.departure_custom %}
@@ -159,24 +218,23 @@
       <option value="基隆市" {% if not has_dep_custom and driver.departure == '基隆市' %}selected{% endif %}>基隆市</option>
       <option value="桃園市" {% if not has_dep_custom and driver.departure == '桃園市' %}selected{% endif %}>桃園市</option>
       <option value="新竹市" {% if not has_dep_custom and driver.departure == '新竹市' %}selected{% endif %}>新竹市</option>
-       <option value="新竹縣"  {% if not has_dep_custom and driver.departure == '新竹縣' %}selected{% endif %}>新竹縣</option>
-      <option value="苗栗縣"  {% if not has_dep_custom and driver.departure == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
-      <option value="台中市"  {% if not has_dep_custom and driver.departure == '台中市' %}selected{% endif %}>台中市</option>
-      <option value="彰化縣"  {% if not has_dep_custom and driver.departure == '彰化縣' %}selected{% endif %}>彰化縣</option>
-      <option value="南投縣"  {% if not has_dep_custom and driver.departure == '南投縣' %}selected{% endif %}>南投縣</option>
-      <option value="雲林縣"  {% if not has_dep_custom and driver.departure == '雲林縣' %}selected{% endif %}>雲林縣</option>
-      <option value="嘉義市"  {% if not has_dep_custom and driver.departure == '嘉義市' %}selected{% endif %}>嘉義市</option>
-      <option value="嘉義縣"  {% if not has_dep_custom and driver.departure == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
-      <option value="台南市"  {% if not has_dep_custom and driver.departure == '台南市' %}selected{% endif %}>台南市</option>
-      <option value="高雄市"  {% if not has_dep_custom and driver.departure == '高雄市' %}selected{% endif %}>高雄市</option>
-      <option value="屏東縣"  {% if not has_dep_custom and driver.departure == '屏東縣' %}selected{% endif %}>屏東縣</option>
-      <option value="宜蘭縣"  {% if not has_dep_custom and driver.departure == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
-      <option value="花蓮縣"  {% if not has_dep_custom and driver.departure == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
-      <option value="台東縣"  {% if not has_dep_custom and driver.departure == '台東縣' %}selected{% endif %}>台東縣</option>
-      <option value="澎湖縣"  {% if not has_dep_custom and driver.departure == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
-      <option value="金門縣"  {% if not has_dep_custom and driver.departure == '金門縣' %}selected{% endif %}>金門縣</option>
-      <option value="連江縣"  {% if not has_dep_custom and driver.departure == '連江縣' %}selected{% endif %}>連江縣</option>
-      <!-- 其餘縣市照這個寫法擴充 -->
+      <option value="新竹縣" {% if not has_dep_custom and driver.departure == '新竹縣' %}selected{% endif %}>新竹縣</option>
+      <option value="苗栗縣" {% if not has_dep_custom and driver.departure == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+      <option value="台中市" {% if not has_dep_custom and driver.departure == '台中市' %}selected{% endif %}>台中市</option>
+      <option value="彰化縣" {% if not has_dep_custom and driver.departure == '彰化縣' %}selected{% endif %}>彰化縣</option>
+      <option value="南投縣" {% if not has_dep_custom and driver.departure == '南投縣' %}selected{% endif %}>南投縣</option>
+      <option value="雲林縣" {% if not has_dep_custom and driver.departure == '雲林縣' %}selected{% endif %}>雲林縣</option>
+      <option value="嘉義市" {% if not has_dep_custom and driver.departure == '嘉義市' %}selected{% endif %}>嘉義市</option>
+      <option value="嘉義縣" {% if not has_dep_custom and driver.departure == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+      <option value="台南市" {% if not has_dep_custom and driver.departure == '台南市' %}selected{% endif %}>台南市</option>
+      <option value="高雄市" {% if not has_dep_custom and driver.departure == '高雄市' %}selected{% endif %}>高雄市</option>
+      <option value="屏東縣" {% if not has_dep_custom and driver.departure == '屏東縣' %}selected{% endif %}>屏東縣</option>
+      <option value="宜蘭縣" {% if not has_dep_custom and driver.departure == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+      <option value="花蓮縣" {% if not has_dep_custom and driver.departure == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+      <option value="台東縣" {% if not has_dep_custom and driver.departure == '台東縣' %}selected{% endif %}>台東縣</option>
+      <option value="澎湖縣" {% if not has_dep_custom and driver.departure == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+      <option value="金門縣" {% if not has_dep_custom and driver.departure == '金門縣' %}selected{% endif %}>金門縣</option>
+      <option value="連江縣" {% if not has_dep_custom and driver.departure == '連江縣' %}selected{% endif %}>連江縣</option>
     </select>
     <input type="text"
            id="customDeparture"
@@ -244,7 +302,7 @@
       <option value="MAYBE" {% if driver.flexible_pickup == 'MAYBE' %}selected{% endif %}>視情況</option>
     </select>
 
-    <div class="switch">
+    <div class="switch" id="active-switch">
       <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %} />
       <span class="toggle"></span>
       <label for="is_active">是否開放（座位滿會自動關閉）</label>
@@ -254,89 +312,34 @@
     <textarea name="note">{{ driver.note|default_if_none:'' }}</textarea>
 
     <button class="btn" type="submit">💾 儲存</button>
-    <!-- ✅ 回首頁按鈕（表單外，純連結，不會觸發提交） -->
-<div style="max-width:600px;margin:0 auto 8px;">
-  <a href="{% url 'find_index' %}" class="btn-ghost" style="
-     display:inline-block;text-decoration:none;text-align:center;
-     width:96%;padding:12px;margin-top: 10px;border-radius:10px;font-weight:700;">
-    🏠 回首頁
-  </a>
-</div>
+
+    <div style="max-width:600px;margin:0 auto 8px;">
+      <a href="{% url 'find_index' %}" class="btn-ghost" style="display:inline-block;text-decoration:none;text-align:center;width:96%;padding:12px;margin-top:10px;border-radius:10px;font-weight:700;">
+        🏠 回首頁
+      </a>
+    </div>
   </form>
-  <!-- B) 刪除司機（獨立 form，避免誤觸送到上面） -->
-  <form method="POST" action="{% url 'delete_driver' driver.id %}" style="max-width:600px;margin:14px auto 0;"
-        onsubmit="return confirm('⚠️ 確定要取消出車嗎？相關乘客也會被解除關聯！')">
+
+  <!-- 刪除司機表單（原樣） -->
+  <form id="deleteDriverForm" method="POST" action="{% url 'delete_driver' driver.id %}" style="max-width:600px;margin:14px auto 0;" onsubmit="return handleDeleteDriverSubmit(event)">
     {% csrf_token %}
-    <button class="btn btn-danger" type="submit">🗑️ 取消出車</button>
+    <button id="deleteDriverBtn" class="btn btn-danger" type="submit">🗑️ 取消出車</button>
   </form>
 
-  <!-- C) 已登記乘客 -->
-  <div class="panel">
-    <h3>🧍 待確認</h3>
-    <ul class="pax-list">
-      {% if pending %}
-        {% for p in pending %}
-          <li class="pax-item pax-pending">
-            <div class="pax-row">
-              <div class="pax-head">
-                <span class="pax-name">{{ p.passenger_name }}</span>
-                <span class="badge gender">{{ p.get_gender_display }}</span>
-                {% if p.together_return is not None %}
-                  <span class="badge rt">回程：{{ p.together_return|yesno:"一起,不一起" }}</span>
-                {% endif %}
-              </div>
-              <div class="pax-grid">
-                <div class="pax-cell"><label>出發地</label><div>{{ p.departure|default:"未填" }}</div></div>
-                <div class="pax-cell"><label>目的地</label><div>{{ p.destination|default:"未填" }}</div></div>
-                <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
-                <div class="pax-cell"><label>願付</label><div>{% if p.willing_to_pay %}NT$ {{ p.willing_to_pay|floatformat:0 }}{% else %}未填{% endif %}</div></div>
-                <div class="pax-cell"><label>日期</label><div>{{ p.date }}</div></div>
-                <div class="pax-cell"><label>回程</label><div>{{ p.return_date|default:"未定" }}</div></div>
-                <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
-              </div>
-              {% if p.note %}<div class="pax-note">備註：{{ p.note }}</div>{% endif %}
-              <div class="pax-actions">
-                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-              </div>
-            </div>
-          </li>
-        {% endfor %}
-      {% else %}
-        <li class="pax-item">目前沒有待確認乘客</li>
-      {% endif %}
-    </ul>
+  <!-- 乘客清單（原樣） -->
+<!-- C) 已登記乘客（升級：接受 / 拒絕 / 司機備忘錄） -->
+<div class="panel" id="manage-panels">
+  {% include "Find/_manage_panels.html" %}
+</div>
 
-    <h3 style="margin-top:18px;">✅ 已接受</h3>
-    <ul class="pax-list">
-      {% if accepted %}
-        {% for p in accepted %}
-          <li class="pax-item pax-accepted">
-            <div class="pax-row">
-              <div class="pax-head">
-                <span class="pax-name">✔ {{ p.passenger_name }}</span>
-                <span class="badge gender">{{ p.get_gender_display }}</span>
-              </div>
-              <div class="pax-grid">
-                <div class="pax-cell"><label>出發地</label><div>{{ p.departure }}</div></div>
-                <div class="pax-cell"><label>人數</label><div>{{ p.seats_needed }}</div></div>
-                <div class="pax-cell span-2"><label>聯絡方式</label><div>{{ p.contact|default:"未填" }}</div></div>
-              </div>
-              <div class="pax-actions">
-                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-              </div>
-            </div>
-          </li>
-        {% endfor %}
-      {% else %}
-        <li class="pax-item">尚無已接受乘客</li>
-      {% endif %}
-    </ul>
-  </div>
+<div id="driver-meta" data-driver-id="{{ driver.id }}"></div>
+
+</div>
 
   <script>
-    // 出發地為「自填」時顯示自訂輸入框
+    const driverId = "{{ driver.id }}";
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    // 出發/目的自填顯示（原樣）
     function checkCustomDeparture(select){
       const customInput = document.getElementById('customDeparture');
       if (!customInput) return;
@@ -345,7 +348,6 @@
       customInput.required = show;
       if (!show) customInput.value = '';
     }
-    // 目的地為「自填」時顯示自訂輸入框
     function checkCustomDestination(select){
       const input = document.getElementById('customDestination');
       if (!input) return;
@@ -355,13 +357,12 @@
       if (!show) input.value = '';
     }
 
-    // 日期前端防呆：出發 >= 今天；回程 >= max(今天, 出發) 或為空
+    // 日期防呆（原樣）
     document.addEventListener('DOMContentLoaded', () => {
       const dep = document.getElementById('driver-date');
       const ret = document.getElementById('driver-return');
       const today = new Date().toISOString().split('T')[0];
       if (!dep || !ret) return;
-
       function syncMin(){
         dep.min = today;
         ret.min = dep.value || today;
@@ -372,47 +373,82 @@
       syncMin();
     });
 
-    // 進頁初始化（若預設就選到自填要展開）
+    // 初始化「自填」展開
     (function(){
       const depSel = document.getElementById('departure');
       const desSel = document.getElementById('destination');
       if (depSel) checkCustomDeparture(depSel);
       if (desSel) checkCustomDestination(desSel);
     })();
-  </script>
-  <script>
-(function () {
-  const elActive = document.getElementById('is_active');
-  const elToggle = document.querySelector('.switch .toggle');
-  const elLabel  = document.querySelector('.switch label');
-  if (!elActive || !elToggle || !elLabel) return;
 
-  // 建立/取得提示節點 <span class="hint" id="active-hint">
-  let hint = document.getElementById('active-hint');
+    // 刪除確認（原樣）
+    function handleDeleteDriverSubmit(e){
+      if (!confirm('⚠️ 確定要取消出車嗎？相關乘客也會被解除關聯！')) return false;
+      const btn = document.getElementById('deleteDriverBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '處理中…'; }
+      return true;
+    }
+
+    // ✅ 隱私開關：需要 Email 才能啟用
+    (function(){
+  const wrap = document.getElementById('privacy-switch');
+  if (!wrap) return;
+  const email = document.getElementById('email');
+  const hide  = document.getElementById('hide_contact');
+  const toggle= wrap.querySelector('.toggle');
+  const hint  = document.getElementById('privacyHint');
+
+  function syncPrivacy(){
+    const hasEmail = !!(email.value && email.value.includes('@'));
+    if (!hasEmail){
+      hide.checked  = false;
+      hide.disabled = true;
+      toggle.classList.add('is-disabled');
+      if (hint){ hint.style.color = '#9a6b00'; hint.textContent = '尚未填寫 Email，無法隱藏聯絡方式。'; }
+    }else{
+      hide.disabled = false;
+      toggle.classList.remove('is-disabled');
+      if (hint){ hint.style.color = '#6b7280'; hint.textContent = '需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。'; }
+    }
+  }
+  // 讓點擊滑桿也能切換
+  toggle.addEventListener('click', ()=>{ if (!hide.disabled) { hide.checked = !hide.checked; } });
+  email.addEventListener('input', syncPrivacy);
+  syncPrivacy();
+})();
+
+    // 是否開放 switch 鎖定（你原本的腳本保留）
+    (function () {
+  const wrap    = document.getElementById('active-switch');
+  if (!wrap) return;
+  const elActive= document.getElementById('is_active');
+  const elToggle= wrap.querySelector('.toggle');
+  const elLabel = wrap.querySelector('label');
+
+  // 建立提示：插在「是否開放」這組開關下面
+  let hint = wrap.querySelector('#active-hint');
   if (!hint) {
     hint = document.createElement('span');
     hint.id = 'active-hint';
     hint.className = 'hint';
-    // 置於 label 下面（和你的結構兼容）
     elLabel.insertAdjacentElement('afterend', hint);
   }
 
-  // 取得 seats_filled：用 hidden 或 data 任一；兩者都沒有就 0
+  // 取得 filled（與你原本一致）
   function getFilled() {
     const h = document.getElementById('seats_filled_val');
     if (h && h.value !== undefined) {
       const n = parseInt(h.value, 10);
       return Number.isFinite(n) ? n : 0;
     }
-    const meta = document.getElementById('driver-meta'); // <div id="driver-meta" data-seats-filled="3">
-    if (meta && meta.dataset && meta.dataset.seatsFilled !== undefined) {
+    const meta = document.getElementById('driver-meta');
+    if (meta?.dataset?.seatsFilled !== undefined) {
       const n = parseInt(meta.dataset.seatsFilled, 10);
       return Number.isFinite(n) ? n : 0;
     }
     return 0;
   }
 
-  // 總座位欄位（用來即時判斷是否可開放）
   const elTotal = document.getElementById('seats_total');
 
   function setHint(text, tone){
@@ -428,41 +464,150 @@
     const totalSafe = Number.isFinite(total) ? Math.max(1, total) : 1;
 
     if (filled >= totalSafe) {
-      // 滿座 → 強制關閉且鎖住
       elActive.checked = false;
       elActive.disabled = true;
-      elToggle.style.opacity = .6;
-      elToggle.style.cursor = 'not-allowed';
+      elToggle.classList.add('is-disabled');
       setHint(`座位已滿（${filled}/${totalSafe}），已自動關閉`, 'warn');
       elActive.title = '座位已滿時不可開放';
     } else {
-      // 可切換
       elActive.disabled = false;
-      elToggle.style.opacity = 1;
-      elToggle.style.cursor = 'pointer';
+      elToggle.classList.remove('is-disabled');
       elActive.title = '';
       setHint(elActive.checked ? '目前狀態：已開放' : '目前狀態：未開放', elActive.checked ? 'ok' : '');
     }
   }
 
-  // 讓點擊綠色滑桿也能切換
-  elToggle.addEventListener('click', () => {
-    if (elActive.disabled) return;
-    elActive.checked = !elActive.checked;
-    refreshLock();
-  });
+      elToggle.addEventListener('click', () => {
+        if (elActive.disabled) return;
+        elActive.checked = !elActive.checked;
+        refreshLock();
+      });
+      elActive.addEventListener('change', refreshLock);
+      if (elTotal) {
+        elTotal.addEventListener('input', refreshLock);
+        elTotal.addEventListener('change', refreshLock);
+      }
+      refreshLock();
+    })();
+    
+  </script>
+<script>
+(function(){
+  const $  = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  const pendingList  = $('#pending-list');
+  const acceptedList = $('#accepted-list');
 
-  elActive.addEventListener('change', refreshLock);
+  function htmlToNode(html){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html.trim();
+    return wrap.firstElementChild;
+  }
+  function getListByStatus(status){
+    if (status === 'pending')  return pendingList;
+    if (status === 'accepted') return acceptedList;
+    return null;
+  }
+  function patchPaxItem(payload){
+    if (!payload || !payload.pax_id) return;
+    const id  = String(payload.pax_id);
+    const old = document.querySelector(`.pax-item[data-pax="${CSS.escape(id)}"]`);
 
-  if (elTotal) {
-    elTotal.addEventListener('input', refreshLock);
-    elTotal.addEventListener('change', refreshLock);
+    if (payload.status === 'deleted'){
+      if (old) old.remove();
+      return;
+    }
+    const container = getListByStatus(payload.status);
+    if (!container) return;
+
+    const node = htmlToNode(payload.html);
+    if (!node) return;
+
+    if (old && old.parentElement === container){
+      old.replaceWith(node);
+    }else{
+      if (old) old.remove();
+      container.appendChild(node);
+    }
   }
 
-  // 初始跑一次
-  refreshLock();
+  // 接受 / 拒絕
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action="accept"],button[data-action="reject"]');
+    if (!btn) return;
+
+    const url = btn.dataset.url;
+    if (!url) return;
+    if (btn.dataset.action === 'reject' && !confirm('確定要取消/拒絕嗎？')) return;
+
+    try{
+      const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      const res  = await fetch(url, { method:'POST', headers:{'X-CSRFToken': csrf} });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error||'操作失敗');
+      patchPaxItem(data);
+    }catch(err){
+      console.error(err); alert('操作失敗');
+    }
+  });
+
+  // 司機備忘錄（prompt 版本）
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action="memo"]');
+    if (!btn) return;
+
+    const paxId   = btn.dataset.id;
+    const urlBase = btn.dataset.urlBase; // 例如 /find/pax/0/memo/
+    const cur     = btn.dataset.current || "";
+    if (!paxId || !urlBase) return;
+    const url     = urlBase.replace(/\/0\/memo\/?$/, `/${paxId}/memo/`);
+
+    const memo = prompt('司機備忘錄（僅司機可見）', cur);
+    if (memo === null) return;
+
+    try{
+      const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      const fd   = new FormData(); fd.append('memo', memo);
+      const res  = await fetch(url, { method:'POST', headers:{'X-CSRFToken': csrf}, body: fd });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error||'更新失敗');
+
+      patchPaxItem(data); // 直接用後端回來的新 li 替換
+      alert('已更新司機備忘錄');
+    }catch(err){
+      console.error(err); alert('更新失敗');
+    }
+  });
+
+  // WebSocket：別處修改（如公開列表編輯）時即時同步
+  try{
+    const driverId = $('#driver-meta')?.dataset?.driverId || '{{ driver.id }}';
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws.onmessage = (evt) => {
+      try{
+        const data = JSON.parse(evt.data);
+        if (data && data.ok) patchPaxItem(data);
+      }catch(_e){}
+    };
+  }catch(_e){}
+})();
+
+(function initManageWS(){
+  if (window.__MANAGE_WS_BOUND__) return;
+  window.__MANAGE_WS_BOUND__ = true;
+const driverId = "{{ driver.id }}";
+const proto = location.protocol === "https:" ? "wss" : "ws";
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data || '{}');
+    if (msg.type === 'manage_panels') {
+      const box = document.getElementById('manage-panels');
+      if (box) box.innerHTML = msg.html;
+    }
+  };
 })();
 </script>
+
 
 </body>
 </html>

@@ -24,13 +24,18 @@
     <div class="col-actions">
       <button type="button" class="btn-manage" data-action="manage" data-id="{{ d.id }}">管理</button>
       <button
-        type="button"
-        class="btn-join"
-        data-action="join"
-        data-id="{{ d.id }}"
-        data-date="{{ d.date|date:'Y-m-d' }}"
-        data-return="{{ d.return_date|date:'Y-m-d'|default_if_none:'' }}"
-        >參加</button>
+  type="button"
+  class="btn-join"
+  data-action="join"
+  data-id="{{ d.id }}"
+  data-date="{{ d.date|date:'Y-m-d' }}"
+  data-return="{{ d.return_date|date:'Y-m-d'|default_if_none:'' }}"
+  data-total="{{ d.seats_total }}"
+  data-filled="{{ d.seats_filled }}"
+  data-remaining="{{ d.available|default_if_none:0 }}"
+>
+  參加
+</button>
       <button
         id="arrow-{{ d.id }}"
         class="arrow"
@@ -54,8 +59,15 @@
             <div class="driver-kv">
               <div class="k">暱稱</div><div class="v">{{ d.driver_name }}</div>
               <div class="k">性別</div><div class="v">{{ d.get_gender_display }}</div>
-              <div class="k">Email</div><div class="v">{{ d.email|default:"未提供" }}</div>
-              <div class="k">聯絡方式</div><div class="v">{{ d.contact }}</div>
+              <!-- <div class="k">Email</div><div class="v">{{ d.email|default:"未提供" }}</div> -->
+              <div class="k">聯絡方式</div>
+                <div class="v">
+                {% if d.hide_contact and d.email %}
+                    <span class="muted">已隱藏（以系統信通知）</span>
+                {% else %}
+                    {{ d.contact|default:"未填" }}
+                {% endif %}
+                </div>
             </div>
           </div>
           <div class="driver-info__group">
@@ -75,59 +87,64 @@
           </div>
         </div>
 
-        <!-- 中欄：待確認 -->
-        <div class="details-col">
-          <h4 class="pax-panel-title">🧍 待確認</h4>
-            <div class="pax-scroll">
-            <ul class="pax-list pending-scroll">
-  {% if d.pending_list %}
-    {% for p in d.pending_list %}
-      <li class="pax-item pax-pending">
-        <div class="pax-2col">
-          <div class="pax-left">
-            <div class="pax-title">{{ p.passenger_name }}</div>
-            <div class="pax-sub">上車：{{ p.departure }} · 人數：{{ p.seats_needed }}</div>
-          </div>
-          <div class="pax-actions">
-            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-          </div>
-        </div>
-      </li>
-    {% endfor %}
-  {% else %}
-    <li class="pax-empty">目前沒有待確認乘客</li>
-  {% endif %}
-</ul>
+        {# 中欄：待確認 #}
+<div class="details-col">
+  <h4 class="pax-panel-title">🧍 待確認</h4>
+  <div class="pax-scroll">
+    {% with pend=d.pending_list %}
+    <ul class="pax-list pending-scroll">
+      {% if pend %}
+        {% for p in pend %}
+          <li class="pax-item pax-pending">
+            <div class="pax-2col">
+              <div class="pax-left">
+                <div class="pax-title">{{ p.passenger_name }}</div>
+                <div class="pax-sub">上車：{{ p.departure }} · 人數：{{ p.seats_needed }}</div>
+              </div>
+              <div class="pax-actions">
+                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+              </div>
             </div>
-        </div>
-
-        <!-- 右欄：已接受 -->
-        <div class="details-col">
-          <h4 class="pax-panel-title">✅ 已接受</h4>
-<div class="pax-scroll">
-  <ul class="pax-list accepted-scroll">
-  {% if d.accepted_list %}
-    {% for p in d.accepted_list %}
-      <li class="pax-item pax-accepted">
-        <div class="pax-2col">
-          <div class="pax-left">
-            <div class="pax-title"><span class="check">✔</span>{{ p.passenger_name }}</div>
-            <div class="pax-sub">上車：{{ p.departure }} · 人數：{{ p.seats_needed }}</div>
-          </div>
-          <div class="pax-actions">
-            <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-            <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
-          </div>
-        </div>
-      </li>
-    {% endfor %}
-  {% else %}
-    <li class="pax-empty">尚無已接受乘客</li>
-  {% endif %}
-  </ul>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-empty">目前沒有待確認乘客</li>
+      {% endif %}
+    </ul>
+    {% endwith %}
+  </div>
 </div>
-        </div>
+
+{# 右欄：已接受 #}
+<div class="details-col">
+  <h4 class="pax-panel-title">✅ 已接受</h4>
+  <div class="pax-scroll">
+    {% with acc=d.accepted_list %}
+    <ul class="pax-list accepted-scroll">
+      {% if acc %}
+        {% for p in acc %}
+          <li class="pax-item pax-accepted">
+            <div class="pax-2col">
+              <div class="pax-left">
+                <div class="pax-title"><span class="check">✔</span>{{ p.passenger_name }}</div>
+                <div class="pax-sub">上車：{{ p.departure }} · 人數：{{ p.seats_needed }}</div>
+              </div>
+              <div class="pax-actions">
+                <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
+                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-empty">尚無已接受乘客</li>
+      {% endif %}
+    </ul>
+    {% endwith %}
+  </div>
+</div>
+
 
       </div>
     </div>

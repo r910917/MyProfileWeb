@@ -1,0 +1,24 @@
+{# Find/_manage_panels.html #}
+<h3 style="margin-top:18px;">✅ 已接受</h3>
+<ul id="accepted-list" class="pax-list">
+  {% if accepted %}
+    {% for p in accepted %}
+      {% include "Find/_driver_manage_pax_item.html" %}
+    {% endfor %}
+  {% else %}
+    <li class="pax-item">尚無已接受乘客</li>
+  {% endif %}
+</ul>
+
+<h3>🧍 待確認</h3>
+<ul id="pending-list" class="pax-list">
+  {% if pending %}
+    {% for p in pending %}
+      {% include "Find/_driver_manage_pax_item.html" %}
+    {% endfor %}
+  {% else %}
+    <li class="pax-item">目前沒有待確認乘客</li>
+  {% endif %}
+</ul>
+
+

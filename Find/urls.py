@@ -1,6 +1,7 @@
 from django.urls import path
 from django.urls import re_path
 from . import views
+from .consumers import DriverManageConsumer
 
 urlpatterns = [
     path("", views.index, name="find_index"),
@@ -20,6 +21,14 @@ urlpatterns = [
     # 司機管理頁
     path("driver/<int:driver_id>/manage/", views.driver_manage, name="driver_manage"),
     path("driver/<int:driver_id>/delete/", views.delete_driver, name="delete_driver"),
+    path("pax/<int:pax_id>/memo/",   views.pax_memo,   name="pax_memo"),
+    path('pax/<int:pax_id>/accept/', views.pax_accept, name='pax_accept'),
+    path('pax/<int:pax_id>/reject/', views.pax_reject, name='pax_reject'),
     # 密碼驗證（AJAX）
     path("driver/<int:driver_id>/manage/auth/", views.driver_manage_auth, name="driver_manage_auth"),
+]
+
+urlpatterns += [
+    path("driver/<int:driver_id>/privacy/", views.driver_toggle_privacy, name="driver_toggle_privacy"),
+    path("pax/<int:pax_id>/privacy/", views.pax_toggle_privacy, name="pax_toggle_privacy"),
 ]

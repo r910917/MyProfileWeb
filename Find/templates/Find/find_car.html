@@ -2,6 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>🚗 新增出車資訊</title>
   <style>
     body { font-family:"Microsoft JhengHei",sans-serif; background:linear-gradient(to right,#f0f9ff,#fefefe); margin:0; padding:40px 20px; }
@@ -11,16 +12,145 @@
     input,textarea,select { width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:1px solid #ccc; transition:border-color .3s, box-shadow .3s; font-size:15px; }
     input:focus,textarea:focus,select:focus { border-color:#007bff; box-shadow:0 0 8px rgba(0,123,255,.3); outline:none; }
     textarea { min-height:80px; resize:vertical; }
-    button { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894); color:#fff; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s; }
+    button { width:100%; padding:14px; border:0; border-radius:10px; background:linear-gradient(45deg,#007bff,#00b894);color:#fff ; font-size:18px; font-weight:700; cursor:pointer; transition:background .3s, transform .2s; }
     button:hover { background:linear-gradient(45deg,#0056b3,#009e77); transform:scale(1.02); }
     .alert { max-width:600px; margin:0 auto 12px; padding:12px 14px; border-radius:10px; }
     .alert-danger { background:#fdeaea; color:#7f1d1d; border:1px solid #f5c2c7; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
     .required::after{ content:" *"; color:red; }
+
+    /* 開關（switch） */
+    .switch {
+      display:flex; align-items:center; gap:10px; user-select:none;
+      padding:10px 12px; border:1px solid #e9eef5; border-radius:12px; background:#f9fbff;
+    }
+    .switch .toggle.is-disabled { opacity:.6; cursor:not-allowed; }
+    .switch input { position:relative; width:44px; height:24px; appearance:none; -webkit-appearance:none; background:#d1d5db; border-radius:999px; outline:none; transition:background .2s; cursor:pointer; }
+    .switch input::after{
+      content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.2);
+      transition:transform .2s;
+    }
+    .switch input:checked{ background:#22c55e; }
+    .switch input:checked::after{ transform:translateX(20px); }
+    .switch input:disabled{ background:#e5e7eb; cursor:not-allowed; }
+    .switch span { font-weight:600; color:#374151; }
+
+    .muted { color:#6b7280; font-size:12px; display:block; margin-top:6px; }
+    .hint-error { color:#b91c1c; }
+    /* =============== 手機／小平板強化 =============== */
+    @media (max-width: 768px) {
+      body {
+        padding: 24px 14px;
+        background: #f6f9fc;
+      }
+      h2 { font-size: 22px; margin-bottom: 18px; }
+
+      form {
+        max-width: 640px;
+        padding: 18px 16px;
+        border-radius: 14px;
+        box-shadow: 0 4px 10px rgba(0,0,0,.08);
+      }
+
+      /* 欄位字級與間距 */
+      label { font-size: 14px; margin-top: 10px; margin-bottom: 6px; }
+      input, textarea, select {
+        /* iOS < 16 會因小於 16px 自動放大，這裡鎖 16px */
+        font-size: 16px;
+        padding: 12px 12px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+      }
+      textarea { min-height: 96px; }
+
+      /* switch 區塊堆疊更鬆 */
+      .switch {
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+      }
+
+      /* 送出鍵更大、更好點 */
+      button {
+        font-size: 17px;
+        padding: 14px;
+        border-radius: 12px;
+      }
+
+      .alert { margin-bottom: 12px; }
+      .muted { font-size: 12px; }
+    }
+
+    /* 超小螢幕（如 360px）再緊一點 */
+    @media (max-width: 420px) {
+      body { padding: 18px 10px; }
+      h2 { font-size: 20px; }
+      form { padding: 14px 12px; border-radius: 12px; }
+      label { font-size: 13px; }
+      input, textarea, select { padding: 11px 10px; }
+    }
+
+    /* =============== 可選：送出鍵吸附底部（不改 HTML 結構） =============== */
+    /* 作法 A：直接把 form 最後一顆 <button> 加上 .sticky-submit class */
+    .sticky-submit {
+      position: sticky;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+      z-index: 2;
+      /* 讓它浮起來一點 */
+      box-shadow: 0 6px 16px rgba(0,0,0,.15);
+    }
+
+    /* 作法 B：不改 HTML，由 JS 自動幫最後一顆 button 加 .sticky-submit
+      → 將下方 JS 貼到頁尾即可 */
+    /* 讓 sticky 能正常運作、並預留底部空間（避免被鍵盤或安全區遮住） */
+html, body { height: 100%; }
+form { 
+  /* 預留給吸底按鈕的空間 */
+  padding-bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 96px));
+}
+
+/* 吸底送出鍵：有底色與陰影，手機上更明顯 */
+.sticky-submit {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  z-index: 10;
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+  background: #fff;         /* 讓按鈕底下不會透出表單 */
+  border: 1px solid #e5e7eb;
+}
+
+/* iOS 16 以下防縮放（你已把 input 字級拉到 16px，這裡再保險） */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea, button { font-size: 16px; }
+}
+
+/* 手機版強化（維持你原本的樣式，這邊只確保會生效） */
+@media (max-width: 768px) {
+  body { padding: 24px 14px; background: #f6f9fc; }
+  h2 { font-size: 22px; margin-bottom: 18px; }
+  form {
+    max-width: 640px;
+    padding: 18px 16px;
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,.08);
+  }
+  label { font-size: 14px; margin-top: 10px; margin-bottom: 6px; }
+  input, textarea, select {
+    font-size: 16px;
+    padding: 12px 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  textarea { min-height: 96px; }
+  .switch { gap: 12px; padding: 10px 12px; border-radius: 12px; }
+  button { font-size: 17px; padding: 14px; border-radius: 12px; }
+}
+
   </style>
 </head>
 <body>
   <h2>🚗 新增出車資訊</h2>
+
   <form method="POST" id="driverCreateForm">
     {% csrf_token %}
 
@@ -36,13 +166,24 @@
     </select>
 
     <label for="email">Email</label>
-    <input type="email" name="email" id="email" value="{{ prefill.email|default:'' }}" placeholder="選填白，僅用於寄送通知" />
+    <input type="email" name="email" id="email" value="{{ prefill.email|default:'' }}" placeholder="選填，僅用於寄送通知（不公開）" />
+
+    <!-- 🔒 隱藏個資（需要 Email 才能啟用；司機預設勾選） -->
+    <label>隱私設定</label>
+    <div class="switch">
+      <input type="checkbox"
+             id="hide_contact"
+             name="hide_contact"
+             {% if prefill.hide_contact is not defined or prefill.hide_contact %}checked{% endif %}>
+      <span>隱藏個資（聯絡方式）</span>
+    </div>
+    <small id="privacyHint" class="muted">※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</small>
 
     <label for="contact" class="required">聯絡方式</label>
     <input type="text" name="contact" id="contact" value="{{ prefill.contact|default:'' }}" placeholder="LINE、IG 或手機號碼" required />
 
     <label for="password" class="required">管理密碼</label>
-    <input type="password" name="password" id="password" value="{{ prefill.password|default:'' }}" placeholder="建議 4 碼，預設 0000 方便管理" required />
+    <input type="password" name="password" id="password" value="{{ prefill.password|default:'' }}" placeholder="建議 4 碼，預設 0000 方便管理" />
 
     <label for="flexible_pickup" class="required">順路接送意願</label>
     <select name="flexible_pickup" id="flexible_pickup" required>
@@ -87,52 +228,50 @@
       <option value="連江縣"  {% if prefill.departure == '連江縣' %}selected{% endif %}>連江縣</option>
     </select>
 
-    {# 注意：name 要叫 departure_custom（後端才接得到） #}
     <input type="text" id="customDeparture" name="departure_custom"
            value="{{ prefill.departure_custom|default:'' }}"
            style="display:{% if prefill.departure == '自填' or prefill.departure_custom %}block{% else %}none{% endif %};"
            placeholder="輸入自訂出發地" />
 
     <label for="destination">目的地</label>
-<select name="destination" id="destination" onchange="checkCustomDestination(this)">
-  <option value="" {% if not prefill.destination %}selected{% endif %}>請選擇縣市</option>
-  <option value="自填" {% if prefill.destination == '自填' %}selected{% endif %}>其他</option>
-  <option value="花蓮縣光復鄉"  {% if prefill.destination == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
-  <option value="花蓮縣光復車站以外火車站"  {% if prefill.destination == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
-  <option value="花蓮縣光復車站"  {% if prefill.destination == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
-  <option value="光復鄉糖廠"  {% if prefill.destination == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
-  <option value="需清淤地區"  {% if prefill.destination == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
-  <option value="台北市"  {% if prefill.destination == '台北市' %}selected{% endif %}>台北市</option>
-  <option value="新北市"  {% if prefill.destination == '新北市' %}selected{% endif %}>新北市</option>
-  <option value="基隆市"  {% if prefill.destination == '基隆市' %}selected{% endif %}>基隆市</option>
-  <option value="桃園市"  {% if prefill.destination == '桃園市' %}selected{% endif %}>桃園市</option>
-  <option value="新竹市"  {% if prefill.destination == '新竹市' %}selected{% endif %}>新竹市</option>
-  <option value="新竹縣"  {% if prefill.destination == '新竹縣' %}selected{% endif %}>新竹縣</option>
-  <option value="苗栗縣"  {% if prefill.destination == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
-  <option value="台中市"  {% if prefill.destination == '台中市' %}selected{% endif %}>台中市</option>
-  <option value="彰化縣"  {% if prefill.destination == '彰化縣' %}selected{% endif %}>彰化縣</option>
-  <option value="南投縣"  {% if prefill.destination == '南投縣' %}selected{% endif %}>南投縣</option>
-  <option value="雲林縣"  {% if prefill.destination == '雲林縣' %}selected{% endif %}>雲林縣</option>
-  <option value="嘉義市"  {% if prefill.destination == '嘉義市' %}selected{% endif %}>嘉義市</option>
-  <option value="嘉義縣"  {% if prefill.destination == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
-  <option value="台南市"  {% if prefill.destination == '台南市' %}selected{% endif %}>台南市</option>
-  <option value="高雄市"  {% if prefill.destination == '高雄市' %}selected{% endif %}>高雄市</option>
-  <option value="屏東縣"  {% if prefill.destination == '屏東縣' %}selected{% endif %}>屏東縣</option>
-  <option value="宜蘭縣"  {% if prefill.destination == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
-  <option value="花蓮縣"  {% if prefill.destination == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
-  <option value="台東縣"  {% if prefill.destination == '台東縣' %}selected{% endif %}>台東縣</option>
-  <option value="澎湖縣"  {% if prefill.destination == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
-  <option value="金門縣"  {% if prefill.destination == '金門縣' %}selected{% endif %}>金門縣</option>
-  <option value="連江縣"  {% if prefill.destination == '連江縣' %}selected{% endif %}>連江縣</option>
-</select>
+    <select name="destination" id="destination" onchange="checkCustomDestination(this)">
+      <option value="" {% if not prefill.destination %}selected{% endif %}>請選擇縣市</option>
+      <option value="自填" {% if prefill.destination == '自填' %}selected{% endif %}>其他</option>
+      <option value="花蓮縣光復鄉"  {% if prefill.destination == '花蓮縣光復鄉' %}selected{% endif %}>花蓮縣光復鄉</option>
+      <option value="花蓮縣光復車站以外火車站"  {% if prefill.destination == '花蓮縣光復車站以外火車站' %}selected{% endif %}>花蓮縣光復車站以外火車站</option>
+      <option value="花蓮縣光復車站"  {% if prefill.destination == '花蓮縣光復車站' %}selected{% endif %}>花蓮縣光復車站</option>
+      <option value="光復鄉糖廠"  {% if prefill.destination == '光復鄉糖廠' %}selected{% endif %}>光復鄉糖廠</option>
+      <option value="需清淤地區"  {% if prefill.destination == '需清淤地區' %}selected{% endif %}>需清淤地區</option>
+      <option value="台北市"  {% if prefill.destination == '台北市' %}selected{% endif %}>台北市</option>
+      <option value="新北市"  {% if prefill.destination == '新北市' %}selected{% endif %}>新北市</option>
+      <option value="基隆市"  {% if prefill.destination == '基隆市' %}selected{% endif %}>基隆市</option>
+      <option value="桃園市"  {% if prefill.destination == '桃園市' %}selected{% endif %}>桃園市</option>
+      <option value="新竹市"  {% if prefill.destination == '新竹市' %}selected{% endif %}>新竹市</option>
+      <option value="新竹縣"  {% if prefill.destination == '新竹縣' %}selected{% endif %}>新竹縣</option>
+      <option value="苗栗縣"  {% if prefill.destination == '苗栗縣' %}selected{% endif %}>苗栗縣</option>
+      <option value="台中市"  {% if prefill.destination == '台中市' %}selected{% endif %}>台中市</option>
+      <option value="彰化縣"  {% if prefill.destination == '彰化縣' %}selected{% endif %}>彰化縣</option>
+      <option value="南投縣"  {% if prefill.destination == '南投縣' %}selected{% endif %}>南投縣</option>
+      <option value="雲林縣"  {% if prefill.destination == '雲林縣' %}selected{% endif %}>雲林縣</option>
+      <option value="嘉義市"  {% if prefill.destination == '嘉義市' %}selected{% endif %}>嘉義市</option>
+      <option value="嘉義縣"  {% if prefill.destination == '嘉義縣' %}selected{% endif %}>嘉義縣</option>
+      <option value="台南市"  {% if prefill.destination == '台南市' %}selected{% endif %}>台南市</option>
+      <option value="高雄市"  {% if prefill.destination == '高雄市' %}selected{% endif %}>高雄市</option>
+      <option value="屏東縣"  {% if prefill.destination == '屏東縣' %}selected{% endif %}>屏東縣</option>
+      <option value="宜蘭縣"  {% if prefill.destination == '宜蘭縣' %}selected{% endif %}>宜蘭縣</option>
+      <option value="花蓮縣"  {% if prefill.destination == '花蓮縣' %}selected{% endif %}>花蓮縣</option>
+      <option value="台東縣"  {% if prefill.destination == '台東縣' %}selected{% endif %}>台東縣</option>
+      <option value="澎湖縣"  {% if prefill.destination == '澎湖縣' %}selected{% endif %}>澎湖縣</option>
+      <option value="金門縣"  {% if prefill.destination == '金門縣' %}selected{% endif %}>金門縣</option>
+      <option value="連江縣"  {% if prefill.destination == '連江縣' %}selected{% endif %}>連江縣</option>
+    </select>
 
-<input type="text"
-       id="customDestination"
-       name="destination_custom"
-       value="{{ prefill.destination_custom|default:'' }}"
-       style="display:{% if prefill.destination == '自填' or prefill.destination_custom %}block{% else %}none{% endif %};"
-       placeholder="輸入自訂目的地" />
-
+    <input type="text"
+           id="customDestination"
+           name="destination_custom"
+           value="{{ prefill.destination_custom|default:'' }}"
+           style="display:{% if prefill.destination == '自填' or prefill.destination_custom %}block{% else %}none{% endif %};"
+           placeholder="輸入自訂目的地" />
 
     <label for="driver-fare-note">酌收費用（選填）</label>
     <input type="text" id="driver-fare-note" name="fare_note"
@@ -141,9 +280,10 @@
 
     <label for="driver-date" class="required">出發日期</label>
     <input type="date" name="date" id="driver-date" value="{{ prefill.date|default:'' }}" required />
-  {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-  {% endif %}
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
     <label for="driver-return">回程日期（選填）</label>
     <input type="date" name="return_date" id="driver-return" value="{{ prefill.return_date|default:'' }}" />
 
@@ -154,7 +294,7 @@
   </form>
 
   <script>
-    // 出發地為「自填」時顯示自訂輸入框
+    // 出發/目的為「自填」時顯示自訂輸入框
     function checkCustomDeparture(select){
       const customInput = document.getElementById('customDeparture');
       if (!customInput) return;
@@ -164,20 +304,19 @@
       if (!show) customInput.value = '';
     }
     function checkCustomDestination(select){
-    const input = document.getElementById('customDestination');
-    if (!input) return;
-    const show = (select.value === '自填');
-    input.style.display = show ? 'block' : 'none';
-    input.required = show;
-    if (!show) input.value = '';
-  }
+      const input = document.getElementById('customDestination');
+      if (!input) return;
+      const show = (select.value === '自填');
+      input.style.display = show ? 'block' : 'none';
+      input.required = show;
+      if (!show) input.value = '';
+    }
 
     // 回程日期不可早於出發日期（前端即時防呆）
     document.addEventListener('DOMContentLoaded', () => {
       const dep = document.getElementById('driver-date');
       const ret = document.getElementById('driver-return');
       if (!dep || !ret) return;
-
       function syncMin(){
         ret.min = dep.value || '';
         if (ret.value && dep.value && ret.value < dep.value) ret.value = '';
@@ -185,13 +324,44 @@
       dep.addEventListener('change', syncMin);
       syncMin();
     });
+
+    // 隱私開關：需要 Email 才能啟用
+    (function(){
+      const email = document.getElementById('email');
+      const hide  = document.getElementById('hide_contact');
+      const hint  = document.getElementById('privacyHint');
+
+      function syncPrivacy(){
+        const hasEmail = !!(email.value && email.value.includes('@'));
+        if (!hasEmail){
+          hide.checked = false;     // 沒 Email 強制不可隱藏
+          hide.disabled = true;
+          if (hint) { hint.classList.add('hint-error'); hint.textContent = '※ 尚未填寫 Email，無法隱藏聯絡方式。'; }
+        }else{
+          hide.disabled = false;
+          if (hint) { hint.classList.remove('hint-error'); hint.textContent = '※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。'; }
+          // 依你的需求：司機預設隱藏（有 Email 時保持勾選可用）
+          if (!hide.hasAttribute('data-touched') && !hide.checked) hide.checked = true;
+        }
+      }
+      if (hide){
+        hide.addEventListener('change', ()=> hide.setAttribute('data-touched','1'));
+      }
+      if (email){
+        email.addEventListener('input', syncPrivacy);
+        // 首次載入同步一次
+        syncPrivacy();
+      }
+    })();
+
     // 進頁初始化（若預設就選到自填要展開）
-  (function(){
-    const depSel = document.getElementById('departure');
-    const desSel = document.getElementById('destination');
-    if (depSel) checkCustomDeparture(depSel);
-    if (desSel) checkCustomDestination(desSel);
-  })();
+    (function(){
+      const depSel = document.getElementById('departure');
+      const desSel = document.getElementById('destination');
+      if (depSel) checkCustomDeparture(depSel);
+      if (desSel) checkCustomDestination(desSel);
+    })();
   </script>
+
 </body>
 </html>

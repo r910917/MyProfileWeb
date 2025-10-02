@@ -1852,10 +1852,32 @@ function clearFilters(){
 </div>
 
 <script>
+  document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // 檢查 URL 中是否有 `auth_required` 參數
+  if (urlParams.has('auth_required') && urlParams.get('auth_required') === 'true') {
+    // 顯示身份驗證對話框
+    showToastSafe("為保護個資，請勿使用網址破解登入。", "warning"); // 顯示提示訊息
+  }
+});
+document.addEventListener('DOMContentLoaded', function() {
+  // 假設你使用了 `showToastSafe` 函式來顯示錯誤訊息
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get("error");
+  
+  if (error) {
+    showToastSafe(error, "error");
+  }
+});
 /* =========================================================================
  * 0) 公用小工具（單一來源）
  * ========================================================================= */
-
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+function getCSRF() { return getCookie('csrftoken'); }
  (function initUtils(){
   if (window.__UTILS_READY__) return;
   window.__UTILS_READY__ = true;
@@ -1869,10 +1891,10 @@ function clearFilters(){
   };
 
   // 從任一表單或 cookie 取 CSRF（優先表單）
-  window.getCSRF = function(form){
-    const el = (form || document).querySelector('input[name="csrfmiddlewaretoken"]');
-    return (el && el.value) || getCookie('csrftoken') || '';
-  };
+ window.getCSRF = function(form) {
+  const el = (form || document).querySelector('input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : getCookie('csrftoken') || '';
+};
 
   window.showToastSafe = function(msg, type){
     if (typeof showToast === 'function') showToast(msg, type);
@@ -1880,12 +1902,17 @@ function clearFilters(){
   };
 
   // 安全 JSON 取回：res 失敗或非 JSON 不拋例外
-  window.jsonFetch = async function(url, options = {}){
-    const res = await fetch(url, options);
-    let data = {};
-    try { data = await res.json(); } catch(_) {}
-    return { res, data };
-  };
+  window.jsonFetch = async function(url, options = {}) {
+  const res = await fetch(url, options);
+  let data = {};
+  try {
+    data = await res.json();
+  } catch (e) {
+    console.error('JSON parsing error:', e);
+    data = { ok: false, error: 'Invalid JSON response' };
+  }
+  return { res, data };
+};
 })();
 
 /* =========================================================================
@@ -2560,6 +2587,28 @@ document.addEventListener('click', (e) => {
   if (delBtn){  e.preventDefault(); __paxNextAction = 'delete'; openPaxAuth(delBtn.dataset.id); return; }
 });
 
+async function driverManageAuth(driver_id, password) {
+  const csrf_token = getCSRF(); // 假設已經有方法取得 CSRF token
+  const res = await fetch(`/find/driver/${driver_id}/manage/auth/`, {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrf_token, // 帶上 CSRF token
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: new URLSearchParams({
+      password: password
+    }),
+  });
+
+  const data = await res.json();
+  if (res.ok && data.ok) {
+    // 成功，跳轉到管理頁面
+    window.location.href = data.url;
+  } else {
+    alert(data.error || "登入失敗");
+  }
+}
+
 async function submitPaxAuth () {
   const pid = $id('paxAuthId')?.value;
   const pwd = $id('paxAuthPassword')?.value;
@@ -2588,7 +2637,7 @@ async function submitPaxAuth () {
 }
 window.submitPaxAuth = submitPaxAuth;
 
-async function loadPaxAndOpenEdit (pid) {
+async function loadPaxAndOpenEdit(pid) {
   const { res, data } = await jsonFetch(`/find/pax/${pid}/get/`, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   });
@@ -2601,7 +2650,7 @@ async function loadPaxAndOpenEdit (pid) {
   (document.getElementById('paxEditId')      || {}).value = p.id ?? '';
   (document.getElementById('paxName')        || {}).value = p.passenger_name ?? '';
   (document.getElementById('paxGender')      || {}).value = p.gender ?? 'X';
-  (document.getElementById('paxEmail')       || {}).value = p.email ?? '';
+  (document.getElementById('email')          || {}).value = p.email ?? '';           // ← 改這裡
   (document.getElementById('paxContact')     || {}).value = p.contact ?? '';
   (document.getElementById('paxSeats')       || {}).value = p.seats_needed ?? 1;
   (document.getElementById('paxPay')         || {}).value = p.willing_to_pay ?? '';
@@ -2610,16 +2659,23 @@ async function loadPaxAndOpenEdit (pid) {
   (document.getElementById('paxDate')        || {}).value = p.date ?? '';
   (document.getElementById('paxReturn')      || {}).value = p.return_date ?? '';
   (document.getElementById('paxTogether')    || {}).value =
-      (p.together_return === true ? 'true' : p.together_return === false ? 'false' : '');
+    (p.together_return === true ? 'true' : p.together_return === false ? 'false' : '');
   (document.getElementById('paxNote')        || {}).value = p.note ?? '';
 
-  const hide = document.getElementById('paxHideContact');
-  if (hide) hide.checked = !!(p.hide_contact && p.email);
+  // 隱私 checkbox
+  const hideEl = document.getElementById('hide_contact');   // ← 改這裡
+  if (hideEl) {
+    hideEl.checked  = !!(p.hide_contact && p.email);        // 有填 email 才能為 true
+    hideEl.disabled = !p.email;                              // 沒 email 一律禁用
+  }
 
-  initPaxPrivacyBinding();  // 依現在欄位值決定開關可用/提示
   openPaxEdit();
+
+  // 讓開關腳本再跑一次（若你有那段 window.syncPrivacySwitch）
+  window.syncPrivacySwitch && window.syncPrivacySwitch();
 }
 window.loadPaxAndOpenEdit = loadPaxAndOpenEdit;
+
 
 
 function openPaxEdit () {

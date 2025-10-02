@@ -1,0 +1,9 @@
+{% csrf_token %}
+<form method="post">
+  <input type="hidden" name="form" value="auth">
+  <h3>司機 {{ driver.driver_name }} 身分驗證</h3>
+  {% if error %}<div style="color:#c00">{{ error }}</div>{% endif %}
+  <label>密碼</label>
+  <input type="password" name="password" autocomplete="current-password" required>
+  <button type="submit">登入</button>
+</form>

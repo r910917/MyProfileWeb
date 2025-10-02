@@ -11,6 +11,10 @@ from django.db import transaction
 class DriverManageConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         self.driver_id = self.scope["url_route"]["kwargs"]["driver_id"]
+        sess_key = f"driver_auth_{self.driver_id}"
+        if not self.scope.get("session") or not self.scope["session"].get(sess_key):
+            await self.close(code=4403)  # Forbidden
+            return
         self.group_name = f"driver_manage_{self.driver_id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -22,6 +26,20 @@ class DriverManageConsumer(AsyncJsonWebsocketConsumer):
     async def manage_panels_update(self, event):
         # 直接把後端送的 payload 回傳給前端
         await self.send_json(event["payload"])
+
+    # 後端用 group_send(type="manage_panels", ...) 會進到這裡
+    async def manage_panels(self, event):
+        await self.send_json({
+            "type": "manage_panels",
+            "html": event.get("html", ""),
+        })
+
+    async def replace_pax_item(self, event):
+        await self.send_json({
+            "type": "replace_pax_item",
+            "pax_id": event.get("pax_id"),
+            "html": event.get("html",""),
+        })
 class FindConsumer(AsyncWebsocketConsumer):
     
     async def connect(self):

@@ -68,20 +68,22 @@
         </button>
       {% else %}
         {# 待確認：接受/拒絕 #}
-        <button type="button"
-                class="btn-mini ok"
-                data-action="accept"
-                data-id="{{ p.id }}"
-                data-url="{% url 'pax_accept' p.id %}">
-          接受
-        </button>
-        <button type="button"
-                class="btn-mini danger"
-                data-action="reject"
-                data-id="{{ p.id }}"
-                data-url="{% url 'pax_reject' p.id %}">
-          拒絕
-        </button>
+        <button
+  type="button"
+  class="btn-mini ok"
+  data-action="accept"
+  data-id="{{ p.id }}"
+  data-url-base="{% url 'pax_accept' 0 %}">
+  接受
+</button>
+        <button
+  type="button"
+  class="btn-mini danger"
+  data-action="reject"
+  data-id="{{ p.id }}"
+  data-url-base="{% url 'pax_reject' 0 %}">
+  拒絕
+</button>
       {% endif %}
     </div>
   </div>

@@ -95,10 +95,15 @@ ROOT_URLCONF = 'mysite.urls'
 CSRF_TRUSTED_ORIGINS = [
     "https://os.ddns.me",
     "https://hopngo.info",
+    "https://www.hopngo.info",
     "https://*.ddns.me",   # 可選：你所有 ddns.me 子網域
     # 如果你在內網用 http，也可以加：
     "http://192.168.0.157",
 ]
+CSRF_COOKIE_SECURE = True        # 走 HTTPS 就設 True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "Lax"     # 預設 Lax 通常 OK
+SESSION_COOKIE_SAMESITE = "Lax"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

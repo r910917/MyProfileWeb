@@ -12,15 +12,18 @@ from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_protect
+import json
 
 from django.db.models import (
-    Prefetch, Q, F, Case, When, Value, IntegerField, ExpressionWrapper, Count
+    Prefetch, Q, F, Case, When, Value, IntegerField, ExpressionWrapper, Count, Func
 )
 from django.db.models.functions import Cast, Coalesce, NullIf, Replace, Trim
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-
 from .models import DriverTrip, PassengerRequest
 from django.core.exceptions import ValidationError
 
@@ -41,17 +44,31 @@ def _json_body(request):
 
 def _driver_authed(request, driver: DriverTrip) -> bool:
     """
-    授權邏輯：
-    1) 若先前在管理頁已驗證，session 會有 driver_auth_<id>=True
-    2) 否則接受 X-Driver-Password 或 POST['password'] 當次驗證
+    授權規則：
+    1) 已在 driver_auth 成功 → session 有 driver_auth_<id>=True，直接通過
+    2) 沒有 session 時，允許一次性提供密碼（Header 或表單或 JSON）：
+       - Header: X-Driver-Password
+       - POST form: password
+       - JSON body: {"password": "..."}
     """
     key = f"driver_auth_{driver.id}"
     if request.session.get(key, False):
         return True
-    pw = request.headers.get("X-Driver-Password") or request.POST.get("password") or _json_body(request).get("password")
-    pw = (pw or "").strip()
-    drv_pw = (driver.password or "0000").strip()
-    return (pw and pw == drv_pw)
+
+    pw = request.headers.get("X-Driver-Password") or request.POST.get("password")
+
+    # 可能是 JSON
+    if not pw and request.method == "POST" and request.content_type.startswith("application/json"):
+        try:
+            body = json.loads(request.body.decode("utf-8") or "{}")
+            pw = body.get("password")
+        except Exception:
+            pw = None
+
+    if not pw:
+        return False
+
+    return constant_time_compare((pw or "").strip(), (driver.password or "").strip())
 
 def _repaint_lists():
     """
@@ -116,7 +133,7 @@ def pax_accept(request, pax_id: int):
     # 鎖定司機行程、驗證授權
     d = DriverTrip.objects.using(DB_ALIAS).select_for_update().get(id=p.driver_id)
     if not _driver_authed(request, d):
-        return HttpResponseForbidden("FORBIDDEN")
+        return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
 
     
 
@@ -125,24 +142,16 @@ def pax_accept(request, pax_id: int):
     if remaining < p.seats_needed:
         return JsonResponse({"ok": False, "error": "FULL", "remaining": remaining}, status=400)
 
-    # 若已經接受過，直接回傳目前剩餘座位（idempotent）
-    if p.is_matched:
-        remaining_now = max(0, d.seats_total - d.seats_filled)
-        # 即時更新（保險）
-        broadcast_driver_card(d.id)
-        broadcast_manage_panels(d.id)
-        return JsonResponse({"ok": True, "remaining": remaining_now})
-
     if not p.is_matched:
         d.seats_filled += p.seats_needed
         p.is_matched = True
         d.save(using=DB_ALIAS, update_fields=["seats_filled"])
         p.save(using=DB_ALIAS, update_fields=["is_matched"])
 
-    def _after_commit():
-        broadcast_driver_card(d.id)
-        broadcast_manage_panels(d.id)
-    transaction.on_commit(_after_commit)
+    transaction.on_commit(lambda: (
+        broadcast_driver_card(d.id),
+        broadcast_manage_panels(d.id),
+    ))
     return JsonResponse({"ok": True, "remaining": max(0, d.seats_total - d.seats_filled)})
 
 
@@ -151,15 +160,12 @@ def pax_accept(request, pax_id: int):
 def pax_reject(request, pax_id: int):
     """司機拒絕/取消乘客：若原本已接受需釋放座位，並從司機底下移除。"""
     p = get_object_or_404(PassengerRequest.objects.using(DB_ALIAS), id=pax_id)
+    d = DriverTrip.objects.using(DB_ALIAS).select_for_update().get(id=p.driver_id) if p.driver_id else None
 
-    original_driver_id = p.driver_id  # 先存起來，等等廣播要用
-    d = None
-    if original_driver_id:
-        d = DriverTrip.objects.using(DB_ALIAS).select_for_update().get(id=original_driver_id)
-        if not _driver_authed(request, d):
-            return HttpResponseForbidden("FORBIDDEN")
+    # ✅ 一樣用 JsonResponse
+    if d and not _driver_authed(request, d):
+        return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
 
-    # 若原本是接受狀態 → 釋放座位
     if p.is_matched and d:
         d.seats_filled = max(0, d.seats_filled - p.seats_needed)
         d.save(using=DB_ALIAS, update_fields=["seats_filled"])
@@ -169,14 +175,10 @@ def pax_reject(request, pax_id: int):
     p.is_matched = False
     p.save(using=DB_ALIAS, update_fields=["driver", "is_matched"])
 
-    def _after_commit():
-        if d:
-            broadcast_driver_card(d.id)
-            broadcast_manage_panels(d.id)
-        else:
-            _broadcast_lists()
-
-    transaction.on_commit(_after_commit)
+    transaction.on_commit(lambda: (
+        d and broadcast_driver_card(d.id),
+        d and broadcast_manage_panels(d.id),
+    ))
     return JsonResponse({"ok": True})
 
 @require_POST
@@ -805,6 +807,7 @@ def pax_update(request, pid: int):
     want_hide = hide_raw in ("1", "true", "on", "yes")
     p.hide_contact = (want_hide and bool(p.email))  # 沒 Email 一律 False
 
+
     # 寫入
     p.save(using=DB_ALIAS)
 
@@ -913,76 +916,98 @@ def delete_driver(request, driver_id):
 
     return redirect("find_index")
 
+@csrf_protect
 @require_POST
 def driver_manage_auth(request, driver_id: int):
     """
     接收密碼，驗證正確就回傳管理頁 URL 讓前端跳轉
     """
-    driver = get_object_or_404(DriverTrip.objects.using("find_db"), id=driver_id)
-    password = request.POST.get("password", "")
-    if not password:
+    """
+    驗證司機密碼，成功則回傳管理頁面 URL，讓前端跳轉
+    """
+    driver = get_object_or_404(DriverTrip.objects.using(DB_ALIAS), id=driver_id)
+    pwd = (request.POST.get("password") or "").strip()
+    if not pwd:
         return JsonResponse({"ok": False, "error": "請輸入密碼"}, status=400)
 
-    if password != driver.password:
+    if pwd != driver.password:
         return JsonResponse({"ok": False, "error": "密碼錯誤"}, status=403)
+    
+    # 檢查密碼是否正確
+    if constant_time_compare(pwd, driver.password or ""):
+        # 密碼正確，設定 session，並讓前端跳轉
+        sess_key = f"driver_auth_{driver.id}"
+        url = reverse("driver_manage", args=[driver_id])
+        request.session[sess_key] = True
+        request.session.modified = True
+        request.session.set_expiry(1800)  # 設定 session 失效時間（例如：60 秒後過期）
+        return JsonResponse({"ok": True, "url": url})
 
-    url = reverse("driver_manage", args=[driver_id])
-    return JsonResponse({"ok": True, "url": url})
+    return JsonResponse({"ok": False, "error": "密碼錯誤"}, status=403)
+    
 
+    
 
+@ensure_csrf_cookie
 def driver_manage(request, driver_id: int):
-    # 司機 + 乘客列表（首次進頁）
-    # 在你的 driver_manage view 驗密碼 OK 時：
-    # 新
-    # 1) 先抓 driver（無論 GET / POST）
-    driver = get_object_or_404(
-        DriverTrip.objects.using(DB_ALIAS),
-        id=driver_id
-    )
-
-    # 2) 驗證授權（照你原本的邏輯）
+    # 1) 先抓 driver
+    driver = get_object_or_404(DriverTrip.objects.using(DB_ALIAS), id=driver_id)
+    # 2) 驗證授權（用你自己的規則）
     sess_key = f"driver_auth_{driver.id}"
-    authed = request.session.get(sess_key, False)
-    # 如果你有 POST 密碼驗證，就在這裡處理，成功後：
-    # request.session[sess_key] = True
-    # authed = True
 
-    # 3) 查詢就用上面這個 driver 變數
-    pending = (PassengerRequest.objects.using(DB_ALIAS)
-               .filter(driver=driver, is_matched=False)
-               .order_by("id"))
-    accepted = (PassengerRequest.objects.using(DB_ALIAS)
-                .filter(driver=driver, is_matched=True)
-                .order_by("id"))
-    attach_passenger_lists(driver)
-    request.session[f"driver_auth_{driver.id}"] = True
-    request.session.modified = True
-    # 候選乘客：同路線同一天、未媒合、且未指派 driver
-    candidates = (PassengerRequest.objects.using("find_db")
-                  .filter(departure=driver.departure,
-                          destination=driver.destination,
-                          date=driver.date,
-                          is_matched=False,
-                          driver__isnull=True)
-                  .order_by("id"))
+    # A) 尚未授權：只顯示驗證頁（或改成直接 403）
+    if not request.session.get(sess_key):
+        if request.method == "POST" and request.POST.get("form") == "auth":
+            pwd = (request.POST.get("password") or "").strip()
+            if constant_time_compare(pwd, driver.password or ""):
+                request.session[sess_key] = True
+                request.session.modified = True
+                request.session.set_expiry(1800)
+                return redirect("driver_manage", driver_id=driver.id)
+            return redirect(f"/find?auth_required=true")
+        # GET：顯示驗證頁（*不要*帶任何乘客資料）
+        return redirect(f"/find?auth_required=true")
+    authed = bool(request.session.get(sess_key))
+    # 如果你在其它 view 已做密碼驗證，就會把 session 設 True
+    # request.session[sess_key] = True
+
+    # 3) 初次進頁先準備列表
+    pending_qs  = PassengerRequest.objects.using(DB_ALIAS).filter(driver=driver, is_matched=False).order_by("id")
+    accepted_qs = PassengerRequest.objects.using(DB_ALIAS).filter(driver=driver, is_matched=True ).order_by("id")
+    candidates_qs = PassengerRequest.objects.using(DB_ALIAS).filter(
+        departure=driver.departure,
+        destination=driver.destination,
+        date=driver.date,
+        is_matched=False,
+        driver__isnull=True,
+    ).order_by("id")
 
     saved_msg = matched_msg = full_msg = ""
 
     if request.method == "POST":
         form_type = request.POST.get("form", "")
 
-        # ===================== A) 更新司機資訊 =====================
+        # === A) 更新司機資訊 ===
         if form_type == "update_driver":
-            # --- 基本欄位 ---
-            driver.driver_name = (request.POST.get("driver_name") or driver.driver_name).strip()
-            driver.gender      = (request.POST.get("gender") or driver.gender).strip() or "X"
-            driver.email       = (request.POST.get("email") or None)
-            driver.contact     = (request.POST.get("contact") or driver.contact).strip()
+            if not authed:
+                return HttpResponseForbidden("FORBIDDEN")
 
+            # 基本欄位
+            driver.driver_name = (request.POST.get("driver_name") or driver.driver_name).strip()
+            driver.gender      = (request.POST.get("gender") or driver.gender or "X").strip() or "X"
+            driver.email       = (request.POST.get("email") or None)
+            driver.contact     = (request.POST.get("contact") or driver.contact or "").strip()
+            # ✅ 司機備註（允許空 → None）
+            driver.note = (request.POST.get("note") or "").strip() or None
             # 密碼：有填才更新
             pwd = (request.POST.get("password") or "").strip()
             if pwd:
                 driver.password = pwd
+
+            # 隱私：需有 email 才能 True
+            hide_raw   = (request.POST.get("hide_contact") or "").lower()
+            want_hide  = hide_raw in ("1", "true", "on", "yes")
+            driver.hide_contact = bool(driver.email) and want_hide
 
             # 座位
             try:
@@ -997,38 +1022,33 @@ def driver_manage(request, driver_id: int):
             if hasattr(driver, "fare_note"):
                 driver.fare_note = (request.POST.get("fare_note") or "").strip() or None
 
-            # --- 出發地（一般 / 自填 正規化） ---
+            # 出發/目的地（含自填）
             dep_choice = (request.POST.get("departure") or "").strip()
             dep_custom = (request.POST.get("departure_custom") or "").strip()
             if dep_choice == "自填":
-                departure          = dep_custom
-                departure_custom   = dep_custom
+                driver.departure = dep_custom
+                if hasattr(driver, "departure_custom"):
+                    driver.departure_custom = dep_custom
             else:
-                departure          = dep_choice
-                departure_custom   = ""
+                driver.departure = dep_choice
+                if hasattr(driver, "departure_custom"):
+                    driver.departure_custom = ""
 
-            # --- 目的地（一般 / 自填 正規化） ---
             des_choice = (request.POST.get("destination") or "").strip()
             des_custom = (request.POST.get("destination_custom") or "").strip()
             if des_choice == "自填":
-                destination        = des_custom
-                destination_custom = des_custom
+                driver.destination = des_custom
+                if hasattr(driver, "destination_custom"):
+                    driver.destination_custom = des_custom
             else:
-                destination        = des_choice
-                destination_custom = ""
+                driver.destination = des_choice
+                if hasattr(driver, "destination_custom"):
+                    driver.destination_custom = ""
 
-            driver.departure = departure
-            if hasattr(driver, "departure_custom"):
-                driver.departure_custom = departure_custom
-
-            driver.destination = destination
-            if hasattr(driver, "destination_custom"):
-                driver.destination_custom = destination_custom
-
-            # --- 日期防呆 ---
+            # 日期防呆
             date_str   = (request.POST.get("date") or "").strip()
             return_str = (request.POST.get("return_date") or "").strip() or None
-            dt  = parse_date(date_str)
+            dt  = parse_date(date_str) if date_str else driver.date
             rdt = parse_date(return_str) if return_str else None
 
             today = _date.today()
@@ -1041,47 +1061,54 @@ def driver_manage(request, driver_id: int):
                 error_msg = "回程日期不可早於出發日期"
 
             if error_msg:
-                # 回填目前 driver 狀態與候選列表，顯示錯誤
-                attach_passenger_lists(driver)
+                # 回填目前狀態
+                pending = pending_qs
+                accepted = accepted_qs
+                candidates = candidates_qs
                 return render(request, "Find/driver_manage.html", {
                     "driver": driver,
-                    "pending": driver.pending,
-                    "accepted": driver.accepted,
+                    "pending": pending,
+                    "accepted": accepted,
                     "candidates": candidates,
                     "saved_msg": "",
                     "matched_msg": "",
                     "full_msg": "",
+                    "authed": authed,
                     "error": error_msg,
                 })
 
             driver.date        = dt
             driver.return_date = rdt
 
-            # --- 其他旗標 ---
+            # 其他旗標
             driver.flexible_pickup = (request.POST.get("flexible_pickup") or getattr(driver, "flexible_pickup", "MAYBE")).strip() or "MAYBE"
             driver.is_active       = (request.POST.get("is_active") == "on")
             if driver.seats_filled >= driver.seats_total:
                 driver.is_active = False
 
-            driver.save(using="find_db")
+            driver.save(using=DB_ALIAS)
             saved_msg = "✅ 已更新司機資料"
-            transaction.on_commit(lambda: broadcast_driver_card(driver.id))
 
-        # ===================== B) 接受乘客 =====================
+            # 廣播（卡片 + 管理頁）
+            transaction.on_commit(lambda: (
+                broadcast_driver_card(driver.id),
+                broadcast_manage_panels(driver.id)
+            ))
+
+        # === B) 批次接受乘客 ===
         elif form_type == "accept_passengers":
+            if not authed:
+                return HttpResponseForbidden("FORBIDDEN")
+
             ids = request.POST.getlist("accept_ids")
             accepted_names = []
 
-            with transaction.atomic(using="find_db"):
-                d = (DriverTrip.objects.using("find_db")
-                     .select_for_update()
-                     .get(id=driver.id))
+            with transaction.atomic(using=DB_ALIAS):
+                d = DriverTrip.objects.using(DB_ALIAS).select_for_update().get(id=driver.id)
 
                 for pid in ids:
                     try:
-                        p = (PassengerRequest.objects.using("find_db")
-                             .select_for_update()
-                             .get(id=pid, is_matched=False))
+                        p = PassengerRequest.objects.using(DB_ALIAS).select_for_update().get(id=pid, is_matched=False)
                     except PassengerRequest.DoesNotExist:
                         continue
 
@@ -1091,43 +1118,49 @@ def driver_manage(request, driver_id: int):
                     if d.seats_filled + p.seats_needed <= d.seats_total:
                         d.seats_filled += p.seats_needed
                         p.is_matched = True
-                        p.save(using="find_db")
+                        p.save(using=DB_ALIAS)
                         accepted_names.append(p.passenger_name)
 
                         if d.seats_filled >= d.seats_total:
                             d.is_active = False
-                            d.save(using="find_db")
+                            d.save(using=DB_ALIAS)
                             full_msg = f"🚗 {d.driver_name} 的行程已滿，已自動下架"
                             break
 
-                d.save(using="find_db")
-                transaction.on_commit(lambda: broadcast_driver_card(driver.id))
+                d.save(using=DB_ALIAS)
 
             matched_msg = "✅ 已成功媒合：" + "、".join(accepted_names) if accepted_names else "⚠️ 沒有可媒合的乘客或座位不足"
+            transaction.on_commit(lambda: (
+                broadcast_driver_card(driver.id),
+                broadcast_manage_panels(driver.id)
+            ))
 
-        # ===== 其他表單分支 …（保留你原本的）=====
+        # …(其他分支照你的需求)
 
-        # 提交後重新載入最新資料與候選
-        driver.refresh_from_db(using="find_db")
-        attach_passenger_lists(driver)
-        candidates = (PassengerRequest.objects.using("find_db")
-                      .filter(departure=driver.departure,
-                              destination=driver.destination,
-                              date=driver.date,
-                              is_matched=False,
-                              driver__isnull=True)
-                      .order_by("id"))
+        # 重新抓最新資料（避免用舊的 QuerySet）
+        driver.refresh_from_db(using=DB_ALIAS)
+        pending_qs  = PassengerRequest.objects.using(DB_ALIAS).filter(driver=driver, is_matched=False).order_by("id")
+        accepted_qs = PassengerRequest.objects.using(DB_ALIAS).filter(driver=driver, is_matched=True ).order_by("id")
+        candidates_qs = PassengerRequest.objects.using(DB_ALIAS).filter(
+            departure=driver.departure,
+            destination=driver.destination,
+            date=driver.date,
+            is_matched=False,
+            driver__isnull=True,
+        ).order_by("id")
 
+    # 最後渲染
     return render(request, "Find/driver_manage.html", {
         "driver": driver,
-        "pending": pending,
-        "accepted": accepted,
-        "candidates": candidates,
+        "pending": pending_qs,
+        "accepted": accepted_qs,
+        "candidates": candidates_qs,
         "saved_msg": saved_msg,
         "matched_msg": matched_msg,
         "full_msg": full_msg,
         "authed": authed,
-    })# -------------------
+    })
+# -------------------
 # 首頁
 # -------------------
 # === helpers ===

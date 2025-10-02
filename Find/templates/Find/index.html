@@ -33,19 +33,82 @@ h1{ text-align:center; padding:20px; color:#005c4b; }
 h2{ color:#00695c; margin:20px; font-size:20px; }
 
 /* ==========================================================================
-   首頁兩顆主功能按鈕
+   首頁3顆主功能按鈕
    ========================================================================== */
-.buttons{ text-align:center; margin:20px 0; }
-.btn-main{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:12px 24px; font-size:16px; border-radius:8px;
-  border:none; cursor:pointer; margin:0 6px; color:#fff; font-weight:bold;
-  transition:transform .2s, background .3s;
+/* 主操作區：桌機置中、手機三欄一列 */
+.hero-actions{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  margin:10px 0 18px;
 }
-.btn-driver{ background:#007bff; }
-.btn-driver:hover{ background:#0056b3; transform:scale(1.05); }
-.btn-passenger{ background:#dc3545; }
-.btn-passenger:hover{ background:#a71d2a; transform:scale(1.05); }
+
+/* 共用主按鈕外觀（你原本 btn-main 可沿用；這裡補些細節） */
+.btn-main{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:.5rem; padding:12px 22px; border-radius:999px;
+  font-weight:800; letter-spacing:.5px; border:1px solid transparent;
+  box-shadow:0 6px 24px rgba(0,0,0,.08); cursor:pointer;
+  transition:transform .08s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+.btn-main .ico{ font-size:1.05rem; line-height:1; }
+
+/* 三種色系 */
+.btn-driver   { background:#0b74ff; color:#fff; }
+.btn-driver:hover{ background:#0a61d6; transform:translateY(-1px); }
+
+.btn-passenger{ background:#e53545; color:#fff; }
+.btn-passenger:hover{ background:#c92f3e; transform:translateY(-1px); }
+
+/* 說明＝幽靈膠囊按鈕（亮色描邊 + 玻璃感） */
+.btn-ghost{
+  background:rgba(255,255,255,.75);
+  color:#334155;
+  border-color:#d9e1ec;
+  backdrop-filter:saturate(180%) blur(6px);
+}
+.btn-ghost:hover{
+  background:#f2f6fb;
+  border-color:#c7d3e4;
+  color:#0f172a;
+  transform:translateY(-1px);
+}
+.btn-ghost:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(59,130,246,.25);
+}
+
+/* 手機：三欄一列、滿版按鈕 */
+@media (max-width:640px){
+  .hero-actions{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);  /* 三欄一列 */
+    gap:10px;
+    padding:0 10px;
+  }
+  .btn-main{ width:100%; padding:12px 10px; font-size:15px; }
+  .btn-main .ico{ font-size:1rem; }
+}
+
+/* =============== 說明按鈕（和你現有藍色系一致） =============== */
+/* 說明區縮排（徽章左、文字右；換行自動對齊） */
+.intro-list { margin: 0; padding-left: 0; }
+.intro-row {
+  display: grid;
+  grid-template-columns: auto 1fr; /* 徽章固定寬、文字佔滿 */
+  column-gap: .5rem;
+  row-gap: .25rem;
+  align-items: start;
+  margin-bottom: .5rem;            /* 每條之間間距 */
+}
+.intro-row .badge {
+  white-space: nowrap;             /* 徽章不換行 */
+  font-weight: 600;
+}
+.intro-row span:last-child {
+  line-height: 1.7;                /* 文字行距舒適 */
+}
 
 /* ==========================================================================
    卡片（Driver/Passenger 列表）＋ 左側色條
@@ -1140,50 +1203,83 @@ input.ctl{ padding:.45rem .6rem; }
 .chip .x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e9ecf3;color:#333;cursor:pointer;font-size:.8rem;line-height:1;}
 .chip .x:hover{ background:#dfe4ee; }
 
-/* =============== 說明按鈕（和你現有藍色系一致） =============== */
-/* 說明區縮排（徽章左、文字右；換行自動對齊） */
-.intro-list { margin: 0; padding-left: 0; }
-.intro-row {
-  display: grid;
-  grid-template-columns: auto 1fr; /* 徽章固定寬、文字佔滿 */
-  column-gap: .5rem;
-  row-gap: .25rem;
-  align-items: start;
-  margin-bottom: .5rem;            /* 每條之間間距 */
-}
-.intro-row .badge {
-  white-space: nowrap;             /* 徽章不換行 */
-  font-weight: 600;
-}
-.intro-row span:last-child {
-  line-height: 1.7;                /* 文字行距舒適 */
-}
-
-
-
-
-
-
-
 
 </style>
+<script>
+(function () {
+  // 改成你實際用的 ID
+  const MODAL_ID = 'introModal';     // 原本是 'siteIntroModal'
+  const BTN_ID   = 'btnIntro';       // 原本是 'introHelpBtn'
 
+  function $id(id){ return document.getElementById(id); }
+
+  function openIntro() {
+    const m = $id(MODAL_ID);
+    if (!m) return;
+    m.classList.add('is-open');
+    document.body.classList.add('body--intro-open');
+    const card = m.querySelector('.intro-modal__card');
+    card && card.focus();
+  }
+  function closeIntro() {
+    const m = $id(MODAL_ID);
+    if (!m) return;
+    m.classList.remove('is-open');
+    document.body.classList.remove('body--intro-open');
+  }
+
+  function bindIntro() {
+    // 按鈕開啟
+    const btn = $id(BTN_ID);
+    btn && btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openIntro();
+    });
+
+    // Modal 關閉（遮罩或關閉鈕上加 data-intro-close）
+    const modal = $id(MODAL_ID);
+    if (!modal) return;
+    modal.addEventListener('click', (e) => {
+      if (e.target.matches('[data-intro-close]')) {
+        e.preventDefault();
+        closeIntro();
+      }
+    });
+
+    // ESC 關閉
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeIntro();
+      }
+    });
+
+    // 對外暴露
+    window.showIntroModalNow = openIntro;
+    window.closeIntroModal   = closeIntro;
+  }
+
+  document.addEventListener('DOMContentLoaded', bindIntro);
+})();
+</script>
 </head>
 <body>
   <h1>🌐 花蓮光復救災交通媒合</h1>
 
-  <div class="buttons">
-    <a href="{% url 'find_car' %}">
-      <button class="btn-main btn-driver">🚗 我要出車（找乘客）</button>
-    </a>
-    <button type="button" class="btn btn-outline-secondary btn-sm ms-2"
-        data-bs-toggle="modal" data-bs-target="#introModal">
-  說明
-</button>
-    <a href="{% url 'find_people' %}">
-      <button class="btn-main btn-passenger">🧍 我要搭車（找車）</button>
-    </a>
-  </div>
+  <div class="hero-actions">
+  <button class="btn-main btn-driver" onclick="openDriverModal && openDriverModal()">
+    🚗　我要出車（找乘客）
+  </button>
+
+  <!-- 說明按鈕 -->
+  <button id="btnIntro" class="btn-main btn-ghost" type="button" aria-haspopup="dialog" aria-controls="introModal">
+    <span class="ico">❔</span>
+    <span>說明</span>
+  </button>
+
+  <button class="btn-main btn-passenger" onclick="openJoinModal && openJoinModal()">
+    🧍‍♀️　我要搭車（找車）
+  </button>
+</div>
 
   <h2>找人資訊（司機提供座位）</h2>
   <ul id="passenger-list">
@@ -1883,43 +1979,7 @@ function clearFilters(){
   </div>
 </div>
 
-<!-- -- 使用說明/個資隱私 -- -->
-
-<div id="siteIntroModal" role="dialog" aria-modal="true" aria-labelledby="introTitle">
-  <div class="intro-modal__card" tabindex="-1">
-    <div class="intro-modal__head">
-      <h3 id="introTitle" class="intro-title"><span class="emoji">ℹ️</span>使用說明 & 個資聲明</h3>
-      <button class="intro-close" data-intro-close aria-label="關閉">✕</button>
-    </div>
-    <div class="intro-modal__body">
-  <!-- 使用說明 -->
-  <div class="intro-section">
-    <h4>如何使用</h4>
-    <ul class="intro-list">
-      <li><strong>司機</strong>：點「我要出車」，填寫行程後等待乘客報名。有人加入會寄出 Email 通知司機；司機可選擇「接受／拒絕」。座位滿額後，系統會依規則把聯絡方式寄給需要的一方。</li>
-      <li><strong>乘客</strong>：點「我要搭車」，填寫需求後會出現在列表。司機可依條件是否符合，選擇直接邀請或接受你的報名。</li>
-    </ul>
-  </div>
-
-  <!-- 個資與通知規則 -->
-  <div class="intro-section">
-    <h4>個資與通知規則</h4>
-    <ul class="intro-list">
-      <li>可勾選「<strong>隱藏個資（聯絡方式）</strong>」。若勾選，<strong>需提供 Email</strong> 以便系統私訊通知；Email 不公開。</li>
-      <li><strong>若司機未提供 Email</strong>：司機的聯絡方式將可能公開在卡片上，供乘客聯繫。</li>
-      <li><strong>通知寄送邏輯</strong>：
-        <ul>
-          <li>司機公開、乘客隱藏 → 系統把乘客聯絡方式 Email 給司機。</li>
-          <li>司機隱藏、乘客公開 → 系統把司機聯絡方式 Email 給乘客。</li>
-          <li>兩邊都公開 → 不另外寄信。</li>
-        </ul>
-      </li>
-      <li>本網站收集的 Email 僅用於媒合通知，不做其他用途。</li>
-    </ul>
-  </div>
-
-  <!-- 資訊公開／免責 -->
-  <<!-- ③ 說明 Modal -->
+<!-- ③ 說明 Modal -->
 <div class="modal fade" id="introModal"
      data-bs-backdrop="false" data-bs-keyboard="true"
      tabindex="-1" aria-labelledby="introModalLabel" aria-hidden="true">
@@ -3258,60 +3318,7 @@ window.initPaxPrivacyBinding = initPaxPrivacyBinding;
 
 
 </script>
-<script>
-(function () {
-  const MODAL_ID = 'siteIntroModal';   // 你的說明對話框 id
-  function $id(id){ return document.getElementById(id); }
 
-  function openIntro() {
-    const m = $id(MODAL_ID);
-    if (!m) return;
-    m.classList.add('is-open');
-    document.body.classList.add('body--intro-open');
-    const card = m.querySelector('.intro-modal__card');
-    card && card.focus();
-  }
-  function closeIntro() {
-    const m = $id(MODAL_ID);
-    if (!m) return;
-    m.classList.remove('is-open');
-    document.body.classList.remove('body--intro-open');
-  }
-
-  function bindIntro() {
-    // 按鈕開啟
-    const btn = $id('introHelpBtn');
-    btn && btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      openIntro();
-    });
-
-    // Modal 關閉（遮罩、關閉鈕）
-    const modal = $id(MODAL_ID);
-    if (!modal) return;
-
-    modal.addEventListener('click', (e) => {
-      if (e.target.matches('[data-intro-close]')) {
-        e.preventDefault();
-        closeIntro();
-      }
-    });
-
-    // ESC 關閉
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-        closeIntro();
-      }
-    });
-
-    // 需要時可手動呼叫
-    window.showIntroModalNow = openIntro;
-    window.closeIntroModal   = closeIntro;
-  }
-
-  document.addEventListener('DOMContentLoaded', bindIntro);
-})();
-</script>
 
 
 

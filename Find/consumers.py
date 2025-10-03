@@ -200,6 +200,14 @@ class FindConsumer(AsyncWebsocketConsumer):
 
         return passengers_html, drivers_html
 
+async def driver_card(self, event):
+    await self.send_json({
+        "type": "driver.card",
+        "driver_id": event["driver_id"],
+        "html": event.get("html", ""),
+        "active": event.get("active", True),
+    })
+
 # views.py 或 utils.py
 def build_driver_cards():
     qs = (DriverTrip.objects.using("find_db")

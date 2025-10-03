@@ -322,27 +322,48 @@ def pax_accept(request, pax_id: int):
 @transaction.atomic(using=DB_ALIAS)
 def pax_reject(request, pax_id: int):
     """司機拒絕/取消乘客：若原本已接受需釋放座位，並從司機底下移除。"""
-    p = get_object_or_404(PassengerRequest.objects.using(DB_ALIAS), id=pax_id)
-    d = DriverTrip.objects.using(DB_ALIAS).select_for_update().get(id=p.driver_id) if p.driver_id else None
+    # 先鎖住乘客列，避免併發
+    try:
+        p = (PassengerRequest.objects.using(DB_ALIAS)
+             .select_for_update()
+             .get(id=pax_id))
+    except PassengerRequest.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "Passenger not found"}, status=404)
+    d = None
+    if p.driver_id:
+        # 讀取司機（若有綁）
+        d = (DriverTrip.objects.using(DB_ALIAS)
+             .select_for_update()
+             .filter(id=p.driver_id)
+             .first())
 
-    # ✅ 一樣用 JsonResponse
+    # 授權檢查（若有司機才需要）
     if d and not _driver_authed(request, d):
         return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
 
+    # 若乘客已被接受，釋放座位
     if p.is_matched and d:
         d.seats_filled = max(0, d.seats_filled - p.seats_needed)
-        d.save(using=DB_ALIAS, update_fields=["seats_filled"])
 
-    # 從司機底下移除、回到未媒合
-    p.driver = None
-    p.is_matched = False
-    p.save(using=DB_ALIAS, update_fields=["driver", "is_matched"])
+        #（可選）若座位釋放後不滿了、且你想自動重新上架：
+        if d.seats_filled < d.seats_total and d.is_active is False:
+            d.is_active = True
 
-    transaction.on_commit(lambda: (
-        d and broadcast_driver_card(d.id),
-        d and broadcast_manage_panels(d.id),
-    ))
-    return JsonResponse({"ok": True})
+        d.save(using=DB_ALIAS, update_fields=["seats_filled"])  # 若上面有改 is_active 記得加進 update_fields
+
+    # ✅ 只刪除這位乘客
+    p.delete(using=DB_ALIAS)
+    
+    # 交易提交後再廣播，避免 race
+    def _after_commit():
+        if d:
+            broadcast_driver_card(d.id)        # 單卡（首頁）
+            broadcast_manage_panels(d.id)      # 管理頁兩個 UL
+        else:
+            # 沒有司機（散客）：乘客列表要更新才能消失
+            broadcast_full_update()
+
+    transaction.on_commit(_after_commit)
 
 @require_POST
 def pax_memo(request, pax_id: int):
@@ -914,24 +935,34 @@ def delete_driver(request, driver_id: int):
          .select_for_update()
          .filter(pk=driver_id)
          .first())
+    some_other_condition = d.is_active == "active"
+    delete_event = driver_id is not None and some_other_condition
     if not d:
         if request.headers.get("x-requested-with") == "XMLHttpRequest":
             return JsonResponse({"ok": False, "error": "Driver not found"}, status=404)
         raise Http404("Driver not found")
 
-    # 釋放該司機底下的乘客
-    PassengerRequest.objects.using("find_db").filter(driver_id=driver_id).update(
-        driver=None,
-        is_matched=False,
-    )
+    # ✅ 直接刪除該司機底下所有乘客
+    PassengerRequest.objects.using("find_db").filter(driver_id=driver_id).delete()
     # 硬刪除
     d.delete(using="find_db")
 
     # ✅ 讓所有人同步到最新清單（這是「交易外」或「交易完成後」也 OK）
-    broadcast_full_update()
+    if delete_event:
+        channel_layer = get_channel_layer()  # 確保 channel_layer 被正確初始化
+        async_to_sync(channel_layer.group_send)("find_group", {
+            "type": "driver_partial",
+            "driver_id": driver_id,
+            "driver_html": "",
+            "active": False,
+        })
+        return  # 直接返回，不再執行後續代碼
 
     if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        # 當請求是 AJAX 請求時，返回 JSON 格式的結果
         return JsonResponse({"ok": True, "deleted_id": driver_id})
+
+    # 若非 AJAX 請求，重定向到查詢頁面
     return redirect("find_index")
 
 @csrf_protect

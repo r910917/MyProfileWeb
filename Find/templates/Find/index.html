@@ -1064,6 +1064,12 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 #driver-list::after {
   content: "";
   display: block;
+  height: calc(0dvh + var(--safe-bottom)); /* 50% 視窗高 + 安全區 */
+}
+
+#footer::after{
+  content: "";
+  display: block;
   height: calc(50dvh + var(--safe-bottom)); /* 50% 視窗高 + 安全區 */
 }
 
@@ -1919,7 +1925,7 @@ function clearFilters(){
 </ul>
 
 
-
+<div id="footer"></div>
 
 
 
@@ -2442,219 +2448,55 @@ function getCSRF() { return getCookie('csrftoken'); }
  *    - 支援全量 passengers_html
  *    - 支援單卡片 driver_partial → patchDriverCard()
  * ========================================================================= */
-// (function () {
-//   // 依你的 routing 調整路徑
-//   const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-//   const wsUrl    = `${wsScheme}://${location.host}/ws/find/`;
-//   let socket;
-
-//   function connect() {
-//     socket = new WebSocket(wsUrl);
-
-//     socket.onopen = () => console.log('[WS] connected');
-//     socket.onclose = () => setTimeout(connect, 2000);
-//     socket.onerror = (e) => { console.error('[WS] error', e); socket.close(); };
-
-//     socket.onmessage = (e) => {
-//   let msg; try { msg = JSON.parse(e.data); } catch { return; }
-
-//   if (msg.type === "send.update" || msg.type === "update") {
-//     const dList = document.getElementById("driver-list");
-//     const pList = document.getElementById("passenger-list");
-//     if (msg.drivers_html && dList)    dList.innerHTML    = msg.drivers_html;
-//     if (msg.passengers_html && pList) pList.innerHTML = msg.passengers_html;
-//     return;
-//   }
-
-//   if (msg.type === "send.partial") {
-//     const p = msg.payload;
-//     if (p && p.type === "driver_partial") {
-//       upsertDriverCard(p.driver_id, p.driver_html, p.active !== false);
-//     } else if (msg.driver_id && msg.html) {
-//       upsertDriverCard(msg.driver_id, msg.html, true);
-//     }
-//     return;
-//   }
-
-//   if (msg.type === "manage.panels" && msg.html) {
-//     const el = document.getElementById("managePanels");
-//     if (el) el.innerHTML = msg.html;
-//   }
-// };
-
-//   }
-//   connect();
-
-//   // 把單一司機卡片插入/替換/移除
-//   function upsertDriverCard(driverId, html, active = true) {
-//     const list = document.getElementById("driver-list");
-//     if (!list) return;
-
-//     const selector = `[data-driver-id="${driverId}"]`;
-//     const existing = list.querySelector(selector);
-
-//     if (!active) { if (existing) existing.remove(); return; }
-
-//     const tmp = document.createElement('div');
-//     tmp.innerHTML = (html || '').trim();
-//     const node = tmp.firstElementChild;
-//     if (!node) return;
-
-//     if (existing) {
-//       existing.replaceWith(node);
-//     } else {
-//       list.prepend(node); // 新增預設插最上方
-//     }
-//   }
-// })();
-//  (function initSocket(){
-//   if (!window.socket) {
-//     window.socket = new WebSocket(
-//       (location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/find/'
-//     );
-//   }
-//   socket.addEventListener('open',  () => console.log('✅ WebSocket 連線成功'));
-//   socket.addEventListener('close', () => console.log('❌ WebSocket 已關閉'));
-//   socket.addEventListener('error', (err) => console.error('⚠️ WebSocket 發生錯誤', err));
-
-//   socket.addEventListener('message', (event) => {
-//     let data;
-//     try { data = JSON.parse(event.data); } catch { return; }
-
-//     // 單一卡片更新
-//     if (data.type === 'driver_partial') {
-//       // 期待 payload: { type, driver_id, driver_html, active }
-//       patchDriverCard(data.driver_id, data.driver_html, data.active);
-//       return;
-//     }
-
-//     // 全量更新（保留乘客清單）
-//     if (data.type === 'update') {
-//       if (data.passengers_html) {
-//         const plist = $id('passenger-list');
-//         if (plist) plist.innerHTML = data.passengers_html;
-//       }
-//       // drivers_html 建議改走 driver_partial；如仍傳入，可視需求處理
-//       return;
-//     }
-
-//     if (data.type === 'join_result') {
-//       if (data.success) showToastSafe('✅ 成功加入乘客行程！', 'success');
-//       else showToastSafe('⚠️ 加入失敗：' + (data.message || '沒有可用的司機'), 'error');
-//     }
-//   });
-// })();
-
-/* ==========================================================
- * 單一 WebSocket（相容舊/新訊息）+ 自動重連 + 單次初始化
- * 需求：
- *   - <ul id="driver-list"> 司機清單
- *   - <ul id="passenger-list"> 乘客清單
- *   - 卡片最外層：data-driver-id="{{ d.id }}"
- * ========================================================== */
-(function initFindSocket(){
-  // 防止同頁重複初始化
-  if (window.__FIND_WS_INIT__) return;
-  window.__FIND_WS_INIT__ = true;
-
-  const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  const wsUrl    = `${wsScheme}://${location.host}/ws/find/`;
-  const $id = (id) => document.getElementById(id);
-
-  // 讓舊程式的兩個名稱都可用
-  function patchDriverCard(driverId, html, active = true){
-    upsertDriverCard(driverId, html, active);
+(() => {
+  if (!window.socket) {
+    window.socket = new WebSocket(
+      (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/find/'
+    );
   }
-  function upsertDriverCard(driverId, html, active = true){
-    const list = $id('driver-list');
-    if (!list) return;
-    const existing = list.querySelector(`[data-driver-id="${driverId}"]`);
+  socket.addEventListener('open',  () => console.log('[WS] open'));
+  socket.addEventListener('close', () => console.log('[WS] close'));
+  socket.addEventListener('error', (e) => console.warn('[WS] error', e));
 
-    if (active === false) { if (existing) existing.remove(); return; }
-
-    const tmp = document.createElement('div');
-    tmp.innerHTML = (html || '').trim();
-    const node = tmp.firstElementChild;
-    if (!node) return;
-
-    if (existing) existing.replaceWith(node);
-    else list.prepend(node);
-  }
-
-  function bindHandlers(sock){
-    // 避免重複添加 listener
-    if (sock.__bound__) return;
-    sock.__bound__ = true;
-
-    sock.addEventListener('open',  () => console.log('✅ WS connected:', wsUrl));
-    sock.addEventListener('error', (e) => console.error('⚠️ WS error', e));
-    sock.addEventListener('close', () => {
-      console.warn('❌ WS closed, retry in 2s');
-      setTimeout(connect, 2000);
-    });
-
-    sock.addEventListener('message', (event) => {
-      let msg; try { msg = JSON.parse(event.data); } catch { return; }
-
-      // === 全量更新：相容 send.update / update ===
-      if (msg.type === 'send.update' || msg.type === 'update') {
-        if (msg.drivers_html)   { const el = $id('driver-list');    if (el) el.innerHTML = msg.drivers_html; }
-        if (msg.passengers_html){ const el = $id('passenger-list'); if (el) el.innerHTML = msg.passengers_html; }
+  socket.addEventListener('message', (event) => {
+    let data; try { data = JSON.parse(event.data); } catch { 
+      console.error("Failed to parse message", e);
         return;
-      }
-
-      // === 單卡更新：相容三種 ===
-      // 1) 新：send.partial + payload.driver_partial
-      if (msg.type === 'send.partial') {
-        const p = msg.payload;
-        if (p && p.type === 'driver_partial') {
-          patchDriverCard(p.driver_id, p.driver_html, p.active !== false);
-          return;
-        }
-        // 2) 新：send.partial + {driver_id, html}
-        if (msg.driver_id && msg.html) {
-          patchDriverCard(msg.driver_id, msg.html, true);
-          return;
-        }
-      }
-      // 3) 舊：直接 driver_partial
-      if (msg.type === 'driver_partial') {
-        patchDriverCard(msg.driver_id, msg.driver_html, msg.active !== false);
-        return;
-      }
-
-      // === 管理面板 ===
-      if (msg.type === 'manage.panels' && msg.html) {
-        const el = $id('managePanels');
-        if (el) el.innerHTML = msg.html;
-        return;
-      }
-
-      // === 其它事件：join_result（保留原行為） ===
-      if (msg.type === 'join_result') {
-        const toast = window.showToastSafe || ((t)=>alert(t));
-        toast(msg.success ? '✅ 成功加入乘客行程！'
-                          : `⚠️ 加入失敗：${msg.message || '沒有可用的司機'}`);
-      }
-    });
-  }
-
-  function connect(){
-    // 若已有開啟中的就重用；避免同頁兩條連線
-    if (window.socket && (window.socket.readyState === WebSocket.OPEN ||
-                          window.socket.readyState === WebSocket.CONNECTING)) {
-      bindHandlers(window.socket);
+     }
+     if(data.type === "driver_partial")
+     {
+        console.log(data.type,data.driver_id)
+     }
+    
+    if (data.type === 'driver_partial') {
+      // payload: { driver_id, driver_html, active }
+      patchDriverCard(data.driver_id, data.driver_html, data.active);
       return;
     }
-    try { if (window.socket) window.socket.close(); } catch(_) {}
-    const sock = new WebSocket(wsUrl);
-    window.socket = sock;
-    bindHandlers(sock);
-  }
+    //console.log(data.type.toString() + ", " + typeof(data.drivers_html==='string'),data.sort , data.WebSocket,data)
 
-  connect();
+
+    if (data.type === 'send.update' && data.sort === null) {
+      // 1) 乘客清單
+      //console.log("yes")
+      if (typeof data.passengers_html === 'string') {
+        const plist = $id('passenger-list');
+        if (plist) plist.innerHTML = data.passengers_html;
+      }
+      // 2) 司機清單：若帶了 sort → 比對；沒帶 → 直接更新
+      if (typeof data.drivers_html === 'string') {
+        const currentSort = ($id('sort')?.value || 'date_desc');
+        if (!data.sort || data.sort === currentSort) {
+          replaceDriverListSafely(data.drivers_html);
+        }
+      }
+    }
+
+    if (data.type === 'join_result') {
+      showToastSafe(data.success ? '✅ 成功送出申請' : ('⚠️ 失敗：' + (data.message||'')), data.success?'success':'error');
+    }
+  });
 })();
-
 
 
 /* =========================================================================
@@ -2737,31 +2579,62 @@ function restoreCardState(li, state) {
 }
 // 單一卡片替換 / 附加 / 移除
 function patchDriverCard(driverId, driverHTML, active = true) {
+  // 防止頁面刷新時觸發自動更新
+  if (sessionStorage.getItem('page_initialized') !== 'true') {
+    sessionStorage.setItem('page_initialized', 'true');
+    console.log("Page initialized, skipping auto updates.");
+    return;
+  }
+
   const list = document.getElementById('driver-list');
-  if (!list || !driverId || typeof driverHTML !== 'string') return;
+  if (!list || !driverId) return;
   const selector = `li[data-driver="${CSS.escape(String(driverId))}"]`;
   const oldLi = list.querySelector(selector);
+
+  // === 1) 要移除的情境：active === false 或 html 為空/不存在，都移除 ===
+  if (active === false || !driverHTML || (typeof driverHTML === 'string' && driverHTML.trim() === '')) {
+    if (oldLi) oldLi.remove();
+    console.log("Signal T-1")
+    return;
+  }
+
+  // 之後才需要 html 必須是字串
+  if (typeof driverHTML !== 'string') {
+    console.log("Signal T-Null-HTML")
+    return;
+  }
 
   // 不存在：active=true → append
   if (!oldLi) {
     if (!active) return;
+    console.log("Signal T-2")
     const tmp = document.createElement('div');
     tmp.innerHTML = driverHTML.trim();
     const newLi = tmp.querySelector('li') || tmp.firstElementChild;
     if (newLi) list.appendChild(newLi);
     return;
   }
-  // 下架：移除
-  if (!active) { oldLi.remove(); return; }
 
+  // 下架：移除
+  if (!active) {console.log("Signal T-Remove"); oldLi.remove(); return; }
+
+  console.log("Signal T-3")
   const state = snapshotCardState(oldLi);
   const tmp = document.createElement('div');
   tmp.innerHTML = driverHTML.trim();
   const newLi = tmp.querySelector('li') || tmp.firstElementChild;
-  if (!newLi) return;
+  if (!newLi){
+    console.log("Signal T-4")
+    return;
+  }
+  console.log("Signal T-5")
   oldLi.replaceWith(newLi);
+  console.log("Signal T-6")
   restoreCardState(newLi, state);
+  
+  
 }
+
 /* ========= 讓展開面板在手機上成為可捲容器 ========= */
 function setDetailsMaxHeight(li){
   if (!li) return;

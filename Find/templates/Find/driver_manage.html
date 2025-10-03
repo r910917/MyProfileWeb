@@ -716,6 +716,7 @@ async function handleDeleteDriverSubmit(e){
   const url  = form.action;
   const csrf = form.querySelector('input[name=csrfmiddlewaretoken]')?.value || '';
 
+  btn.disabled = true;
   btn.disabled = true; btn.textContent = '處理中…';
 
   try {
@@ -734,18 +735,65 @@ async function handleDeleteDriverSubmit(e){
       return false;
     }
 
-    // ✅ 成功：這頁沒有 onmessage，就手動跳回列表（或改成 location.reload()）
+    // ✅ 成功：不進行 WebSocket 更新，直接跳轉或刷新頁面
     window.location.href = "{% url 'find_index' %}";
     return true;
   } catch (err) {
     console.error(err);
     alert('網路錯誤');
-    btn.disabled = false; btn.textContent = '🗑️ 取消出車';
+    btn.disabled = false;
+    btn.textContent = '🗑️ 取消出車';
     return false;
   }
 }
 </script>
+
+
 <script>
+(function () {
+  const meta = document.getElementById('driver-meta');
+  if (!meta) return;
+  const driverId = meta.dataset.driverId;
+  if (!driverId) return;
+
+  // ✅ 用 driver/<id> 這條路，或 manage/<id> 都可（因為路由都加了）
+  const proto = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+  const host  = location.host;
+  const wsUrl = `${proto}${host}/ws/find/driver/${driverId}/`;   // ←← 建議用這條
+
+  // 避免重複建立多條連線
+  if (window.__manageWS && window.__manageWS.readyState === 1) {
+    try { window.__manageWS.close(); } catch (_) {}
+  }
+
+  const ws = new WebSocket(wsUrl);
+  window.__manageWS = ws;
+
+  ws.onopen = () => console.log('[manageWS] connected:', wsUrl);
+  ws.onclose = (e) => console.log('[manageWS] closed', e.code, e.reason);
+  ws.onerror = (e) => console.error('[manageWS] error', e);
+
+  // 後端廣播 manage_panels 的 payload，要在這裡更新畫面
+  ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'manage_panels' && typeof msg.html === 'string') {
+        const box = document.getElementById('manage-panels');
+        if (box) box.innerHTML = msg.html;
+      }
+      // 如果你有分單張卡片更新：
+      if (msg.type === 'replace_pax_item' && msg.pax_id && typeof msg.html === 'string') {
+        const li = document.querySelector(`.pax-item[data-pax="${msg.pax_id}"]`);
+        if (li) li.outerHTML = msg.html;
+      }
+    } catch (err) {
+      console.error('ws message parse error', err, ev.data);
+    }
+  };
+})();
+</script>
+
+<!-- <script>
 (function () {
   const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
   const wsUrl    = `${wsScheme}://${location.host}/ws/find/`; // ← 路由見第2步
@@ -803,7 +851,7 @@ async function handleDeleteDriverSubmit(e){
     else list.prepend(node);
   }
 })();
-</script>
+</script> -->
 
 
 

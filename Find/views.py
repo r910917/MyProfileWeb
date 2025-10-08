@@ -428,6 +428,11 @@ def driver_toggle_privacy(request, driver_id:int):
     if hide and not d.email:
         return JsonResponse({"ok": False, "error": "要隱藏聯絡方式，必須先填寫 Email"}, status=400)
     d.hide_contact = hide
+
+    # 3) 讀取 auto_email_contact（只有 hide=True 才有意義）
+    auto_email = (request.POST.get("auto_email") or "").lower() in ("1", "true", "yes", "on")
+    d.auto_email_contact = auto_email if hide else False
+
     try:
         d.full_clean()
     except ValidationError as e:
@@ -437,7 +442,11 @@ def driver_toggle_privacy(request, driver_id:int):
         broadcast_driver_card(driver_id)
     except Exception:
         pass
-    return JsonResponse({"ok": True, "hide": d.hide_contact})
+    return JsonResponse({
+        "ok": True,
+        "hide": d.hide_contact,
+        "auto_email": d.auto_email_contact,
+    })
 
 @require_POST
 def pax_toggle_privacy(request, pax_id:int):
@@ -480,235 +489,7 @@ def driver_pax_memo(request, driver_id:int, pax_id:int):
     return JsonResponse({"ok": True})
 
 
-def fare_text_to_int(field_name: str = "fare_note"):
-    """
-    回傳一個可用於 annotate 的表達式：
-    - 從文字欄位抽出所有阿拉伯數字（移除非 0-9），轉成整數
-    - 抽不到數字 -> 變成 NULL
-    - 盡量跨 DB：Postgres/MySQL 用 REGEXP_REPLACE；SQLite 用多重 Replace 做近似清理
-    """
-    vendor = connection.vendor  # 'postgresql' | 'mysql' | 'sqlite' | 'oracle'...
 
-    if vendor == "postgresql" and PGRegexpReplace is not None:
-        # 把非數字全部清成空字串
-        cleaned = PGRegexpReplace(F(field_name), r"[^0-9]+", Value(""))
-    elif vendor == "mysql":
-        # MySQL 8 有 REGEXP_REPLACE
-        cleaned = Func(F(field_name), Value(r"[^0-9]+"), Value(""), function="REGEXP_REPLACE")
-    else:
-        # SQLite / 其他：盡量把常見符號先清掉（$、NT、NT$、NTD、元、逗號、空白等）
-        cleaned = Replace(
-            Replace(
-                Replace(
-                    Replace(
-                        Replace(
-                            Replace(
-                                Replace(Trim(F(field_name)), Value("NT$"), Value("")),
-                                Value("NTD"), Value(""),
-                            ),
-                            Value("NT"), Value(""),
-                        ),
-                        Value("$"), Value(""),
-                    ),
-                    Value("元"), Value(""),
-                ),
-                Value(","), Value(""),
-            ),
-            Value(" "), Value(""),
-        )
-        # 注意：SQLite 沒有 regex，只能先把常見符號去掉；如果還有其它字，Cast 會失敗 -> 我們用 NullIf 處理
-
-    # 變空字串時 -> NULL；然後 Cast 成整數
-    numeric_or_empty = NullIf(cleaned, Value(""))
-    as_int = Cast(numeric_or_empty, IntegerField())
-    # 不要用 0 填補，讓「免費」等無數字的直接變成 NULL；數字篩選時自然被排除
-    return as_int  # 交給外層用 Coalesce 或直接拿來做條件
-
-CITY_N2S = [
-    "需清淤地區","光復鄉糖廠","花蓮縣光復車站以外火車站","花蓮縣光復鄉","基隆市","台北市","新北市","桃園市","新竹市","新竹縣","苗栗縣",
-    "台中市","彰化縣","南投縣","雲林縣",
-    "嘉義市","嘉義縣",
-    "台南市","高雄市","屏東縣",
-    "宜蘭縣","花蓮縣","台東縣",
-    "澎湖縣","金門縣","連江縣",
-]
-
-def _city_rank_case(field: str = "departure") -> Case:
-    """將欄位值（城市名）轉為排序權重。"""
-    whens = [When(**{field: name}, then=Value(idx)) for idx, name in enumerate(CITY_N2S)]
-    return Case(*whens, default=Value(999), output_field=IntegerField())
-
-def get_active_location_choices():
-    """從已上架司機中抓『出發地 / 目的地』的候選值（去空白、去重），並提供數量。"""
-    base = DriverTrip.objects.using("find_db").filter(is_active=True)
-
-    dep_qs = (
-        base.exclude(departure__isnull=True)
-            .exclude(departure__exact="")
-            .values("departure")
-            .annotate(n=Count("id"))
-            .annotate(rank=_city_rank_case("departure"))
-            .order_by("rank", "departure")
-    )
-    des_qs = (
-        base.exclude(destination__isnull=True)
-            .exclude(destination__exact="")
-            .values("destination")
-            .annotate(n=Count("id"))
-            .annotate(rank=_city_rank_case("destination"))
-            .order_by("rank", "destination")
-    )
-
-    dep_choices = [row["departure"] for row in dep_qs]
-    des_choices = [row["destination"] for row in des_qs]
-
-    # 如果你想在前端顯示數量，可一併傳過去
-    dep_with_count = [(row["departure"], row["n"]) for row in dep_qs]
-    des_with_count = [(row["destination"], row["n"]) for row in des_qs]
-    return dep_choices, des_choices, dep_with_count, des_with_count
-
-def _dep_rank_case():
-    whens = [When(departure=city, then=Value(i)) for i, city in enumerate(CITY_N2S)]
-    return Case(*whens, default=Value(999), output_field=IntegerField())
-
-def get_order_by(sort: str | None) -> list[str]:
-    order_map = {
-        "date_desc": ["-date", "id"],
-        "date_asc" : ["date", "id"],
-        "dep_asc"  : ["departure", "date", "id"],
-        "dep_desc" : ["-departure", "date", "id"],
-    }
-    return order_map.get((sort or "").strip() or "date_desc", ["-date", "id"])
-
-def _getlist_qs(request, key: str) -> list[str]:
-    """GET 支援單值或多選陣列（key 或 key[] 都吃）。"""
-    vals = request.GET.getlist(key) or request.GET.getlist(f"{key}[]")
-    return [v for v in (vals or []) if str(v).strip()]
-
-def _parse_int(val, default=None):
-    try:
-        return int(str(val).strip())
-    except Exception:
-        return default
-
-
-def create_driver(request):
-    # ... validate & save
-    driver = DriverTrip.objects.using("find_db").create(...)
-    broadcast_driver_card(driver.id)  # or broadcast_full_lists()
-    return redirect("find_index")
-
-
-def driver_cards_qs(
-    *, 
-    only_active: bool = True,
-    order_by: list[str] | None = None,
-    sort: str | None = None,
-    filters: dict | None = None,
-):
-    """
-    回傳已帶好 passengers 的 DriverTrip QuerySet：
-      - d.pending_list：未媒合乘客
-      - d.accepted_list：已媒合乘客
-
-    filters 支援 keys：
-      dep_in, des_in, date_in, ret_in, gender_in (list)
-      need_seats (int)
-      fare_num (int), fare_mode ('lte'|'gte'), fare_q (str)
-    """
-    DB_ALIAS = "find_db"
-
-    # 1) 起手式：一定要有初值，避免 UnboundLocalError
-    qs = DriverTrip.objects.using(DB_ALIAS).all()
-    if only_active:
-        qs = qs.filter(is_active=True)
-
-    # 2) 篩選
-    f = filters or {}
-    dep_in     = tuple(sorted(set(f.get("dep_in")    or [])))
-    des_in     = tuple(sorted(set(f.get("des_in")    or [])))
-    date_in    = tuple(sorted(set(f.get("date_in")   or [])))
-    ret_in     = tuple(sorted(set(f.get("ret_in")    or [])))
-    gender_in  = tuple(sorted(set(f.get("gender_in") or [])))
-    need_seats = f.get("need_seats", None)
-    fare_num   = f.get("fare_num", None)
-    fare_mode  = (f.get("fare_mode") or "").strip()          # 'lte'|'gte'
-    fare_q     = (f.get("fare_q") or "").strip()
-
-    if dep_in:    qs = qs.filter(departure__in=dep_in)
-    if des_in:    qs = qs.filter(destination__in=des_in)
-    if date_in:   qs = qs.filter(date__in=date_in)
-    if ret_in:    qs = qs.filter(return_date__in=ret_in)
-    if gender_in: qs = qs.filter(gender__in=gender_in)
-
-    # 可用座位（剩餘座位 >= 需求）
-    if need_seats is not None:
-        qs = qs.annotate(
-            available=ExpressionWrapper(F("seats_total") - F("seats_filled"), output_field=IntegerField())
-        )
-
-    # 酌收費用：數字優先；否則退回關鍵字（避免 CAST 在不同 DB 行為不一致）
-    if fare_num is not None and fare_mode in ("lte", "gte"):
-        if hasattr(DriverTrip, "fare_amount"):
-            fld = "fare_amount"
-            comp = f"{fld}__{fare_mode}"
-            qs = qs.filter(**{f"{fld}__isnull": False, comp: fare_num})
-        else:
-            # 沒有數字欄位時，不做 CAST（跨 DB 不穩）；交由關鍵字或忽略
-            pass
-    if fare_q:
-        if hasattr(DriverTrip, "fare_note"):
-            qs = qs.filter(fare_note__icontains=fare_q)
-
-    # ---- 整卡片關鍵字搜尋：對常見欄位 + 關聯乘客欄位做 icontains，並對每個詞做 AND 疊加 ----
-    qkw = (f.get("q") or "").strip()
-    if qkw:
-        # 以空白切成多個詞，逐字 AND 篩（使用 .distinct() 避免 join 重覆）
-        terms = [t for t in re.split(r"\s+", qkw) if t]
-        for t in terms:
-            qs = qs.filter(
-                Q(driver_name__icontains=t) |
-                Q(contact__icontains=t) |
-                Q(email__icontains=t) |
-                Q(departure__icontains=t) |
-                Q(destination__icontains=t) |
-                Q(note__icontains=t) |
-                Q(fare_note__icontains=t) |
-                Q(flexible_pickup__icontains=t) |
-                Q(passengers__passenger_name__icontains=t) |
-                Q(passengers__note__icontains=t)
-            )
-        # 若使用者輸入像日期的字串（YYYY-MM-DD），嘗試也比對日期等於
-        if len(qkw) <= 10 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", qkw):
-            qs = qs.filter(Q(date=qkw) | Q(return_date=qkw)) | qs
-
-        qs = qs.distinct()
-
-    # 3) 排序：order_by 優先，其次由 sort 決定
-    if order_by:
-        qs = qs.order_by(*order_by)
-    else:
-        if sort == "dep_n2s":
-            qs = qs.annotate(dep_rank=_city_rank_case("departure")).order_by("dep_rank", "date", "id")
-        elif sort == "dep_s2n":
-            qs = qs.annotate(dep_rank=_city_rank_case("departure")).order_by("-dep_rank", "date", "id")
-        elif sort == "dep_asc":
-            qs = qs.order_by("departure", "id")
-        elif sort == "dep_desc":
-            qs = qs.order_by("-departure", "id")
-        elif sort == "date_asc":
-            qs = qs.order_by("date", "id")
-        else:
-            qs = qs.order_by("-date", "-id")
-
-    # 4) passengers 預抓（to_attr）
-    pending_qs  = PassengerRequest.objects.using(DB_ALIAS).filter(is_matched=False).order_by("-id")
-    accepted_qs = PassengerRequest.objects.using(DB_ALIAS).filter(is_matched=True).order_by("-id")
-
-    return qs.prefetch_related(
-        Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
-        Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
-    )
 # ---- 共用：取單一司機，並帶 pending/accepted 兩個清單 ----
 def fetch_driver_with_lists(driver_id: int):
     pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("id")
@@ -1046,6 +827,7 @@ def driver_manage(request, driver_id: int):
             driver.gender      = (request.POST.get("gender") or driver.gender or "X").strip() or "X"
             driver.email       = (request.POST.get("email") or None)
             driver.contact     = (request.POST.get("contact") or driver.contact or "").strip()
+            
             # ✅ 司機備註（允許空 → None）
             driver.note = (request.POST.get("note") or "").strip() or None
             # 密碼：有填才更新
@@ -1054,9 +836,31 @@ def driver_manage(request, driver_id: int):
                 driver.password = pwd
 
             # 隱私：需有 email 才能 True
-            hide_raw   = (request.POST.get("hide_contact") or "").lower()
-            want_hide  = hide_raw in ("1", "true", "on", "yes")
+            hide_raw  = (request.POST.get("hide_contact") or "").lower()
+            want_hide = hide_raw in ("1", "true", "on", "yes")
             driver.hide_contact = bool(driver.email) and want_hide
+            # 沒有 Email 不能隱藏
+            if want_hide and not driver.email:
+                # 回填目前狀態並顯示錯誤（沿用你已有的 render 區塊）
+                pending   = pending_qs
+                accepted  = accepted_qs
+                candidates= candidates_qs
+                return render(request, "Find/driver_manage.html", {
+                    "driver": driver,
+                    "pending": pending,
+                    "accepted": accepted,
+                    "candidates": candidates,
+                    "saved_msg": "",
+                    "matched_msg": "",
+                    "full_msg": "",
+                    "authed": authed,
+                    "error": "要隱藏聯絡方式，必須先填寫 Email",
+                })
+            
+            # 只有隱藏時才讀 auto_email_contact；否則一律關閉
+            auto_raw  = (request.POST.get("auto_email_contact") or "").lower()
+            want_auto = auto_raw in ("1", "true", "on", "yes")
+            driver.auto_email_contact = bool(driver.email) and driver.hide_contact and want_auto
 
             # 座位
             try:
@@ -1212,68 +1016,378 @@ def driver_manage(request, driver_id: int):
 # -------------------
 # 首頁
 # -------------------
-# === helpers ===
-from django.db.models import Count
+# ---- imports）----
+import re
+from django.db import connection
+from django.db.models import (
+    Case, When, Value, IntegerField, ExpressionWrapper, F, Prefetch, Q, Count,
+    Func, Value as V, CharField
+)
+from django.db.models.functions import Cast, NullIf, Trim, Replace
+
+# 若有 Postgres，可用正規式替換；沒有就保持 None
+try:
+    from django.contrib.postgres.search import SearchVector  # 不是必須，只是避免匯入錯
+    from django.contrib.postgres.functions import RegexpReplace as PGRegexpReplace
+except Exception:
+    PGRegexpReplace = None
+CITY_N2S = [
+    "需清淤地區","光復鄉糖廠","花蓮縣光復車站以外火車站","花蓮縣光復鄉","基隆市","台北市","新北市","桃園市","新竹市","新竹縣","苗栗縣",
+    "台中市","彰化縣","南投縣","雲林縣",
+    "嘉義市","嘉義縣",
+    "台南市","高雄市","屏東縣",
+    "宜蘭縣","花蓮縣","台東縣",
+    "澎湖縣","金門縣","連江縣",
+]
+
+def fare_text_to_int(field_name: str = "fare_note"):
+    vendor = connection.vendor  # 'postgresql' | 'mysql' | 'sqlite' | 'oracle'...
+
+    if vendor == "postgresql" and PGRegexpReplace is not None:
+        cleaned = PGRegexpReplace(F(field_name), r"[^0-9]+", Value(""))
+    elif vendor == "mysql":
+        cleaned = Func(F(field_name), Value(r"[^0-9]+"), Value(""), function="REGEXP_REPLACE")
+    else:
+        cleaned = Replace(
+            Replace(
+                Replace(
+                    Replace(
+                        Replace(
+                            Replace(
+                                Replace(Trim(F(field_name)), Value("NT$"), Value("")),
+                                Value("NTD"), Value(""),
+                            ),
+                            Value("NT"), Value(""),
+                        ),
+                        Value("$"), Value(""),
+                    ),
+                    Value("元"), Value(""),
+                ),
+                Value(","), Value(""),
+            ),
+            Value(" "), Value(""),
+        )
+    numeric_or_empty = NullIf(cleaned, Value(""))
+    as_int = Cast(numeric_or_empty, IntegerField())
+    return as_int
+
+def _city_rank_case(field: str = "departure") -> Case:
+    # 包含 icontains 規則，較彈性（地名是句子的一部分也吃得到）
+    whens = [When(**{f"{field}__icontains": name}, then=Value(idx+1))
+             for idx, name in enumerate(CITY_N2S)]
+    return Case(*whens, default=Value(999), output_field=IntegerField())
+
+def get_order_by(sort: str | None) -> list[str] | None:
+    """
+    傳回基本 order_by。遇到 seats_*/fare_* 或 dep_n2s/dep_s2n 這類需要 annotate 的，
+    這裡回傳 None 讓 driver_cards_qs 內部自己處理。
+    """
+    s = (sort or "").strip()
+    # 需要 annotate 的排序：交給 driver_cards_qs
+    if sort in ("seats_asc", "seats_desc", "fare_asc", "fare_desc"):
+        return None
+    if sort == "date_asc":
+        return ["date", "id"]
+    if sort == "dep_n2s":
+        return None  # 地理排序一樣在 driver_cards_qs 做 annotate 後排序
+    if sort == "dep_s2n":
+        return None
+    # 預設（日期新→舊）
+    return ["-date", "-id"]
+
+
+
+
+# 兼容舊名稱（如果其他地方有用到）
+def _dep_rank_case():
+    return _city_rank_case("departure")
 
 def _getlist_qs(request, key: str) -> list[str]:
-    """支援 ?key=a&key=b 或 ?key[]=a&key[]=b 兩種形式。"""
-    vals = request.GET.getlist(key)
-    if not vals:
-        vals = request.GET.getlist(f"{key}[]")
-    # 清掉空字串與重複
-    return [v for v in dict.fromkeys([ (v or "").strip() for v in vals ]) if v]
+    """GET 支援單值或多選（?key=a&key=b 或 ?key[]=a&key[]=b）。"""
+    vals = request.GET.getlist(key) or request.GET.getlist(f"{key}[]")
+    return [v for v in (vals or []) if str(v).strip()]
 
 def _parse_int(val, default=None):
     try:
-        return int(val)
-    except (TypeError, ValueError):
+        return int(str(val).strip())
+    except Exception:
         return default
 
-def _extract_filters_from_request(request) -> dict:
-    """把 URL 查詢參數整理成 driver_cards_qs 可用的 filters dict。"""
+
+def create_driver(request):
+    # ... validate & save
+    driver = DriverTrip.objects.using("find_db").create(...)
+    broadcast_driver_card(driver.id)  # or broadcast_full_lists()
+    return redirect("find_index")
+
+FREE_WORDS = ["免費", "免", "待定", "未定", "面議", "不收", "不收費", "free", "Free", "FREE", "0"]
+def _free_note_q(field="fare_note"):
+    """fare_note 為空/NULL 或包含免費/待定等關鍵字"""
+    q = Q(**{f"{field}__isnull": True}) | Q(**{f"{field}": ""})
+    for w in FREE_WORDS:
+        q |= Q(**{f"{field}__icontains": w})
+    return q
+
+
+
+def driver_cards_qs(
+    *,
+    only_active: bool = True,
+    order_by: list[str] | None = None,
+    sort: str | None = None,
+    filters: dict | None = None,
+):
+    """
+    回傳已帶好 passengers 的 DriverTrip QuerySet：
+      - d.pending_list：未媒合乘客
+      - d.accepted_list：已媒合乘客
+
+    filters 支援：
+      dep_in, des_in, date_in, ret_in, gender_in (list)
+      need_seats (int)
+      fare_num (int), fare_mode ('lte'|'gte'), fare_q (str)
+      q (整卡片關鍵字)
+    """
+    DB_ALIAS = "find_db"
+
+    # 1) 起手式
+    qs = DriverTrip.objects.using(DB_ALIAS).all()
+    if only_active:
+        qs = qs.filter(is_active=True)
+
+    # 2) 篩選
+    f = filters or {}
+    dep_in     = tuple(sorted(set(f.get("dep_in")    or [])))
+    des_in     = tuple(sorted(set(f.get("des_in")    or [])))
+    date_in    = tuple(sorted(set(f.get("date_in")   or [])))
+    ret_in     = tuple(sorted(set(f.get("ret_in")    or [])))
+    gender_in  = tuple(sorted(set(f.get("gender_in") or [])))
+    need_seats = f.get("need_seats", None)
+    fare_num   = f.get("fare_num", None)
+    fare_mode  = (f.get("fare_mode") or "").strip()   # 'lte'|'gte'
+    fare_q     = (f.get("fare_q") or "").strip()
+    qkw        = (f.get("q") or "").strip()
+
+    if dep_in:    qs = qs.filter(departure__in=dep_in)
+    if des_in:    qs = qs.filter(destination__in=des_in)
+    if date_in:   qs = qs.filter(date__in=date_in)
+    if ret_in:    qs = qs.filter(return_date__in=ret_in)
+    if gender_in: qs = qs.filter(gender__in=gender_in)
+
+    # 可用座位（剩餘座位）
+    want_seat_sort = sort in ("seats_desc", "seats_asc") or (need_seats is not None)
+    if want_seat_sort:
+        qs = qs.annotate(
+            remaining=ExpressionWrapper(
+                F("seats_total") - F("seats_filled"),
+                output_field=IntegerField()
+            )
+        )
+    if need_seats is not None:
+        qs = qs.filter(remaining__gte=int(need_seats) if want_seat_sort else
+                       (F("seats_total") - F("seats_filled") >= int(need_seats)))
+
+    # available 已在上面條件式可能被 annotate；若未 annotate 就補上以供排序
+    if sort in ("seats_asc", "seats_desc") and "available" not in qs.query.annotations:
+        qs = qs.annotate(
+            available=ExpressionWrapper(F("seats_total") - F("seats_filled"), output_field=IntegerField())
+        )
+    # 酌收費用（若你有 fare_amount 直接用；否則退回文字排序）
+    has_fare_amount = hasattr(DriverTrip, "fare_amount")
+    has_fare_amount_field = hasattr(DriverTrip, "fare_amount")
+    need_fare_sort = sort in ("fare_desc", "fare_asc")
+    if need_fare_sort:
+        if has_fare_amount_field:
+            fare_value_field = F("fare_amount")
+        else:
+            # 你已有的輔助：把文字金額轉 int，沒有就 None
+            qs = qs.annotate(fare_num_annot=fare_text_to_int("fare_note"))
+            fare_value_field = F("fare_num_annot")
+
+        # 定義「免費/待定/待議/AA/未定」的判斷
+        free_q = (
+            Q(fare_note__iregex=r"(免費|待定|待議|AA|未定)")
+            | Q(fare_note__isnull=True)
+            | Q(fare_note__exact="")
+            | Q(fare_amount__isnull=True) if has_fare_amount_field else Q(fare_num_annot__isnull=True)
+        )
+
+        # 依方向給 rank：asc 要把免費放最前；desc 放最後
+        if sort == "fare_asc":
+            # 免費=0，數字=1
+            qs = qs.annotate(
+                fare_rank=Case(When(free_q, then=Value(0)), default=Value(1), output_field=IntegerField())
+            )
+            # 免費群排最前，再依數字由低到高
+            qs = qs.order_by("fare_rank", fare_value_field.asc(nulls_last=True), "id")
+        else:
+            # 數字=0，免費=1（排最後）
+            qs = qs.annotate(
+                fare_rank=Case(When(free_q, then=Value(1)), default=Value(0), output_field=IntegerField())
+            )
+            # 先數字群由高到低，再免費群
+            qs = qs.order_by("fare_rank", fare_value_field.desc(nulls_last=True), "id")
+    # ------------ 決定排序（其餘項目）------------
+    elif order_by:
+        qs = qs.order_by(*order_by)
+
+    else:
+        if sort == "date_asc":
+            qs = qs.order_by("date", "id")
+        elif sort in (None, "", "date_desc"):
+            qs = qs.order_by("-date", "-id")
+
+        elif sort == "dep_n2s":
+            qs = qs.annotate(dep_rank=_city_rank_case("departure")).order_by("dep_rank", "date", "id")
+        elif sort == "dep_s2n":
+            qs = qs.annotate(dep_rank=_city_rank_case("departure")).order_by("-dep_rank", "date", "id")
+
+        elif sort == "seats_asc":
+            # 少→多：available 由小到大
+            qs = qs.order_by("available", "id")
+        elif sort == "seats_desc":
+            # 多→少：available 由大到小
+            qs = qs.order_by("-available", "id")
+
+        else:
+            qs = qs.order_by("-date", "-id")
+
+
+    # 有數字欄位：直接用數字，同時做一個「是否免費/待定」旗標，排序/篩選會用到
+    if has_fare_amount:
+        qs = qs.annotate(
+            fare_num  = Coalesce(F("fare_amount"), Value(0)),
+            fare_free = Case(
+                When(_free_note_q("fare_note"), then=Value(1)),  # 1=免費/待定
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+        )
+    else:
+        # 沒數字欄位：用文字排序備援，另外一樣標 free 旗標
+        qs = qs.annotate(
+            fare_text = Coalesce(F("fare_note"), Value("")),
+            fare_free = Case(
+                When(_free_note_q("fare_note"), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+        )
+
+    # ---------- 金額門檻過濾 ----------
+    # 要求：當 mode == 'lte' (小於等於) 時，免費/待定也要被包含
+    if fare_num is not None and (fare_mode in ("lte", "gte")):
+        if has_fare_amount:
+            # 數字比較
+            base = Q(**{f"fare_num__{fare_mode}": int(fare_num)})
+            # <= 門檻時把免費/待定也算進來
+            if fare_mode == "lte":
+                base |= Q(fare_free=1)
+            qs = qs.filter(base)
+        else:
+            # 沒有 fare_amount 無法做數字比較：
+            # 只在 <= 時把免費/待定納入（>= 對純文字沒意義，忽略）
+            if fare_mode == "lte":
+                qs = qs.filter(_free_note_q("fare_note"))
+
+    # 關鍵字（例如「免費」「AA」）
+    if fare_q and hasattr(DriverTrip, "fare_note"):
+        qs = qs.filter(fare_note__icontains=fare_q)
+
+    # 整卡片關鍵字搜尋（多詞 AND）
+    if qkw:
+        terms = [t for t in re.split(r"\s+", qkw) if t]
+        for t in terms:
+            qs = qs.filter(
+                Q(driver_name__icontains=t) |
+                Q(contact__icontains=t) |
+                Q(email__icontains=t) |
+                Q(departure__icontains=t) |
+                Q(destination__icontains=t) |
+                Q(note__icontains=t) |
+                Q(fare_note__icontains=t) |
+                Q(flexible_pickup__icontains=t) |
+                Q(passengers__passenger_name__icontains=t) |
+                Q(passengers__note__icontains=t)
+            )
+        # 若是 YYYY-MM-DD 也比對日期等於
+        if len(qkw) <= 10 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", qkw):
+            qs = qs.filter(Q(date=qkw) | Q(return_date=qkw)) | qs
+        qs = qs.distinct()
+
+    # 4) 預抓乘客：pending_list / accepted_list
+    pending_qs  = PassengerRequest.objects.using(DB_ALIAS).filter(is_matched=False).order_by("-id")
+    accepted_qs = PassengerRequest.objects.using(DB_ALIAS).filter(is_matched=True ).order_by("-id")
+
+    return qs.prefetch_related(
+        Prefetch("passengers", queryset=pending_qs,  to_attr="pending_list"),
+        Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
+    )
+
+def _extract_filters_from_request(request):
+    # 你現成的那支即可；這裡保留常見 keys
+    q = request.GET.get("q", "").strip()
+    dep_in = request.GET.getlist("dep")
+    des_in = request.GET.getlist("des")
+    date_in = request.GET.getlist("date")
+    ret_in = request.GET.getlist("ret")
+    gender_in = request.GET.getlist("gender")
+    need_seats = request.GET.get("need_seats")
+    fare_mode = (request.GET.get("fare_mode") or "").strip()
+    fare_num = request.GET.get("fare_num")
+    fare_q   = request.GET.get("fare", "")
     return {
-        "dep_in"    : _getlist_qs(request, "dep"),
-        "des_in"    : _getlist_qs(request, "des"),
-        "date_in"   : _getlist_qs(request, "date"),
-        "ret_in"    : _getlist_qs(request, "ret"),
-        "gender_in" : _getlist_qs(request, "gender"),
-        "need_seats": _parse_int(request.GET.get("need_seats"), None),
-        "fare_mode" : (request.GET.get("fare_mode") or "").strip(),              # 'lte' | 'gte'
-        "fare_num"  : _parse_int(request.GET.get("fare_num"), None),             # 數字門檻
-        "fare_q"    : (request.GET.get("fare") or "").strip(),                   # 關鍵字（如：免費、AA）
-        "q"         : (request.GET.get("q") or "").strip(),  
+        "q": q or None,
+        "dep_in": dep_in or None,
+        "des_in": des_in or None,
+        "date_in": date_in or None,
+        "ret_in": ret_in or None,
+        "gender_in": gender_in or None,
+        "need_seats": int(need_seats) if (need_seats and need_seats.isdigit()) else None,
+        "fare_mode": fare_mode if fare_mode in ("lte", "gte") else None,
+        "fare_num": int(fare_num) if (fare_num and fare_num.isdigit()) else None,
+        "fare_q": fare_q or None,
     }
+
 
 def get_active_location_choices():
     """
     只統計「上架中的司機」的出發地/目的地清單與數量。
+    以地理順序（_city_rank_case）排序，再以字母作次序。
     回傳：(DEP_CHOICES, DES_CHOICES, DEP_WITH_COUNT, DES_WITH_COUNT)
     """
     base = DriverTrip.objects.using("find_db").filter(is_active=True)
 
     dep_ct = (
-        base.values("departure")
+        base.exclude(departure__isnull=True)
+            .exclude(departure__exact="")
+            .values("departure")
             .annotate(n=Count("id"))
-            .order_by("departure")
+            .annotate(rank=_city_rank_case("departure"))
+            .order_by("rank", "departure")
     )
     des_ct = (
-        base.values("destination")
+        base.exclude(destination__isnull=True)
+            .exclude(destination__exact="")
+            .values("destination")
             .annotate(n=Count("id"))
-            .order_by("destination")
+            .annotate(rank=_city_rank_case("destination"))
+            .order_by("rank", "destination")
     )
 
-    DEP_WITH_COUNT = [(row["departure"] or "", row["n"]) for row in dep_ct if row["departure"]]
-    DES_WITH_COUNT = [(row["destination"] or "", row["n"]) for row in des_ct if row["destination"]]
+    DEP_WITH_COUNT = [(row["departure"], row["n"])   for row in dep_ct]
+    DES_WITH_COUNT = [(row["destination"], row["n"]) for row in des_ct]
 
     DEP_CHOICES = [name for name, _ in DEP_WITH_COUNT]
     DES_CHOICES = [name for name, _ in DES_WITH_COUNT]
     return DEP_CHOICES, DES_CHOICES, DEP_WITH_COUNT, DES_WITH_COUNT
 
 
+
 # === view ===
 def index(request):
     sort = request.GET.get("sort", "date_desc")
-    order_by = get_order_by(sort)  # 你的既有對照：date_desc/date_asc/dep_*…
+    order_by = get_order_by(sort)
 
     # 組 filters
     filters = _extract_filters_from_request(request)
@@ -1281,19 +1395,14 @@ def index(request):
     # 司機卡片（已 prefetch pending_list / accepted_list）
     drivers = driver_cards_qs(
         only_active=True,
-        order_by=order_by,   # 若你想讓 sort 特製生效，也可只傳 sort=sort
+        order_by=order_by,
         sort=sort,
         filters=filters,
     )
 
     # 供日期多選用的選項（純字串）
-    # 這裡直接從目前可見的 drivers 取，不會出現無效日期
-    DATE_CHOICES = sorted({
-        d.date.isoformat() for d in drivers if getattr(d, "date", None)
-    })
-    RET_CHOICES = sorted({
-        d.return_date.isoformat() for d in drivers if getattr(d, "return_date", None)
-    })
+    DATE_CHOICES = sorted({ d.date.isoformat() for d in drivers if getattr(d, "date", None) })
+    RET_CHOICES  = sorted({ d.return_date.isoformat() for d in drivers if getattr(d, "return_date", None) })
 
     # 乘客（左上角區塊）
     passengers = (
@@ -1302,9 +1411,53 @@ def index(request):
         .order_by("-id")
     )
 
-    # 出發地/目的地（多選來源）＋數量
-    DEP_CHOICES, DES_CHOICES, DEP_WITH_COUNT, DES_WITH_COUNT = get_active_location_choices()
+    # 出發地/目的地（多選來源）＋數量（用地理排序）
+    base = DriverTrip.objects.using("find_db").filter(is_active=True)
 
+    dep_ct = (
+        base.exclude(departure__isnull=True).exclude(departure__exact="")
+            .values("departure")
+            .annotate(n=Count("id"))
+            .annotate(rank=_city_rank_case("departure"))
+            .order_by("rank", "departure")
+    )
+    des_ct = (
+        base.exclude(destination__isnull=True).exclude(destination__exact="")
+            .values("destination")
+            .annotate(n=Count("id"))
+            .annotate(rank=_city_rank_case("destination"))
+            .order_by("rank", "destination")
+    )
+
+    DEP_WITH_COUNT = [(row["departure"], row["n"])   for row in dep_ct]
+    DES_WITH_COUNT = [(row["destination"], row["n"]) for row in des_ct]
+    DEP_CHOICES = [name for name, _ in DEP_WITH_COUNT]
+    DES_CHOICES = [name for name, _ in DES_WITH_COUNT]
+
+    # ▶▶ 如果是部分請求（AJAX / _partial=1），只回傳司機清單的 HTML
+    is_partial = request.GET.get("_partial") == "1" or request.headers.get("x-requested-with") == "XMLHttpRequest"
+    if is_partial:
+        drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers}, request)
+        return JsonResponse({
+            "ok": True,
+            "drivers_html": drivers_html,
+            # 若你想一起回傳篩選來源（例如「動態數量」），也可以加在這裡
+            # "dep_with_count": DEP_WITH_COUNT,
+            # "des_with_count": DES_WITH_COUNT,
+        })
+
+    # ---------- AJAX：回傳 partial（不刷新整頁） ----------
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        drivers_html = render_to_string("Find/_driver_list.html", {"drivers": drivers})
+        passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
+        return JsonResponse({
+            "type": "send.update",
+            "drivers_html": drivers_html,
+            "passengers_html": passengers_html,
+            "sort": sort,
+        })
+
+    # ---------- 首次載入：整頁 render ----------
     return render(
         request,
         "Find/index.html",

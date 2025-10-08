@@ -9,11 +9,17 @@ class DriverTrip(models.Model):
     password = models.CharField(max_length=50, default="0000")  # 🔑 管理密碼
     # ★ 新增：是否隱藏聯絡方式（需要 email）
     hide_contact = models.BooleanField(default=False)  # 司機預設隱藏
+    auto_email_contact = models.BooleanField(
+        default=False,
+        help_text="（僅在隱藏個資為 True 時生效）自動將你的聯絡方式以 Email 通知已報名的乘客"
+    )
     def clean(self):
         super().clean()
         # 沒 email 不可隱藏；直接回退/阻擋
         if self.hide_contact and not self.email:
             raise ValidationError("要隱藏聯絡方式，必須先填寫 Email，否則無法建立乘客聯繫。")
+        if not self.hide_contact:
+            self.auto_email_contact = False
     # （可選）提供一個顯示字串，模板更乾淨
     @property
     def display_contact(self):
@@ -71,11 +77,17 @@ class PassengerRequest(models.Model):
     # ★ 新增：司機備忘（僅司機看得到）
     driver_memo = models.TextField(blank=True, null=True, default="")
     # ★ 新增：是否隱藏聯絡方式（需要 email）
-    hide_contact = models.BooleanField(default=False)   # 乘客預設不隱藏
+    auto_email_contact = models.BooleanField(
+        default=False,
+        help_text="（僅在隱藏個資為 True 時生效）自動將你的聯絡方式以 Email 通知司機"
+    )
     def clean(self):
         super().clean()
+        # 沒 email 不可隱藏；直接回退/阻擋
         if self.hide_contact and not self.email:
-            raise ValidationError("要隱藏聯絡方式，必須先填寫 Email，否則無法建立司機聯繫。")
+            raise ValidationError("要隱藏聯絡方式，必須先填寫 Email，否則無法建立乘客聯繫。")
+        if not self.hide_contact:
+            self.auto_email_contact = False
 
     # （可選）提供一個顯示字串，模板更乾淨
     @property

@@ -118,23 +118,79 @@ textarea{min-height:80px;resize:vertical}
 .pax-memo::before{ background:#3b82f6; }
 
 /* ========== Switch (toggle) ========== */
-.switch{
-  display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0;
+/* 卡片容器 */
+    .pref-card{
+      border:1px solid #e5e7eb; background:#f9fafb; border-radius:12px;
+      padding:14px; margin:12px 0;
+    }
+
+    /* 每一列（開關 + 文字） */
+    .pref-row{ display:flex; align-items:center; gap:12px; padding:6px 2px; }
+    .pref-row.sub{ padding-left:44px; }       /* 第二列縮排，看起來是附屬選項 */
+
+    /* 文字區 */
+    .pref-text{ display:flex; flex-direction:column; gap:2px; }
+    .pref-title{ font-weight:600; color:#1f2937; }
+    .pref-desc{ font-size:.9rem; color:#6b7280; }
+
+    /* 底部說明 */
+    .pref-hint{ margin-top:8px; font-size:.85rem; color:#6b7280; }
+    .pref-hint.hint-error{ color:#b91c1c; }
+
+    /* 滑動開關（與 iOS 風格相近） */
+.switch{ position:relative; display:inline-block; width:52px; height:28px; }
+.switch input{ display:none; }
+.slider{
+  position:absolute; inset:0; cursor:pointer; background:#e5e7eb; border-radius:999px;
+  transition:background .2s ease;
 }
-.switch input[type="checkbox"]{position:absolute;opacity:0;width:0;height:0}
-.switch .toggle{
-  position:relative;width:52px;height:30px;border-radius:999px;background:#e5e7eb;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);transition:background .2s ease;cursor:pointer;display:inline-block;
+.slider:before{
+  content:""; position:absolute; height:22px; width:22px; left:3px; top:3px;
+  background:white; border-radius:999px; transition:transform .2s ease;
+  box-shadow:0 1px 2px rgba(0,0,0,.15);
 }
-.switch .toggle::after{
-  content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;
-  box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .2s ease;
+.switch input:checked + .slider{ background:#10b981; }          /* 綠色開啟 */
+.switch input:checked + .slider:before{ transform:translateX(24px); }
+
+/* 小螢幕微調 */
+@media (max-width: 480px){
+  .pref-row.sub{ padding-left:36px; }
 }
-.switch input[type="checkbox"]:checked + .toggle{ background:#10b981 }
-.switch input[type="checkbox"]:checked + .toggle::after{ transform:translateX(22px) }
-.switch .toggle.is-disabled{opacity:.6;cursor:not-allowed}
-.switch label{font-weight:600;color:#374151;cursor:pointer}
-.switch .hint{display:block;font-size:12px;color:#6b7280;margin-top:2px;text-align:center}
+
+/* 只影響 #active-switch 這一顆，避免被全站 .switch 覆蓋 */
+#active-switch.active-switch{
+  display:flex; align-items:center; gap:.6rem; user-select:none;
+  /* 這行可幫你擋住外部繼承的排版 */
+  position:relative;
+}
+#active-switch input[type="checkbox"]{
+  position:absolute; opacity:0; width:1px; height:1px; pointer-events:none;
+}
+
+/* Toggle 外觀 */
+#active-switch .toggle{
+  position:relative; width:48px; height:26px; border-radius:999px;
+  background:#e5e7eb; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+  transition:background .2s ease;
+}
+#active-switch .toggle::after{
+  content:""; position:absolute; top:3px; left:3px; width:20px; height:20px;
+  border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
+  transition:transform .2s cubic-bezier(.4,0,.2,1);
+}
+
+/* 勾選狀態 */
+#active-switch input[type="checkbox"]:checked + .toggle{ background:#10b981; }
+#active-switch input[type="checkbox"]:checked + .toggle::after{ transform:translateX(22px); }
+
+/* 焦點可及性 */
+#active-switch input[type="checkbox"]:focus + .toggle{
+  outline:2px solid #2563eb; outline-offset:2px;
+}
+
+/* 標籤字 */
+#active-switch .txt{ cursor:pointer; color:#374151; font-size:.95rem; line-height:1.2; }
+
 
 /* ========== Responsive ========== */
 @media (max-width:1024px){ .pax-grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
@@ -155,6 +211,31 @@ textarea{min-height:80px;resize:vertical}
 
 </head>
 <body>
+  <h2>🛠 乘客管理</h2>
+<!-- 乘客清單（原樣） -->
+<!-- C) 已登記乘客（升級：接受 / 拒絕 / 司機備忘錄） -->
+<div class="panel" id="manage-panels">
+  {% csrf_token %}
+  {% include "Find/_manage_panels.html" %}
+</div>
+
+<div id="driver-meta" data-driver-id="{{ driver.id }}"></div>
+<!-- 刪除司機表單（保留 CSRF 與 action） -->
+<form id="deleteDriverForm"
+      method="POST"
+      action="{% url 'delete_driver' driver.id %}"
+      style="max-width:600px;margin:14px auto 0;"
+      onsubmit="return handleDeleteDriverSubmit(event)">
+  {% csrf_token %}
+  <button id="deleteDriverBtn" class="btn btn-danger" type="submit">🗑️ 取消出車</button>
+  <div style="max-width:600px;margin:0 auto 8px;">
+      <a href="{% url 'find_index' %}" class="btn-ghost" style="display:inline-block;text-decoration:none;text-align:center;width:100%;padding:12px;margin-top:10px;border-radius:10px;font-weight:700;">
+        🏠 回首頁
+      </a>
+  </div>
+</form>
+
+
   <h2>🛠 司機管理</h2>
 
   {% if saved_msg %}<div class="alert alert-ok">{{ saved_msg }}</div>{% endif %}
@@ -182,16 +263,35 @@ textarea{min-height:80px;resize:vertical}
     <label>Email（選填）</label>
     <input type="email" id="email" name="email" value="{{ driver.email|default_if_none:'' }}" />
 
-    <!-- 🔒 隱私：需要 Email 才能啟用 -->
-    <div class="switch" id="privacy-switch" style="margin-top:6px;">
-      <input type="checkbox"
-             id="hide_contact"
-             name="hide_contact"
-             {% if driver.hide_contact %}checked{% endif %} />
-      <span class="toggle"></span>
-      <label for="hide_contact">隱藏個資（聯絡方式）</label>
-    </div>
-    <span id="privacyHint" class="hint">需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</span>
+    <!-- 隱私設定：卡片 + 兩個滑動開關 -->
+    <section class="pref-card">
+      <div class="pref-row">
+        <label class="switch">
+          <input type="checkbox" id="hide_contact" name="hide_contact"
+                {% if prefill.hide_contact is not defined or prefill.hide_contact %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+          <div class="pref-title">隱藏個資（聯絡方式）</div>
+          <div class="pref-desc"></div>
+        </div>
+      </div>
+
+      <div id="autoEmailWrap" class="pref-row sub" style="display:none;">
+        <label class="switch">
+          <input type="checkbox" id="auto_email_contact" name="auto_email_contact"
+                {% if prefill.auto_email_contact %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+          <div class="pref-title">隱藏時，自動把我的聯絡方式 Email 給已報名乘客</div>
+        </div>
+      </div>
+
+      <div id="privacyHint" class="pref-hint">
+        ※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。
+      </div>
+    </section>
 
     <label class="required" style="margin-top:14px;">聯絡方式</label>
     <input type="text" name="contact" value="{{ driver.contact }}" placeholder="LINE / IG / Phone Number" required />
@@ -302,44 +402,16 @@ textarea{min-height:80px;resize:vertical}
       <option value="MAYBE" {% if driver.flexible_pickup == 'MAYBE' %}selected{% endif %}>視情況</option>
     </select>
 
-    <div class="switch" id="active-switch">
-      <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %} />
-      <span class="toggle"></span>
-      <label for="is_active">是否開放（座位滿會自動關閉）</label>
+    <div id="active-switch" class="active-switch">
+      <input type="checkbox" name="is_active" id="is_active" {% if driver.is_active %}checked{% endif %}>
+      <span class="toggle" aria-hidden="true"></span>
+      <label for="is_active" class="txt">是否開放（座位滿會自動關閉）</label>
     </div>
 
     <label>備註</label>
     <textarea id="driverNote" name="note" row="3" placeholder="備註(選填)">{{ driver.note|default_if_none:'' }}</textarea>
-
     <button class="btn" type="submit">💾 儲存</button>
-
-    <div style="max-width:600px;margin:0 auto 8px;">
-      <a href="{% url 'find_index' %}" class="btn-ghost" style="display:inline-block;text-decoration:none;text-align:center;width:96%;padding:12px;margin-top:10px;border-radius:10px;font-weight:700;">
-        🏠 回首頁
-      </a>
-    </div>
   </form>
-
-  <!-- 刪除司機表單（保留 CSRF 與 action） -->
-<form id="deleteDriverForm"
-      method="POST"
-      action="{% url 'delete_driver' driver.id %}"
-      style="max-width:600px;margin:14px auto 0;"
-      onsubmit="return handleDeleteDriverSubmit(event)">
-  {% csrf_token %}
-  <button id="deleteDriverBtn" class="btn btn-danger" type="submit">🗑️ 取消出車</button>
-</form>
-
-  <!-- 乘客清單（原樣） -->
-<!-- C) 已登記乘客（升級：接受 / 拒絕 / 司機備忘錄） -->
-<div class="panel" id="manage-panels">
-  {% csrf_token %}
-  {% include "Find/_manage_panels.html" %}
-</div>
-
-<div id="driver-meta" data-driver-id="{{ driver.id }}"></div>
-
-</div>
 
   <script>
     const driverId = "{{ driver.id }}";
@@ -393,44 +465,76 @@ textarea{min-height:80px;resize:vertical}
   }
 
     // ✅ 隱私開關：需要 Email 才能啟用
-(function () {
-  const wrap   = document.getElementById('privacy-switch');
-  const email  = document.getElementById('email');           // 司機的 Email 欄
-  const cb     = document.getElementById('hide_contact');    // 司機的隱私 checkbox
-  const knob   = wrap?.querySelector('.toggle');
-  const hintEl = document.getElementById('privacyHint');
-  if (!wrap || !email || !cb) return;
+(function(){
+  const email = document.getElementById('email');
+  const hide  = document.getElementById('hide_contact');
+  const auto  = document.getElementById('auto_email_contact');
+  const wrap  = document.getElementById('autoEmailWrap');
+  const hint  = document.getElementById('privacyHint');
 
-  function syncDriverPrivacy () {
-    const hasEmail = !!email.value.trim();
+  // 記錄使用者是否主動改動過，避免我們的「預設值」蓋掉使用者選擇
+  let touchedHide = false;
+  let touchedAuto = false;
 
-    // 沒 Email → 一律上鎖且強制關閉
-    if (!hasEmail) {
-      cb.checked  = false;          // 只有沒 Email 時才強制改為關閉
-      cb.disabled = true;
-      knob?.classList.add('is-disabled');
-      if (hintEl) { hintEl.textContent = '尚未填寫 Email，無法隱藏聯絡方式。'; hintEl.style.color = '#9a6b00'; }
+  hide && hide.addEventListener('change', () => { touchedHide = true; syncUI(); });
+  auto && auto.addEventListener('change', () => { touchedAuto = true; syncUI(); });
+
+  function hasEmail(){
+    return !!(email && email.value && email.value.includes('@'));
+  }
+
+  function setHint(lines){
+    if (!hint) return;
+    // 你要的分段文字（多行）
+    hint.innerHTML = lines.map(line => line.replace(/\s+$/,'')).join('<br>');
+  }
+
+  function syncUI(){
+    const ok = hasEmail();
+
+    if (!ok){
+      // 沒 Email：都關、都鎖、隱藏第二顆開關
+      if (hide){ hide.checked = false; hide.disabled = true; }
+      if (auto){ auto.checked = false; auto.disabled = true; }
+      if (wrap){ wrap.style.display = 'none'; }
+      setHint([
+        '※ 尚未填寫 Email，無法隱藏聯絡方式。',
+        '填寫後即可啟用「隱藏個資」與「自動寄信」。'
+      ]);
       return;
     }
 
-    // 有 Email → 只解鎖，不改變使用者勾選結果
-    cb.disabled = false;            // 讓使用者自己決定勾/不勾
-    knob?.classList.remove('is-disabled');
-    if (hintEl) { hintEl.textContent = '需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。'; hintEl.style.color = '#6b7280'; }
+    // 有 Email：可以切
+    if (hide){ hide.disabled = false; }
+
+    // 需求：輸入完 Email 時，「隱藏個資」預設關閉（除非使用者剛剛手動開過）
+    if (!touchedHide && hide && hide.checked !== false){
+      hide.checked = false;
+    }
+
+    // 第二顆只在隱藏=開時才顯示可用
+    const on = !!(hide && hide.checked);
+    if (wrap){ wrap.style.display = on ? '' : 'none'; }
+    if (auto){ auto.disabled = !on; }
+
+    // 需求：當隱藏個資打開時，自動寄信預設「開啟」（除非使用者剛剛手動關過）
+    if (on && auto && !touchedAuto && !auto.checked){
+      auto.checked = true;
+    }
+    if (!on && auto){
+      auto.checked = false;
+    }
+
+    setHint([
+      '※ Email 僅供系統通知，不會公開。',
+      '若關閉自動寄送 Email，則需等待乘客加入後，系統才會把乘客資料寄送至您的 Email。'
+    ]);
   }
 
-  // 讓點擊滑桿也能切換（被鎖定時不動）
-  knob?.addEventListener('click', () => {
-    if (cb.disabled) return;
-    cb.checked = !cb.checked;
-  });
+  email && email.addEventListener('input', syncUI);
 
-  // Email 變動時重新同步；初始化跑一次（保留伺服器初始 checked）
-  email.addEventListener('input', syncDriverPrivacy);
-  syncDriverPrivacy();
-
-  // 如果你有從後端 AJAX 回填司機資料，可在回填後呼叫這個
-  window.syncDriverPrivacy = syncDriverPrivacy;
+  // 初始狀態：依 template 的 checked 值 + email 內容，再套上述規則
+  syncUI();
 })();
 
     // 是否開放 switch 鎖定（你原本的腳本保留）
@@ -792,68 +896,5 @@ async function handleDeleteDriverSubmit(e){
   };
 })();
 </script>
-
-<!-- <script>
-(function () {
-  const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  const wsUrl    = `${wsScheme}://${location.host}/ws/find/`; // ← 路由見第2步
-  let socket;
-
-  function connect() {
-    socket = new WebSocket(wsUrl);
-    socket.onopen  = () => console.log('[WS] connected');
-    socket.onclose = () => setTimeout(connect, 2000);
-    socket.onerror = (e) => { console.error('[WS] error', e); socket.close(); };
-
-    socket.onmessage = (e) => {
-      let msg; try { msg = JSON.parse(e.data); } catch { return; }
-
-      if (msg.type === "send.update") {
-        const dList = document.getElementById("driver-list");
-        const pList = document.getElementById("passenger-list");
-        if (msg.drivers_html && dList)    dList.innerHTML    = msg.drivers_html;
-        if (msg.passengers_html && pList) pList.innerHTML = msg.passengers_html;
-        return;
-      }
-
-      if (msg.type === "send.partial") {
-        if (msg.payload && msg.payload.type === "driver_partial") {
-          upsertDriverCard(msg.payload.driver_id, msg.payload.driver_html, msg.payload.active !== false);
-          return;
-        }
-        if (msg.driver_id && msg.html) {
-          upsertDriverCard(msg.driver_id, msg.html, true);
-          return;
-        }
-      }
-
-      if (msg.type === "manage.panels" && msg.html) {
-        const el = document.getElementById("managePanels");
-        if (el) el.innerHTML = msg.html;
-      }
-    };
-  }
-  connect();
-
-  function upsertDriverCard(driverId, html, active = true) {
-    const list = document.getElementById("driver-list");
-    if (!list) return;
-    const existing = list.querySelector(`[data-driver-id="${driverId}"]`);
-
-    if (active === false) { if (existing) existing.remove(); return; }
-
-    const tmp = document.createElement('div');
-    tmp.innerHTML = (html || '').trim();
-    const node = tmp.firstElementChild;
-    if (!node) return;
-
-    if (existing) existing.replaceWith(node);
-    else list.prepend(node);
-  }
-})();
-</script> -->
-
-
-
 </body>
 </html>

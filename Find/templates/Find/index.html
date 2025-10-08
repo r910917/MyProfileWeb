@@ -1106,15 +1106,93 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .panel-toggle svg{ width:18px; height:18px; transition:transform .22s ease; color:#334155; }
 .panel[aria-expanded="true"] .panel-toggle svg{ transform:rotate(180deg); }
 
-/* ✅ 只用 max-height/opacity 做動畫—不要再用 display:none/block */
-.panel .panel-bd{
-  padding:12px 12px 14px;     /* 這裡保留 padding，但不要再加 display:none */
-  overflow:hidden;
-  max-height:0;
-  opacity:0;
-  transition:
-    max-height var(--collapse-ms) ease,
-    opacity    var(--collapse-ms) ease;
+/* 整條水平工具列（超出可橫向捲動） */
+#filterPanel .panel-bd { padding-bottom: 8px; }
+.hscroll-toolbar{
+  display:flex; align-items:flex-end; gap:12px;
+  overflow-x:auto; overflow-y:hidden; white-space:nowrap;  /* 單列 */
+  padding:10px 8px; border:1px solid #e8edf5; border-radius:16px;
+  background:#f7f9fc;
+  scroll-snap-type:x proximity; overscroll-behavior-x:contain;
+}
+/* 共同：水平工具列，可左右滑動 */
+.hscroll-toolbar{
+  display:flex; gap:12px; align-items:flex-end;
+  overflow-x:auto; overflow-y:hidden; white-space:nowrap;
+  padding:10px 8px; border:1px solid #e8edf5; border-radius:16px;
+  background:#f7f9fc; margin-bottom:10px;
+}
+.hscroll-toolbar > *{ flex:0 0 auto; }
+
+
+
+/* 排序行：seg-box 原樣即可，只調寬度 */
+.sort-toolbar .seg-box{ min-width:220px; }
+
+/* 篩選行：卡片化 */
+.filter-toolbar .tool{
+  display:flex; flex-direction:column; gap:6px;
+  min-width:220px; max-width:320px;
+  background:#fff; border:1px solid #e7ecf4; border-radius:14px;
+  padding:10px 12px;
+}
+.filter-toolbar .tool.slim   { min-width:160px; }
+.filter-toolbar .tool.narrow { min-width:140px; }
+.filter-toolbar .tool.grow   { min-width:260px; max-width:420px; }
+
+.tool-title{ font-size:.86rem; color:#556070; font-weight:600; }
+.tool-ctl{ height:36px; padding:6px 10px; border:1px solid #d9e2ef; border-radius:10px; background:#fff; }
+select.tool-ctl[multiple]{ height:auto; min-height:36px; }
+
+.tool.actions{ background:transparent; border:0; padding:0; min-width:fit-content; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; border-radius:999px; border:0; font-weight:700; cursor:pointer; }
+.btn.primary{ background:#1677ff; color:#fff; }
+.btn.ghost  { background:#eef3fb; color:#1f2a3c; }
+
+/* 捲軸（可省略） */
+.hscroll-toolbar::-webkit-scrollbar{ height:8px; }
+.hscroll-toolbar::-webkit-scrollbar-thumb{ background:#d7deea; border-radius:999px; }
+
+
+
+/* 小分隔線（可拿掉） */
+.hs-divider{ width:1px; height:42px; background:#e3e9f4; margin:0 4px; }
+
+/* 讓 seg-box 在單列時看起來像膠囊群 */
+.hscroll-toolbar .seg-box{ min-width:220px; }
+
+/* 篩選工具卡片 */
+.hscroll-toolbar .tool{
+  display:flex; flex-direction:column; gap:6px;
+  min-width:220px; max-width:320px;
+  background:#fff; border:1px solid #e7ecf4; border-radius:14px;
+  padding:10px 12px; box-shadow:0 1px 0 rgba(0,0,0,.02);
+}
+.hscroll-toolbar .tool.slim   { min-width:160px; }
+.hscroll-toolbar .tool.narrow { min-width:140px; }
+.hscroll-toolbar .tool.grow   { min-width:260px; max-width:420px; }
+
+/* 標題與控件 */
+.hscroll-toolbar .tool-title{ font-size:.86rem; color:#556070; font-weight:600; }
+.hscroll-toolbar .tool-ctl{
+  height:36px; padding:6px 10px; border:1px solid #d9e2ef; border-radius:10px; background:#fff;
+}
+.hscroll-toolbar select.tool-ctl[multiple]{ height:auto; min-height:36px; }
+
+/* 按鈕與樣式沿用排序 */
+.hscroll-toolbar .tool.actions{ background:transparent; border:0; box-shadow:none; padding:0; min-width:fit-content; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; padding:8px 14px; border-radius:999px; border:0; cursor:pointer; font-weight:700; }
+.btn.primary{ background:#1677ff; color:#fff; }
+.btn.ghost  { background:#eef3fb; color:#1f2a3c; }
+
+/* 捲軸美化（可省略） */
+.hscroll-toolbar::-webkit-scrollbar{ height:8px; }
+.hscroll-toolbar::-webkit-scrollbar-thumb{ background:#d7deea; border-radius:999px; }
+.hscroll-toolbar::-webkit-scrollbar-track{ background:transparent; }
+
+@media (max-width: 768px){
+  .hscroll-toolbar{ border-radius:12px; }
+  .hscroll-toolbar .tool{ min-width:200px; }
 }
 .panel[aria-expanded="true"] .panel-bd{ opacity:1; }
 
@@ -1124,8 +1202,6 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 .panel-toggle { width:34px; height:34px; border-radius:10px; border:1px solid #dbe0e8; background:#fff; display:grid; place-items:center; }
 .panel-toggle svg { width:18px; height:18px; transition:transform .22s ease; color:#334155; }
 .panel[aria-expanded="true"] .panel-toggle svg { transform:rotate(180deg); }
-.panel-bd { padding:12px 12px 14px; display:none; }
-.panel[aria-expanded="true"] .panel-bd{ display:block; }
 
 /* 標題 + 筆數選單 */
 .section-head{
@@ -1174,41 +1250,96 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 #passenger-list.paged::after { height:0 !important; }
 
 /* ====== 排序：膠囊 Segmented Switch ====== */
-.sort-wrap{
-  display:grid;
-  grid-template-columns: repeat(3, minmax(0,1fr)); /* ✅ 三欄 */
-  gap:10px;
-  align-items:center;
-}
 /* 小螢幕時自動堆疊成一欄（避免擠不下）—如果你想維持三欄可刪掉這段 */
 @media (max-width: 768px){
   .sort-wrap{ grid-template-columns: 1fr; }
 }
-.seg-box{ flex:1; }     /* 保持每欄等寬 */
-.seg-title{ font-size:.9rem; color:#475569; margin:2px 0 4px 6px; }
 
+/* 工具列容器：橫向捲動、不換行 */
+.seg-toolbar {
+  display: flex;
+  gap: 12px;
+  justify-content:center;
+  align-items: stretch;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 10px;
+}
+
+/* 每一個區塊像小卡片，固定寬度方便橫排 */
+.seg-box {
+  flex: 0 0 auto;             /* 不換行，寬度由內容決定 */
+  min-width: 200px;           /* 手機可讀的最小寬 */
+  scroll-snap-align: start;   /* 捲動停在卡片起點 */
+  background: #f7f9fc;
+  border: 1px solid #e5eaf2;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+/* 標題與膠囊排成一列，說明更明顯 */
+.seg-box .seg-title {
+  font-size: 12px;
+  color: #667085;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+/* 膠囊開關：橫向並排 */
 .seg-switch {
-  --h:40px; position:relative; background:#f4f6fb; border:1px solid #e4e8f0;
-  border-radius:999px; display:flex; padding:4px; height:var(--h);
-  box-shadow:inset 0 1px 3px rgba(0,0,0,.04);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e9eef6;
+  border-radius: 999px;
+  padding: 4px;
 }
+
 .seg-switch .pill {
-  position:absolute; top:4px; left:4px; height:calc(var(--h) - 8px); width:calc(50% - 4px);
-  background:#fff; border-radius:999px; box-shadow:0 2px 10px rgba(0,0,0,.08);
-  transition:left .22s cubic-bezier(.4,0,.2,1), width .22s cubic-bezier(.4,0,.2,1);
+  position: absolute;
+  top: 4px; bottom: 4px;
+  width: calc(50% - 6px);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(16,24,40,.08);
+  transition: transform .2s ease;
+  pointer-events: none;
 }
+
+/* 左右狀態 */
+.seg-switch[data-state="left"]  .pill { transform: translateX(0); }
+.seg-switch[data-state="right"] .pill { transform: translateX(100%); }
+
+/* 選項按鈕 */
 .seg-switch .opt {
-  flex:1; display:flex; align-items:center; justify-content:center; gap:.4rem;
-  z-index:1; color:#475569; font-weight:600; cursor:pointer; user-select:none;
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+  color: #344054;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.seg-switch .opt .ico{ width:16px; height:16px; }
-.seg-switch[data-state="right"] .pill { left:calc(50% + 0px); }
-.seg-title { font-size:.9rem; color:#475569; margin:2px 0 4px 6px; }
 
-/* 次級分組（出發地排序） */
-.seg-group { display:flex; gap:10px; }
-.seg-box { flex:1; }
+/* 視覺上的「目前選中」 */
+.seg-switch .opt[aria-pressed="true"] {
+  color: #0b63ff;
+  font-weight: 600;
+}
 
+/* 手機特化：讓每張卡更窄一點，方便一屏放更多 */
+@media (max-width: 640px) {
+  .seg-box { min-width: 170px; }
+  .seg-switch .opt { font-size: 13px; padding: 6px 10px; }
+}
 /* ====== 隱藏 select（保相容） ====== */
 #sort{ display:none; }
 
@@ -1217,14 +1348,17 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
   gap:10px 12px; align-items:end; margin-top:6px;
 }
-@media (max-width:768px){ .filt-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } .only-desktop-spacer{ display:none; } }
-
+@media (max-width:768px){
+  .filt-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .only-desktop-spacer{ display:none; }
+}
 .filt-item{ display:flex; flex-direction:column; gap:6px; min-width:0; }
 .filt-item label{ font-size:.86rem; color:#666; }
 .ctl{ width:100%; box-sizing:border-box; }
 select.ctl{ min-height: 2.6rem; padding:.35rem .55rem; }
 input.ctl{ padding:.45rem .6rem; }
 
+/* 按鈕 */
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
   padding:10px 16px; border-radius:10px; border:0; cursor:pointer; font-weight:600;
@@ -1236,7 +1370,8 @@ input.ctl{ padding:.45rem .6rem; }
 /* ====== 酌收費用 Toggle（≥ / ≤） ====== */
 .fare-toggle{ display:flex; align-items:center; gap:.5rem; }
 .toggle{
-  position:relative; width:160px; height:36px; border-radius:999px; background:#e9edf3; border:1px solid #d8dee8; cursor:pointer;
+  position:relative; width:160px; height:36px; border-radius:999px;
+  background:#e9edf3; border:1px solid #d8dee8; cursor:pointer;
 }
 .toggle .knob{
   position:absolute; top:3px; left:3px; width:30px; height:30px; border-radius:50%;
@@ -1252,6 +1387,7 @@ input.ctl{ padding:.45rem .6rem; }
 .chip{display:inline-flex;align-items:center;gap:.45rem;padding:.28rem .6rem;border-radius:999px;border:1px solid #e1e4ea;background:#f7f8fb;font-size:.87rem;color:#333;}
 .chip .x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e9ecf3;color:#333;cursor:pointer;font-size:.8rem;line-height:1;}
 .chip .x:hover{ background:#dfe4ee; }
+
 
 
 </style>
@@ -1515,7 +1651,6 @@ input.ctl{ padding:.45rem .6rem; }
 })();
 </script>
 
-
 <h2>找車需求（乘客需要司機）</h2>
 
 {{ filters|json_script:"filtersData" }}
@@ -1524,7 +1659,7 @@ input.ctl{ padding:.45rem .6rem; }
 {{ filters|json_script:"filtersData" }}
 <div id="filterPanel" class="panel" aria-expanded="false">
   <div class="panel-hd" id="panelHead">
-      <div class="panel-title">
+    <div class="panel-title">
       <span class="dot" aria-hidden="true"></span>
       <span>條件與排序（快速找到你要的車）</span>
     </div>
@@ -1535,403 +1670,143 @@ input.ctl{ padding:.45rem .6rem; }
     </div>
   </div>
 
+  <!-- 這一層是關鍵：把排序與篩選都包在 panel-bd 裡 -->
   <div class="panel-bd">
-    <!-- ===== 排序（膠囊） ===== -->
-    <div class="sort-wrap" role="group" aria-label="排序選擇">
-      <!-- 日期：遠→近 / 近→遠 -->
+
+    <!-- ===== 排序（一列） ===== -->
+    <div class="hscroll-toolbar sort-toolbar" role="group" aria-label="排序">
+      <!-- 出發日期 -->
       <div class="seg-box">
-        <div class="seg-title">出發日期</div>
+        <div class="seg-title">出發日期 <span class="seg-current"></span></div>
         <div id="segDate" class="seg-switch" data-state="{% if sort == 'date_asc' %}right{% else %}left{% endif %}">
           <div class="pill" aria-hidden="true"></div>
-          <button class="opt" type="button" data-sort="date_desc" aria-pressed="{% if sort == 'date_desc' %}true{% else %}false{% endif %}">
-            <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M7 3v4M17 3v4M3 11h18M7 15h5m-5 4h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-            遠→近
-          </button>
-          <button class="opt" type="button" data-sort="date_asc" aria-pressed="{% if sort == 'date_asc' %}true{% else %}false{% endif %}">
-            <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M7 3v4M17 3v4M3 11h18M7 19h5m-5-4h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-            近→遠
-          </button>
+          <button class="opt" type="button" data-sort="date_desc" aria-pressed="{% if sort == 'date_desc' %}true{% else %}false{% endif %}">遠→近</button>
+          <button class="opt" type="button" data-sort="date_asc"  aria-pressed="{% if sort == 'date_asc'  %}true{% else %}false{% endif %}">近→遠</button>
         </div>
       </div>
 
-      <!-- 出發地：北→南 / 南→北（下方另有 A→Z / Z→A 小組） -->
+      <!-- 出發地（地理） -->
       <div class="seg-box">
-        <div class="seg-title">出發地（地理）</div>
+        <div class="seg-title">出發地（地理） <span class="seg-current"></span></div>
         <div id="segGeo" class="seg-switch" data-state="{% if sort == 'dep_s2n' %}right{% else %}left{% endif %}">
-          <div class="pill"></div>
+          <div class="pill" aria-hidden="true"></div>
           <button class="opt" type="button" data-sort="dep_n2s" aria-pressed="{% if sort == 'dep_n2s' %}true{% else %}false{% endif %}">北→南</button>
           <button class="opt" type="button" data-sort="dep_s2n" aria-pressed="{% if sort == 'dep_s2n' %}true{% else %}false{% endif %}">南→北</button>
         </div>
       </div>
 
+      <!-- 可用座位 -->
       <div class="seg-box">
-        <div class="seg-title">出發地（字母）</div>
-        <div id="segAlpha" class="seg-switch" data-state="{% if sort == 'dep_desc' %}right{% else %}left{% endif %}">
-          <div class="pill"></div>
-          <button class="opt" type="button" data-sort="dep_asc"  aria-pressed="{% if sort == 'dep_asc' %}true{% else %}false{% endif %}">A→Z</button>
-          <button class="opt" type="button" data-sort="dep_desc" aria-pressed="{% if sort == 'dep_desc' %}true{% else %}false{% endif %}">Z→A</button>
+        <div class="seg-title">可用座位 <span class="seg-current"></span></div>
+        <div id="segSeats" class="seg-switch" data-state="{% if sort == 'seats_asc' %}right{% else %}left{% endif %}">
+          <div class="pill" aria-hidden="true"></div>
+          <button class="opt" type="button" data-sort="seats_desc" aria-pressed="{% if sort == 'seats_desc' %}true{% else %}false{% endif %}">多→少</button>
+          <button class="opt" type="button" data-sort="seats_asc"  aria-pressed="{% if sort == 'seats_asc'  %}true{% else %}false{% endif %}">少→多</button>
         </div>
       </div>
 
-      <!-- 隱藏 select（保相容） -->
+      <!-- 酌收費用 -->
+      <div class="seg-box">
+        <div class="seg-title">酌收費用 <span class="seg-current"></span></div>
+        <div id="segFare" class="seg-switch" data-state="{% if sort == 'fare_asc' %}right{% else %}left{% endif %}">
+          <div class="pill" aria-hidden="true"></div>
+          <button class="opt" type="button" data-sort="fare_desc" aria-pressed="{% if sort == 'fare_desc' %}true{% else %}false{% endif %}">高→低</button>
+          <button class="opt" type="button" data-sort="fare_asc"  aria-pressed="{% if sort == 'fare_asc'  %}true{% else %}false{% endif %}">低→高</button>
+        </div>
+      </div>
+
+      <!-- 隱藏 select（沿用 JS） -->
       <select id="sort" name="sort" hidden>
         <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>日期 新→舊</option>
         <option value="date_asc"  {% if sort == 'date_asc'  %}selected{% endif %}>日期 舊→新</option>
         <option value="dep_n2s"   {% if sort == 'dep_n2s'   %}selected{% endif %}>出發 北→南</option>
         <option value="dep_s2n"   {% if sort == 'dep_s2n'   %}selected{% endif %}>出發 南→北</option>
-        <option value="dep_asc"   {% if sort == 'dep_asc'   %}selected{% endif %}>出發地 A→Z</option>
-        <option value="dep_desc"  {% if sort == 'dep_desc'  %}selected{% endif %}>出發地 Z→A</option>
+        <option value="seats_desc" {% if sort == 'seats_desc' %}selected{% endif %}>座位 多→少</option>
+        <option value="seats_asc"  {% if sort == 'seats_asc'  %}selected{% endif %}>座位 少→多</option>
+        <option value="fare_desc"  {% if sort == 'fare_desc'  %}selected{% endif %}>費用 高→低</option>
+        <option value="fare_asc"   {% if sort == 'fare_asc'   %}selected{% endif %}>費用 低→高</option>
       </select>
     </div>
 
-    <!-- ===== 篩選格線 ===== -->
-    <form id="filtersForm" class="filt-grid" onsubmit="return false;">
-      <!-- row 1 -->
-      <div class="filt-item">
-        <label for="f-dep">出發地</label>
-        <!-- 出發地（多選） -->
-          <select id="f-dep" class="ctl" multiple>
-            {% for name, n in DEP_WITH_COUNT %}
-              <option value="{{ name }}" {% if filters.dep_in and name in filters.dep_in %}selected{% endif %}>
-                {{ name }}（{{ n }}）
-              </option>
-            {% endfor %}
-          </select>
-      </div>
-      <div class="filt-item">
-        <label for="f-des">目的地</label>
-        <select id="f-des" class="ctl" multiple>
-          {% for name, n in DES_WITH_COUNT %}
-            <option value="{{ name }}" {% if filters.des_in and name in filters.des_in %}selected{% endif %}>
-              {{ name }}（{{ n }}）
-            </option>
+    <!-- ===== 篩選（一列） ===== -->
+    <div class="hscroll-toolbar filter-toolbar" role="group" aria-label="篩選">
+      <div class="tool">
+        <div class="tool-title">出發地</div>
+        <select id="f-dep" class="tool-ctl" multiple>
+          {% for name, n in DEP_WITH_COUNT %}
+            <option value="{{ name }}" {% if filters.dep_in and name in filters.dep_in %}selected{% endif %}>{{ name }}（{{ n }}）</option>
           {% endfor %}
         </select>
       </div>
-      <div class="filt-item">
-        <label for="f-date">出發日期</label>
-        <select id="f-date" class="ctl" multiple>
+
+      <div class="tool">
+        <div class="tool-title">目的地</div>
+        <select id="f-des" class="tool-ctl" multiple>
+          {% for name, n in DES_WITH_COUNT %}
+            <option value="{{ name }}" {% if filters.des_in and name in filters.des_in %}selected{% endif %}>{{ name }}（{{ n }}）</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="tool">
+        <div class="tool-title">出發日期</div>
+        <select id="f-date" class="tool-ctl" multiple>
           {% for ds in DATE_CHOICES %}<option value="{{ ds }}" {% if filters.date_in and ds in filters.date_in %}selected{% endif %}>{{ ds }}</option>{% endfor %}
         </select>
       </div>
-      <div class="filt-item">
-        <label for="f-ret">回程日期</label>
-        <select id="f-ret" class="ctl" multiple>
+
+      <div class="tool">
+        <div class="tool-title">回程日期</div>
+        <select id="f-ret" class="tool-ctl" multiple>
           {% for rs in RET_CHOICES %}<option value="{{ rs }}" {% if filters.ret_in and rs in filters.ret_in %}selected{% endif %}>{{ rs }}</option>{% endfor %}
         </select>
       </div>
 
-      <!-- row 2 -->
-      <div class="filt-item">
-        <label for="f-fare-num">金額</label>
-        <input id="f-fare-num" class="ctl" type="number" min="0" step="1"
-               value="{% if filters.fare_num %}{{ filters.fare_num }}{% endif %}" placeholder="數字金額">
+      <div class="tool narrow">
+        <div class="tool-title">金額低於</div>
+        <input id="f-fare-num" class="tool-ctl" type="number" min="0" step="1"
+               value="{% if filters.fare_num %}{{ filters.fare_num }}{% endif %}" placeholder="數字">
       </div>
-      <!-- <div class="filt-item">
-        <label for="f-fare-text">關鍵字</label>
-        <input id="f-fare-text" class="ctl" type="text" value="{{ filters.fare_q|default:'' }}" placeholder="如：免費、AA">
-      </div> -->
-      <div class="filt-item">
-        <label for="f-q">關鍵字</label>
-        <input id="f-q" class="ctl" type="text" placeholder="搜尋整張卡片（姓名、路線、備註…）"
-              value="{{ filters.q|default:'' }}">
+
+      <div class="tool narrow">
+        <div class="tool-title">可用座位</div>
+        <input id="f-seats" class="tool-ctl" type="number" min="1" step="1"
+               value="{{ filters.need_seats|default_if_none:'' }}" placeholder="例如 2">
       </div>
-      <div class="filt-item">
-        <label for="f-seats">可用座位</label>
-        <input id="f-seats" class="ctl" type="number" min="1" step="1" value="{{ filters.need_seats|default_if_none:'' }}" placeholder="例如 2">
-      </div>
-      <div class="filt-item">
-        <label for="f-gender">司機性別</label>
-        <select id="f-gender" class="ctl" multiple>
+
+      <div class="tool slim">
+        <div class="tool-title">性別</div>
+        <select id="f-gender" class="tool-ctl" multiple>
           <option value="M" {% if filters.gender_in and 'M' in filters.gender_in %}selected{% endif %}>男</option>
           <option value="F" {% if filters.gender_in and 'F' in filters.gender_in %}selected{% endif %}>女</option>
           <option value="X" {% if filters.gender_in and 'X' in filters.gender_in %}selected{% endif %}>不透露</option>
         </select>
       </div>
 
-      <!-- row 3 -->
-      <div class="filt-item">
-        <label>酌收費用</label>
-        <div class="fare-toggle">
-          <div id="fareToggle" class="toggle" role="switch" tabindex="0"
-               aria-checked="{% if filters.fare_mode == 'gte' %}true{% else %}false{% endif %}"
-               data-mode="{% if filters.fare_mode == 'gte' %}gte{% else %}lte{% endif %}">
-            <span class="label lte">小於等於</span>
-            <span class="label gte">大於等於</span>
-            <span class="knob"></span>
-          </div>
-          <input type="hidden" id="f-fare-mode" value="{% if filters.fare_mode %}{{ filters.fare_mode }}{% else %}lte{% endif %}">
-        </div>
+      <div class="tool grow">
+        <div class="tool-title">關鍵字</div>
+        <input id="f-q" class="tool-ctl" type="text" placeholder="搜尋整張卡片（姓名、路線、備註…）"
+               value="{{ filters.q|default:'' }}">
       </div>
 
-      <div class="filt-item only-desktop-spacer"></div>
-
-      <div class="filt-item">
-        <label class="sr-only">套用篩選</label>
-        <button type="button" class="btn primary ctl" id="applyFilters">套用篩選</button>
+      <div class="tool actions">
+        <button type="button" class="btn primary" id="applyFilters">套用篩選</button>
+        <button type="button" class="btn ghost"   id="clearFilters">清除</button>
       </div>
-      <div class="filt-item">
-        <label class="sr-only">清除</label>
-        <button type="button" class="btn ghost ctl" id="clearFilters">清除</button>
-      </div>
-    </form>
+    </div>
 
+    <!-- 已套用條件的晶片 -->
     <div class="chips" id="activeChips"></div>
-  </div>
-</div>
+
+  </div> <!-- /panel-bd -->
+</div> <!-- /#filterPanel -->
 
 
-<script>
-(function(){
-  /* ---------- 工具 ---------- */
-  const $ = (s,r)=> (r||document).querySelector(s);
-  const $$= (s,r)=> Array.from((r||document).querySelectorAll(s));
-  const getSelVals = (sel)=> Array.from(sel?.selectedOptions||[]).map(o=>o.value).filter(Boolean);
-  const saveScrollAndGo = (url)=>{ try{sessionStorage.setItem('scrollY', String(window.scrollY||0));}catch{} location.href=url; };
-  const restoreScroll = ()=>{ try{const y=parseInt(sessionStorage.getItem('scrollY')||'0',10); if(!Number.isNaN(y)&&y>0) window.scrollTo({top:y,behavior:'auto'}); sessionStorage.removeItem('scrollY');}catch{} };
-  document.addEventListener('DOMContentLoaded', restoreScroll);
+<ul id="driver-list"> {% include "Find/_driver_list.html" %} </ul>
 
-  /* ---------- Sorting：膠囊切換 ---------- */
-  const selectSort = document.getElementById('sort');
-  function setSort(val){
-    if (selectSort){ selectSort.value = val; selectSort.dispatchEvent(new Event('change',{bubbles:true})); }
-    const url = new URL(location.href); url.searchParams.set('sort', val); saveScrollAndGo(url.toString());
-  }
-  // 三個雙向膠囊都能切換排序
-  $$('#segDate .opt, #segGeo .opt, #segAlpha .opt').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const sw = btn.closest('.seg-switch');
-      // 切換膠囊視覺
-      sw.setAttribute('data-state', btn.nextElementSibling ? 'left' : 'right'); // 簡單判斷：第一顆在左
-      setSort(btn.dataset.sort);
-    });
-  });
-(function(){
-  function setupDriverPagination(){
-    const list  = document.getElementById('driver-list');
-    const pager = document.getElementById('driverPager');
-    const sizeSel = document.getElementById('driverPageSize');
-    if (!list || !pager || !sizeSel) return;
+<!-- 回到頂端 -->
+<button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆</button>
 
-    // 標記為分頁狀態：關閉 spacer
-    list.classList.add('paged');
-
-    // 讀偏好
-    const key = 'driverPageSize';
-    const saved = localStorage.getItem(key);
-    if (saved && [...sizeSel.options].some(o=>o.value===saved)) sizeSel.value = saved;
-
-    let items = Array.from(list.children).filter(li => li.tagName === 'LI');
-    let page = 1;
-
-    function pages(){
-      const size = parseInt(sizeSel.value,10) || 10;
-      return Math.max(1, Math.ceil(items.length / size));
-    }
-
-    function render(){
-      // 清單可能被 WS 重繪，重抓
-      items = Array.from(list.children).filter(li => li.tagName === 'LI');
-
-      const size = parseInt(sizeSel.value,10) || 10;
-      const total = pages();
-      if (page > total) page = total;
-
-      const start = (page-1)*size, end = start + size;
-      items.forEach((li, i) => li.style.display = (i>=start && i<end) ? '' : 'none');
-
-      drawPager(total);
-      localStorage.setItem(key, sizeSel.value);
-    }
-
-    function drawPager(total){
-      pager.innerHTML = '';
-      if (total <= 1) return;
-
-      const mk = (label, goto, opts={})=>{
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = label;
-        if (opts.disabled) b.disabled = true;
-        if (opts.active)   b.classList.add('is-active');
-        b.addEventListener('click', ()=>{ if (goto && page!==goto){ page = goto; render(); }});
-        return b;
-      };
-
-      pager.appendChild(mk('‹', page-1, {disabled: page===1}));
-
-      if (total <= 9){
-        for (let p=1; p<=total; p++) pager.appendChild(mk(String(p), p, {active:p===page}));
-      } else {
-        const set = [1,2, page-2,page-1,page,page+1,page+2, total-1,total]
-          .filter((v,i,a)=> v>=1 && v<=total && a.indexOf(v)===i)
-          .sort((a,b)=>a-b);
-        let last = 0;
-        for (const p of set){
-          if (p - last > 1){
-            const ell = document.createElement('span');
-            ell.className = 'ellipsis'; ell.textContent = '…';
-            pager.appendChild(ell);
-          }
-          pager.appendChild(mk(String(p), p, {active:p===page}));
-          last = p;
-        }
-      }
-
-      pager.appendChild(mk('›', page+1, {disabled: page===total}));
-    }
-
-    sizeSel.addEventListener('change', ()=>{ page = 1; render(); });
-
-    // 對外提供「清單被動態重繪後」刷新
-    window.refreshDriverPagination = ()=>{ page = 1; render(); };
-
-    render();
-  }
-
-  document.addEventListener('DOMContentLoaded', setupDriverPagination);
-})();
-  /* ---------- 篩選、晶片（與你現有後端相容） ---------- */
-  const depSel   = document.getElementById('f-dep');
-  const desSel   = document.getElementById('f-des');
-  const dateSel  = document.getElementById('f-date');
-  const retSel   = document.getElementById('f-ret');
-  const genderSel= document.getElementById('f-gender');
-  const seatsInp = document.getElementById('f-seats');
-  const fareNum  = document.getElementById('f-fare-num');
-  const fareText = document.getElementById('f-fare-text');
-  const fareMode = document.getElementById('f-fare-mode');
-  const fareToggle = document.getElementById('fareToggle');
-  const chipsBox = document.getElementById('activeChips');
-
-  const FILTERS = (function(){
-    try{ const el=document.getElementById('filtersData'); if(el) return JSON.parse(el.textContent||'{}')||{}; }catch{}
-    // fallback：從 URL
-    const u=new URL(location.href), g=k=>u.searchParams.getAll(k), gi=k=>{const v=u.searchParams.get(k); return v==null?null:(/^\d+$/.test(v)?parseInt(v,10):v);};
-    return { dep_in:g('dep'), des_in:g('des'), date_in:g('date'), ret_in:g('ret'), gender_in:g('gender'),
-             need_seats:gi('need_seats'), fare_mode:u.searchParams.get('fare_mode')||'', fare_num:gi('fare_num'), fare_q:u.searchParams.get('fare')||'' };
-  })();
-
-  function syncFareToggleUI(){
-    const mode = (fareMode.value === 'gte') ? 'gte' : 'lte';
-    fareToggle.dataset.mode = mode;
-    fareToggle.setAttribute('aria-checked', mode==='gte'?'true':'false');
-  }
-  function toggleFareMode(){
-    fareMode.value = (fareMode.value === 'gte') ? 'lte' : 'gte';
-    syncFareToggleUI();
-  }
-  if(fareToggle){ fareToggle.addEventListener('click', toggleFareMode); fareToggle.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleFareMode(); }}); }
-  if(!fareMode.value) fareMode.value='lte'; syncFareToggleUI();
-
-  function applyFilters(){
-  const url   = new URL(location.href);
-  const qInp  = document.getElementById('f-q');        // ★ 關鍵字輸入框
-  url.searchParams.set('sort', selectSort?.value || 'date_desc');
-
-  // 先清舊參數（含 q）
-  ['q','dep','des','fare','fare_mode','fare_num','date','ret','gender','need_seats']
-    .forEach(k => { url.searchParams.delete(k); url.searchParams.delete(k+'[]'); });
-
-  // 多選
-  getSelVals(depSel).forEach(v => url.searchParams.append('dep', v));
-  getSelVals(desSel).forEach(v => url.searchParams.append('des', v));
-  getSelVals(dateSel).forEach(v => url.searchParams.append('date', v));
-  getSelVals(retSel ).forEach(v => url.searchParams.append('ret', v));
-  getSelVals(genderSel).forEach(v => url.searchParams.append('gender', v));
-
-  // 酌收費用：數字優先，其次文字
-  const nr = (fareNum?.value || '').trim();
-  const nv = nr ? parseInt(nr, 10) : NaN;
-  if (!Number.isNaN(nv)) {
-    url.searchParams.set('fare_num', String(nv));
-    url.searchParams.set('fare_mode', (fareMode?.value === 'gte') ? 'gte' : 'lte');
-  } else if (fareText && fareText.value.trim()) {
-    url.searchParams.set('fare', fareText.value.trim());
-  }
-
-  // 可用座位
-  if (seatsInp && seatsInp.value && Number(seatsInp.value) > 0) {
-    url.searchParams.set('need_seats', String(parseInt(seatsInp.value, 10)));
-  }
-
-  // ★ 整卡片關鍵字
-  if (qInp && qInp.value.trim()) {
-    url.searchParams.set('q', qInp.value.trim());
-  }
-
-  saveScrollAndGo(url.toString());
-}
-
-function clearFilters(){
-  // 清多選
-  [depSel, desSel, dateSel, retSel, genderSel].forEach(sel => { if (sel) sel.selectedIndex = -1; });
-
-  // 清數字/文字
-  if (fareNum)  fareNum.value = '';
-  if (fareText) fareText.value = '';
-  if (seatsInp) seatsInp.value = '';
-
-  // 清關鍵字 ★
-  const qInp = document.getElementById('f-q');
-  if (qInp) qInp.value = '';
-
-  // 重置費用模式 → lte
-  if (fareMode) fareMode.value = 'lte';
-  if (typeof syncFareToggleUI === 'function') syncFareToggleUI();
-
-  applyFilters();
-}
-
-  document.getElementById('applyFilters')?.addEventListener('click', applyFilters);
-  document.getElementById('clearFilters')?.addEventListener('click', clearFilters);
-  document.getElementById('filtersForm')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyFilters(); } });
-
-  function makeChip(label, key, value){
-    const el=document.createElement('span'); el.className='chip'; el.dataset.key=key; el.dataset.value=value;
-    el.innerHTML=`${label}<span class="x" aria-label="移除">×</span>`;
-    el.querySelector('.x').addEventListener('click', ()=> {
-      const url=new URL(location.href);
-      if(['dep','des','date','ret','gender'].includes(key)){
-        const all=url.searchParams.getAll(key); url.searchParams.delete(key);
-        all.filter(v=>v!==value).forEach(v=> url.searchParams.append(key,v));
-      }else{
-        if (key==='fare_num') url.searchParams.delete('fare_mode');
-        url.searchParams.delete(key);
-      }
-      saveScrollAndGo(url.toString());
-    });
-    chipsBox.appendChild(el);
-  }
-  (function renderChips(){
-    const f=FILTERS||{}, m={M:'男',F:'女',X:'不透露'};
-    if(!chipsBox) return; chipsBox.innerHTML='';
-    (f.dep_in||[]).forEach(v=> makeChip(`出發：${v}`, 'dep', v));
-    (f.des_in||[]).forEach(v=> makeChip(`目的：${v}`, 'des', v));
-    (f.date_in||[]).forEach(v=> makeChip(`出發日：${v}`, 'date', v));
-    (f.ret_in ||[]).forEach(v=> makeChip(`回程日：${v}`, 'ret', v));
-    (f.gender_in||[]).forEach(v=> makeChip(`性別：${m[v]||v}`, 'gender', v));
-    if (f.q) makeChip(`關鍵字：${f.q}`, 'q', f.q);
-    if (f.need_seats) makeChip(`可用座位≥${f.need_seats}`, 'need_seats', String(f.need_seats));
-    if (f.fare_num !== null && f.fare_num !== undefined) makeChip(`費用 ${(f.fare_mode==='gte')?'≥':'≤'} ${f.fare_num}`, 'fare_num', String(f.fare_num));
-    else if (f.fare_q) makeChip(`費用含：${f.fare_q}`, 'fare', f.fare_q);
-  })();
-})();
-</script>
-
-
-<ul id="driver-list">
-  {% include "Find/_driver_list.html" %}
-</ul>
-
-
-<div id="footer"></div>
-
-
-
-
-  <!-- 回到頂端 -->
-  <button id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆</button>
 
 <!-- 司機管理授權 Modal -->
 <div id="driverAuthModal" class="modal" style="display:none;">
@@ -1964,14 +1839,6 @@ function clearFilters(){
     </div>
   </div>
 </div>
-
-<style>
-  .btn-cancel{background:#d1d5db;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
-  .btn-delete{background:#dc2626;color:#fff;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
-  .btn-delete:hover{background:#b91c1c;}
-</style>
-
-
 
 <!-- Toast 容器 -->
 <div id="toast-container" style="
@@ -2374,10 +2241,155 @@ function clearFilters(){
   </div>
 </div>
 
-    </div>
-  </div>
-</div>
+<div id="footer"></div>
 
+
+
+<script>
+(function(){
+  /* ---------- 工具 ---------- */
+  const $ = (s,r)=> (r||document).querySelector(s);
+  const $$= (s,r)=> Array.from((r||document).querySelectorAll(s));
+  const getSelVals = (sel)=> Array.from(sel?.selectedOptions||[]).map(o=>o.value).filter(Boolean);
+  const saveScrollAndGo = (url)=>{ try{sessionStorage.setItem('scrollY', String(window.scrollY||0));}catch{} location.href=url; };
+  const restoreScroll = ()=>{ try{const y=parseInt(sessionStorage.getItem('scrollY')||'0',10); if(!Number.isNaN(y)&&y>0) window.scrollTo({top:y,behavior:'auto'}); sessionStorage.removeItem('scrollY');}catch{} };
+  document.addEventListener('DOMContentLoaded', restoreScroll);
+
+ /* ---------- Sorting：膠囊切換（四組、含座位/費用） ---------- */
+const selectSort = document.getElementById('sort');
+
+
+/** 依目前 pressed 按鈕，更新 data-state、aria 與「目前：XXX」文字 */
+function activateSeg(segEl, btn){
+  // aria-pressed
+  segEl.querySelectorAll('.opt').forEach(b=>b.setAttribute('aria-pressed','false'));
+  btn.setAttribute('aria-pressed','true');
+
+  // data-state：第一顆 = left，第二顆 = right
+  const opts = Array.from(segEl.querySelectorAll('.opt'));
+  const isRight = (btn === opts[1]);      // 第二顆
+  segEl.setAttribute('data-state', isRight ? 'right' : 'left');
+
+  // 顯示「目前：XXX」（如果 seg-title 裡有 <span class="seg-current">）
+  const title = segEl.previousElementSibling; // .seg-title
+  const cur = title && title.querySelector('.seg-current');
+  if (cur) cur.textContent = '目前：' + btn.textContent.trim();
+}
+
+/** 初始化每組 seg-switch */
+function initSegSwitch(segSelector){
+  document.querySelectorAll(segSelector).forEach(segEl=>{
+    // 初始：找 aria-pressed=true；沒有就預設第一顆
+    const current = segEl.querySelector('.opt[aria-pressed="true"]') || segEl.querySelector('.opt');
+    if (current) activateSeg(segEl, current);
+
+    segEl.querySelectorAll('.opt').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const now = segEl.querySelector('.opt[aria-pressed="true"]');
+        if (now === btn) return; // 同一顆就不動
+        activateSeg(segEl, btn);
+        const sortKey = btn.dataset.sort;
+        if (sortKey) setSort(sortKey);
+      });
+    });
+  });
+}
+
+// 啟動四組：出發日期 / 地理 / 可用座位 / 酌收費用
+document.addEventListener('DOMContentLoaded', ()=>{
+  initSegSwitch('#segDate');
+  initSegSwitch('#segGeo');
+  initSegSwitch('#segSeats');
+  initSegSwitch('#segFare');
+});
+
+  const FILTERS = (function(){
+    try{ const el=document.getElementById('filtersData'); if(el) return JSON.parse(el.textContent||'{}')||{}; }catch{}
+    const u=new URL(location.href), g=k=>u.searchParams.getAll(k), gi=k=>{const v=u.searchParams.get(k); return v==null?null:(/^\d+$/.test(v)?parseInt(v,10):v);};
+    return { dep_in:g('dep'), des_in:g('des'), date_in:g('date'), ret_in:g('ret'), gender_in:g('gender'),
+             need_seats:gi('need_seats'), fare_mode:u.searchParams.get('fare_mode')||'', fare_num:gi('fare_num'), fare_q:u.searchParams.get('fare')||'' };
+  })();
+
+  function syncFareToggleUI(){
+    const mode = (fareMode.value === 'gte') ? 'gte' : 'lte';
+    fareToggle.dataset.mode = mode;
+    fareToggle.setAttribute('aria-checked', mode==='gte'?'true':'false');
+  }
+  function toggleFareMode(){
+    fareMode.value = (fareMode.value === 'gte') ? 'lte' : 'gte';
+    syncFareToggleUI();
+  }
+  if(fareToggle){ fareToggle.addEventListener('click', toggleFareMode); fareToggle.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleFareMode(); }}); }
+  if(!fareMode.value) fareMode.value='lte'; syncFareToggleUI();
+
+  
+
+  function clearFilters(){
+    [depSel, desSel, dateSel, retSel, genderSel].forEach(sel => { if (sel) sel.selectedIndex = -1; });
+    if (fareNum)  fareNum.value = '';
+    if (fareText) fareText.value = '';
+    if (seatsInp) seatsInp.value = '';
+    const qInp = document.getElementById('f-q');
+    if (qInp) qInp.value = '';
+    if (fareMode) fareMode.value = 'lte';
+    if (typeof syncFareToggleUI === 'function') syncFareToggleUI();
+
+    applyFilters();
+  }
+
+  document.getElementById('applyFilters')?.addEventListener('click', applyFilters);
+  document.getElementById('clearFilters')?.addEventListener('click', clearFilters);
+  document.getElementById('filtersForm')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyFilters(); } });
+
+  function makeChip(label, key, value){
+    const el=document.createElement('span'); el.className='chip'; el.dataset.key=key; el.dataset.value=value;
+    el.innerHTML=`${label}<span class="x" aria-label="移除">×</span>`;
+    el.querySelector('.x').addEventListener('click', ()=> {
+      const url=new URL(location.href);
+      if(['dep','des','date','ret','gender'].includes(key)){
+        const all=url.searchParams.getAll(key); url.searchParams.delete(key);
+        all.filter(v=>v!==value).forEach(v=> url.searchParams.append(key,v));
+      }else{
+        if (key==='fare_num') url.searchParams.delete('fare_mode');
+        url.searchParams.delete(key);
+      }
+      saveScrollAndGo(url.toString());
+    });
+    chipsBox.appendChild(el);
+  }
+
+  (function renderChips(){
+    const f=FILTERS||{}, m={M:'男',F:'女',X:'不透露'};
+    if(!chipsBox) return; chipsBox.innerHTML='';
+    (f.dep_in||[]).forEach(v=> makeChip(`出發：${v}`, 'dep', v));
+    (f.des_in||[]).forEach(v=> makeChip(`目的：${v}`, 'des', v));
+    (f.date_in||[]).forEach(v=> makeChip(`出發日：${v}`, 'date', v));
+    (f.ret_in ||[]).forEach(v=> makeChip(`回程日：${v}`, 'ret', v));
+    (f.gender_in||[]).forEach(v=> makeChip(`性別：${m[v]||v}`, 'gender', v));
+    if (f.q) makeChip(`關鍵字：${f.q}`, 'q', f.q);
+    if (f.need_seats) makeChip(`可用座位≥${f.need_seats}`, 'need_seats', String(f.need_seats));
+    if (f.fare_num !== null && f.fare_num !== undefined) makeChip(`費用 ${(f.fare_mode==='gte')?'≥':'≤'} ${f.fare_num}`, 'fare_num', String(f.fare_num));
+    else if (f.fare_q) makeChip(`費用含：${f.fare_q}`, 'fare', f.fare_q);
+  })();
+})();
+function setSort(val){
+  if (selectSort){ 
+    selectSort.value = val; 
+    selectSort.dispatchEvent(new Event('change',{bubbles:true})); 
+  }
+  const url = new URL(location.href);
+  url.searchParams.set('sort', val);
+  history.pushState(null, '', url.toString()); // 使用 pushState 更新 URL，避免頁面跳動
+  refreshDriverPagination();
+}
+
+</script>
+
+<style>
+  .btn-cancel{background:#d1d5db;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+  .btn-delete{background:#dc2626;color:#fff;padding:8px 14px;border:0;border-radius:6px;cursor:pointer;}
+  .btn-delete:hover{background:#b91c1c;}
+</style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -3326,8 +3338,9 @@ document.addEventListener('click', function (e) {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
 
-  const action   = btn.dataset.action;
+  const action = btn.dataset.action;
   const driverId = btn.dataset.id;
+
   if (!action || !driverId) return;
 
   if (action === 'manage') {
@@ -3337,14 +3350,13 @@ document.addEventListener('click', function (e) {
   }
   if (action === 'join') {
     e.preventDefault();
-    // 若 _driver_list.html 上有 data-date / data-return 就讀取，否則 fallback
     openJoinModal(driverId, btn.dataset.date || "", btn.dataset.return || "");
     return;
   }
   if (action === 'toggle') {
     e.preventDefault();
-    const details = $id('details-' + driverId);
-    const arrow   = $id('arrow-' + driverId) || btn;
+    const details = document.getElementById('details-' + driverId);
+    const arrow = document.getElementById('arrow-' + driverId) || btn;
     if (!details) return;
     const isOpen = details.classList.toggle('open');
     arrow.classList.toggle('open', isOpen);
@@ -3677,6 +3689,199 @@ window.initPaxPrivacyBinding = initPaxPrivacyBinding;
 
 
 </script>
+<script>
+(function(){
+  // ---------- 小工具 ----------
+  const $id = (id)=>document.getElementById(id);
+  const getSelVals = (sel)=> sel ? Array.from(sel.selectedOptions||[]).map(o=>o.value).filter(Boolean) : [];
+
+  function replaceDriverListSafely(html){
+    const dlist = $id('driver-list');
+    if (!dlist || typeof html !== 'string') return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    const ul = tmp.querySelector('ul');
+    dlist.innerHTML = ul ? ul.innerHTML : html;   // 只塞 LI
+    if (typeof window.refreshDriverPagination === 'function') window.refreshDriverPagination();
+  }
+  function replacePassengerList(html){
+    const plist = $id('passenger-list');
+    if (!plist || typeof html !== 'string') return;
+    plist.innerHTML = html;
+  }
+
+  // ---------- 把頁面上會用到的元素通通綁起來（你原本漏了這段） ----------
+  const depSel     = $id('f-dep');
+  const desSel     = $id('f-des');
+  const dateSel    = $id('f-date');
+  const retSel     = $id('f-ret');
+  const genderSel  = $id('f-gender');
+  const seatsInp   = $id('f-seats');
+  const fareNum    = $id('f-fare-num');
+  const qInp       = $id('f-q');
+  const chipsBox   = $id('activeChips');
+  const selectSort = $id('sort');          // 隱藏的排序 select
+  const fareMode   = $id('f-fare-mode');   // 若有 ≥/≤ 模式
+  const fareToggle = $id('fareToggle');
+
+  // ---------- AJAX 呼叫（不刷新頁面） ----------
+  async function fetchAndPatch(url){
+    const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    const data = await resp.json();           // { drivers_html, passengers_html, ... }
+    if (data.drivers_html)    replaceDriverListSafely(data.drivers_html);
+    if (data.passengers_html) replacePassengerList(data.passengers_html);
+    renderChips();                            // 依目前 URL 重畫晶片
+  }
+
+  async function fetchPartialsByUrl(url){
+    const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+    if (!resp.ok) throw new Error('bad response');
+    return await resp.json();
+  }
+  function applyJsonToDom(data){
+    if (typeof data.passengers_html === 'string') replacePassengerList(data.passengers_html);
+    if (typeof data.drivers_html === 'string')     replaceDriverListSafely(data.drivers_html);
+  }
+  async function ajaxNavigate(url){
+    try{
+      const data = await fetchPartialsByUrl(url);
+      applyJsonToDom(data);
+      history.pushState(null, '', url);
+    }catch(e){
+      location.href = url; // 失敗就整頁載入，保底
+    }
+  }
+
+  // ---------- 排序（膠囊/按鈕） ----------
+  window.setSort = async function setSort(val){
+    const url = new URL(location.href);
+    url.searchParams.set('sort', val || 'date_desc');
+    history.replaceState(null, '', url.toString()); // 不跳頁
+    try { await fetchAndPatch(url.toString()); } catch {}
+  };
+  document.querySelectorAll('#segDate .opt, #segGeo .opt, #segSeats .opt, #segFare .opt')
+    .forEach(btn => btn.addEventListener('click', ()=> setSort(btn.dataset.sort)));
+
+
+
+  // ---------- 套用 / 清除 ----------
+  async function applyFilters(){
+    const url = new URL(location.href);
+
+    // 排序維持原值或 select 值
+    url.searchParams.set('sort', selectSort?.value || url.searchParams.get('sort') || 'date_desc');
+
+    // 先清舊參數
+    ['q','dep','des','fare','fare_mode','fare_num','date','ret','gender','need_seats']
+      .forEach(k => { url.searchParams.delete(k); url.searchParams.delete(k+'[]'); });
+
+    // 多選
+    getSelVals(depSel).forEach(v => url.searchParams.append('dep', v));
+    getSelVals(desSel).forEach(v => url.searchParams.append('des', v));
+    getSelVals(dateSel).forEach(v => url.searchParams.append('date', v));
+    getSelVals(retSel ).forEach(v => url.searchParams.append('ret', v));
+    getSelVals(genderSel).forEach(v => url.searchParams.append('gender', v));
+
+    // 金額（數字）— 後端會把「<= 金額 或 免費/待定」都納入
+    const nr = (fareNum?.value || '').trim();
+    const nv = nr ? parseInt(nr, 10) : NaN;
+    if (!Number.isNaN(nv)) {
+      url.searchParams.set('fare_num', String(nv));
+      // 這行是關鍵：沒有它後端不知道是 <= 還是 >=
+      url.searchParams.set('fare_mode', (fareMode && fareMode.value === 'gte') ? 'gte' : 'lte');
+    }
+    
+
+    // 可用座位
+    if (seatsInp && seatsInp.value && Number(seatsInp.value) > 0) {
+      url.searchParams.set('need_seats', String(parseInt(seatsInp.value, 10)));
+    }
+
+    // 關鍵字
+    if (qInp && qInp.value.trim()) url.searchParams.set('q', qInp.value.trim());
+
+    // 更新網址、AJAX 更新清單
+    history.replaceState(null, '', url.toString());
+    try { await fetchAndPatch(url.toString()); } catch {}
+  }
+
+  function clearFilters(){
+    [depSel, desSel, dateSel, retSel, genderSel].forEach(sel => { if (sel) sel.selectedIndex = -1; });
+    if (fareNum)  fareNum.value = '';
+    if (seatsInp) seatsInp.value = '';
+    if (qInp)     qInp.value = '';
+    if (fareMode) fareMode.value = 'lte';
+    // 若你有 fareToggle 的 UI，同步一下
+    if (fareToggle) {
+      fareToggle.dataset.mode = 'lte';
+      fareToggle.setAttribute('aria-checked','false');
+    }
+    applyFilters();
+  }
+
+  // ---- 把「改就查」事件補齊（你原本沒綁，所以看起來沒反應） ----
+  [depSel, desSel, dateSel, retSel, genderSel].forEach(sel=>{
+    sel?.addEventListener('change', applyFilters);
+  });
+  seatsInp?.addEventListener('input', debounce(applyFilters, 250));
+  fareNum ?.addEventListener('input', debounce(applyFilters, 250));
+  qInp    ?.addEventListener('input', debounce(applyFilters, 250));
+
+  // 仍保留按鈕
+  $id('applyFilters')?.addEventListener('click', applyFilters);
+  $id('clearFilters')?.addEventListener('click', clearFilters);
+  $id('filtersForm')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyFilters(); } });
+
+  // ---------- 晶片 ----------
+  function makeChip(label, key, value){
+    const el = document.createElement('span');
+    el.className = 'chip'; el.dataset.key = key; el.dataset.value = value;
+    el.innerHTML = `${label}<span class="x" aria-label="移除">×</span>`;
+    el.querySelector('.x').addEventListener('click', async ()=>{
+      const url = new URL(location.href);
+      if (['dep','des','date','ret','gender'].includes(key)){
+        const all = url.searchParams.getAll(key);
+        url.searchParams.delete(key);
+        all.filter(v=>v!==value).forEach(v=> url.searchParams.append(key, v));
+      } else {
+        if (key === 'fare_num') url.searchParams.delete('fare_mode');
+        url.searchParams.delete(key);
+      }
+      history.replaceState(null, '', url.toString());
+      try { await fetchAndPatch(url.toString()); } catch {}
+    });
+    chipsBox.appendChild(el);
+  }
+
+  function renderChips(){
+    const u = new URL(location.href);
+    const g = k => u.searchParams.getAll(k);
+    const m = {M:'男', F:'女', X:'不透露'};
+    chipsBox && (chipsBox.innerHTML = '');
+
+    g('dep').forEach(v=> makeChip(`出發：${v}`, 'dep', v));
+    g('des').forEach(v=> makeChip(`目的：${v}`, 'des', v));
+    g('date').forEach(v=> makeChip(`出發日：${v}`, 'date', v));
+    g('ret').forEach(v=> makeChip(`回程日：${v}`, 'ret', v));
+    g('gender').forEach(v=> makeChip(`性別：${m[v]||v}`, 'gender', v));
+
+    const q = u.searchParams.get('q'); if (q) makeChip(`關鍵字：${q}`, 'q', q);
+    const seats = u.searchParams.get('need_seats'); if (seats) makeChip(`可用座位≥${seats}`, 'need_seats', seats);
+    const fare_num = u.searchParams.get('fare_num');
+    const fare_mode= u.searchParams.get('fare_mode') || 'lte';
+    if (fare_num) makeChip(`費用 ${fare_mode==='gte'?'≥':'≤'} ${fare_num}`, 'fare_num', fare_num);
+  }
+
+  function debounce(fn, ms=1000){
+    let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+  }
+
+  // 初始晶片
+  renderChips();
+})();
+</script>
+
 
 
 </body>

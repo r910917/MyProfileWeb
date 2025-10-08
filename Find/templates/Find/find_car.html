@@ -19,21 +19,89 @@
     @keyframes fadeIn { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
     .required::after{ content:" *"; color:red; }
 
-    /* 開關（switch） */
-    .switch {
-      display:flex; align-items:center; gap:10px; user-select:none;
-      padding:10px 12px; border:1px solid #e9eef5; border-radius:12px; background:#f9fbff;
+    /* 卡片容器 */
+    .pref-card{
+      border:1px solid #e5e7eb; background:#f9fafb; border-radius:12px;
+      padding:14px; margin:12px 0;
     }
-    .switch .toggle.is-disabled { opacity:.6; cursor:not-allowed; }
-    .switch input { position:relative; width:44px; height:24px; appearance:none; -webkit-appearance:none; background:#d1d5db; border-radius:999px; outline:none; transition:background .2s; cursor:pointer; }
-    .switch input::after{
-      content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.2);
-      transition:transform .2s;
-    }
-    .switch input:checked{ background:#22c55e; }
-    .switch input:checked::after{ transform:translateX(20px); }
-    .switch input:disabled{ background:#e5e7eb; cursor:not-allowed; }
-    .switch span { font-weight:600; color:#374151; }
+
+    /* 每一列（開關 + 文字） */
+    .pref-row{ display:flex; align-items:center; gap:12px; padding:6px 2px; }
+    .pref-row.sub{ padding-left:44px; }       /* 第二列縮排，看起來是附屬選項 */
+
+    /* 文字區 */
+    .pref-text{ display:flex; flex-direction:column; gap:2px; }
+    .pref-title{ font-weight:600; color:#1f2937; }
+    .pref-desc{ font-size:.9rem; color:#6b7280; }
+
+    /* 底部說明 */
+    .pref-hint{ margin-top:8px; font-size:.85rem; color:#6b7280; }
+    .pref-hint.hint-error{ color:#b91c1c; }
+
+    /* 滑動開關（與 iOS 風格相近） */
+.switch{ position:relative; display:inline-block; width:52px; height:28px; }
+.switch input{ display:none; }
+.slider{
+  position:absolute; inset:0; cursor:pointer; background:#e5e7eb; border-radius:999px;
+  transition:background .2s ease;
+}
+.slider:before{
+  content:""; position:absolute; height:22px; width:22px; left:3px; top:3px;
+  background:white; border-radius:999px; transition:transform .2s ease;
+  box-shadow:0 1px 2px rgba(0,0,0,.15);
+}
+.switch input:checked + .slider{ background:#10b981; }          /* 綠色開啟 */
+.switch input:checked + .slider:before{ transform:translateX(24px); }
+
+/* 小螢幕微調 */
+@media (max-width: 480px){
+  .pref-row.sub{ padding-left:36px; }
+}
+
+/* 只影響「是否開放」這一顆，避免被全站 .switch 影響 */
+#active-switch{
+  display:flex; align-items:center; gap:.6rem;
+  user-select:none;
+}
+#active-switch input[type="checkbox"]{
+  /* 隱藏原本 checkbox（仍可被 label 點擊） */
+  position:absolute; opacity:0; width:0; height:0;
+}
+
+/* Toggle 外觀 */
+#active-switch .toggle{
+  position:relative; width:48px; height:26px;
+  border-radius:999px; background:#e5e7eb; /* gray-200 */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+  transition: background .2s ease;
+}
+
+/* 圓點 */
+#active-switch .toggle::after{
+  content:""; position:absolute; top:3px; left:3px;
+  width:20px; height:20px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
+  transition: transform .2s cubic-bezier(.4,0,.2,1);
+}
+
+/* 勾選狀態 */
+#active-switch input[type="checkbox"]:checked + .toggle{
+  background:#10b981;               /* teal/green */
+}
+#active-switch input[type="checkbox"]:checked + .toggle::after{
+  transform: translateX(22px);
+}
+
+/* 文字標籤 */
+#active-switch label{
+  cursor:pointer; color:#374151;     /* gray-700 */
+  font-size:.95rem; line-height:1.2;
+}
+
+/* 鍵盤可及性（焦點輪廓落在可視的 .toggle 上） */
+#active-switch input[type="checkbox"]:focus + .toggle{
+  outline: 2px solid #2563eb; outline-offset: 2px;
+}
 
     .muted { color:#6b7280; font-size:12px; display:block; margin-top:6px; }
     .hint-error { color:#b91c1c; }
@@ -146,6 +214,7 @@ form {
   button { font-size: 17px; padding: 14px; border-radius: 12px; }
 }
 
+
   </style>
 </head>
 <body>
@@ -170,14 +239,36 @@ form {
 
     <!-- 🔒 隱藏個資（需要 Email 才能啟用；司機預設勾選） -->
     <label>隱私設定</label>
-    <div class="switch">
-      <input type="checkbox"
-             id="hide_contact"
-             name="hide_contact"
-             {% if prefill.hide_contact is not defined or prefill.hide_contact %}checked{% endif %}>
-      <span>隱藏個資（聯絡方式）</span>
-    </div>
-    <small id="privacyHint" class="muted">※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</small>
+    <!-- 隱私設定：卡片 + 兩個滑動開關 -->
+    <section class="pref-card">
+      <div class="pref-row">
+        <label class="switch">
+          <input type="checkbox" id="hide_contact" name="hide_contact"
+                {% if prefill.hide_contact is not defined or prefill.hide_contact %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+          <div class="pref-title">隱藏個資（聯絡方式）</div>
+          <div class="pref-desc"></div>
+        </div>
+      </div>
+
+      <div id="autoEmailWrap" class="pref-row sub" style="display:none;">
+        <label class="switch">
+          <input type="checkbox" id="auto_email_contact" name="auto_email_contact"
+                {% if prefill.auto_email_contact %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+          <div class="pref-title">隱藏時，自動把我的聯絡方式 Email 給已報名乘客</div>
+        </div>
+      </div>
+
+      <div id="privacyHint" class="pref-hint">
+        ※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。
+      </div>
+    </section>
+
 
     <label for="contact" class="required">聯絡方式</label>
     <input type="text" name="contact" id="contact" value="{{ prefill.contact|default:'' }}" placeholder="LINE、IG 或手機號碼" required />
@@ -291,7 +382,13 @@ form {
     <textarea name="note" id="note">{{ prefill.note|default:'' }}</textarea>
 
     <button type="submit">✅ 送出</button>
+    <div style="max-width:600px;margin:0 auto 8px;">
+      <a href="{% url 'find_index' %}" class="btn-ghost" style="display:inline-block;text-decoration:none;text-align:center;width:96%;padding:12px;margin-top:10px;border-radius:10px;font-weight:700;">
+        🏠 回首頁
+      </a>
+    </div>
   </form>
+  
 
   <script>
     // 出發/目的為「自填」時顯示自訂輸入框
@@ -327,39 +424,62 @@ form {
 
     // 隱私開關：需要 Email 才能啟用
     (function(){
-      const email = document.getElementById('email');
-      const hide  = document.getElementById('hide_contact');
-      const hint  = document.getElementById('privacyHint');
+      const email   = document.getElementById('email');
+      const hide    = document.getElementById('hide_contact');
+      const hint    = document.getElementById('privacyHint');
+      const autoRow = document.getElementById('autoEmailWrap');
+      const autoBox = document.getElementById('auto_email_contact');
+
+      function hasValidEmail(){
+        const v = (email?.value || '').trim();
+        return v && v.includes('@');
+      }
+
+      function syncAutoRow(){
+        const show = !!(hide && hide.checked);
+        if (autoRow) autoRow.style.display = show ? '' : 'none';
+        if (!show && autoBox) autoBox.checked = false;       // 關閉隱藏個資時，自動寄信也關掉
+      }
 
       function syncPrivacy(){
-        const hasEmail = !!(email.value && email.value.includes('@'));
-        if (!hasEmail){
-          hide.checked = false;     // 沒 Email 強制不可隱藏
-          hide.disabled = true;
-          if (hint) { hint.classList.add('hint-error'); hint.textContent = '※ 尚未填寫 Email，無法隱藏聯絡方式。'; }
-        }else{
-          hide.disabled = false;
-          if (hint) { hint.classList.remove('hint-error'); hint.textContent = '※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。'; }
-          // 依你的需求：司機預設隱藏（有 Email 時保持勾選可用）
-          if (!hide.hasAttribute('data-touched') && !hide.checked) hide.checked = true;
-        }
-      }
-      if (hide){
-        hide.addEventListener('change', ()=> hide.setAttribute('data-touched','1'));
-      }
-      if (email){
-        email.addEventListener('input', syncPrivacy);
-        // 首次載入同步一次
-        syncPrivacy();
-      }
-    })();
+        const ok = hasValidEmail();
 
-    // 進頁初始化（若預設就選到自填要展開）
-    (function(){
-      const depSel = document.getElementById('departure');
-      const desSel = document.getElementById('destination');
-      if (depSel) checkCustomDeparture(depSel);
-      if (desSel) checkCustomDestination(desSel);
+        if (!ok){
+          // 沒 Email：不得隱藏，也不顯示次開關
+          if (hide){ hide.checked = false; hide.disabled = true; }
+          if (autoBox) autoBox.checked = false;
+          if (hint){ hint.classList.add('hint-error'); hint.textContent = '※ 尚未填寫 Email，無法隱藏聯絡方式。'; }
+        }else{
+          // 有 Email：可以操作，但「隱藏個資」預設關閉
+          if (hide){
+            hide.disabled = false;
+            // 不要自動打開隱藏個資；保持使用者原本選擇
+            // 若想一律預設關：可強制 hide.checked = false; 視需要打開註解
+            // hide.checked = false;
+          }
+          if (hint){ hint.classList.remove('hint-error'); hint.innerHTML = `
+          ※ Email 僅供系統通知，不會公開。<br>
+          若關閉自動寄送 Email，則需等待乘客加入後自動將乘客資料寄送至您的 Email。
+          `; }
+        }
+
+        syncAutoRow();
+      }
+
+      // 切換「隱藏個資」：若打開，就預設把「自動寄信」打開
+      hide?.addEventListener('change', ()=>{
+        if (hide.checked && autoBox){
+          autoBox.checked = true;         // 需求：打開隱藏個資時，自動寄信預設開啟
+        }else if (autoBox){
+          autoBox.checked = false;
+        }
+        syncAutoRow();
+      });
+
+      email?.addEventListener('input', syncPrivacy);
+
+      // 初始同步
+      syncPrivacy();
     })();
   </script>
 

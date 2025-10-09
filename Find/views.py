@@ -2,8 +2,7 @@ from decimal import Decimal, InvalidOperation
 from collections.abc import Sequence
 from datetime import date as _date
 
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
-from django.http import JsonResponse, HttpResponseForbidden, Http404
+from django.http import JsonResponse, HttpResponseForbidden, Http404, HttpResponseNotFound
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -15,6 +14,11 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.csrf import csrf_protect
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+from django.core.mail import send_mail
+from .utils_email_async import enqueue_join_emails_after_commit
 import json
 
 from django.db.models import (
@@ -132,7 +136,7 @@ def broadcast_driver_card(driver_id: int):
     # 準備這張卡片需要的 pending / accepted
     pending_qs  = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=False).order_by("-id")
     accepted_qs = PassengerRequest.objects.using("find_db").filter(driver_id=driver_id, is_matched=True ).order_by("-id")
-
+    
     # 兩種作法：要嘛 prefetch 到 driver，要嘛直接掛暫時屬性給模板用
     driver.pending  = list(pending_qs)
     driver.accepted = list(accepted_qs)
@@ -246,18 +250,76 @@ def broadcast_update(message):
     )
 
 
-def _broadcast_manage(driver, pax):
-    channel_layer = get_channel_layer()
-    payload = _manage_payload(driver, pax)
-    async_to_sync(channel_layer.group_send)(
-        f"manage_driver_{driver.id}",
-        {"type": "manage.pax", "payload": payload},
-    )
 def broadcast_driver_manage(driver_id, payload):
     layer = get_channel_layer()
     async_to_sync(layer.group_send)(
         f"driver_manage_{driver_id}",
         {"type": "driver.manage.update", "payload": payload}
+    )
+
+
+def _broadcast_after_change(driver_id: int):
+    """
+    任何資料異動後：同時推
+    (A) 公開清單：單卡片替換
+    (B) 司機管理頁：左右兩欄整段
+    """
+    channel_layer = get_channel_layer()
+
+    # --- 查一次資料，兩邊共用 ---
+    d = DriverTrip.objects.using(DB_ALIAS).filter(id=driver_id).first()
+    if not d:
+        return
+
+    pending_qs = (PassengerRequest.objects.using(DB_ALIAS)
+                  .filter(driver=d, is_matched=False)
+                  .order_by("id"))
+    accepted_qs = (PassengerRequest.objects.using(DB_ALIAS)
+                   .filter(driver=d, is_matched=True)
+                   .order_by("id"))
+
+    # 供卡片模板使用的屬性（你的 _driver_card.html 用的是 pending_list / accepted_list）
+    d.pending_list  = list(pending_qs)
+    d.accepted_list = list(accepted_qs)
+
+    # --- (A) 公開清單：單卡片 HTML（FindConsumer 那端會接 "replace_driver_card" 或你也可直接全量 send.update） ---
+    card_html = render_to_string("Find/_driver_card.html", {"d": d})
+    async_to_sync(channel_layer.group_send)(
+        "find_group",
+        {"type": "replace_driver_card", "driver_id": driver_id, "html": card_html}
+    )
+
+    # --- (B) 司機管理頁：左右兩欄（DriverManageConsumer 期待 group = driver_manage_<id>，type = manage_panels）---
+    panels_html = render_to_string("Find/_driver_manage_panels.html", {
+        "driver": d,
+        "pending": pending_qs,
+        "accepted": accepted_qs,
+    })
+    async_to_sync(channel_layer.group_send)(
+        f"driver_manage_{driver_id}",
+        {"type": "manage_panels", "html": panels_html}
+    )
+
+def broadcast_manage_panels(driver_id: int):
+    """只給司機管理頁用：推送待確認／已接受兩個 UL 的整段 HTML。"""
+    d = DriverTrip.objects.using(DB_ALIAS).get(pk=driver_id)
+
+    pending_qs = (PassengerRequest.objects.using(DB_ALIAS)
+                  .filter(driver=d, is_matched=False)
+                  .order_by("-id"))
+    accepted_qs = (PassengerRequest.objects.using(DB_ALIAS)
+                   .filter(driver=d, is_matched=True)
+                   .order_by("-id"))
+
+    html = render_to_string(
+        "Find/_driver_manage_panels.html",   # ←← 與 Consumer/上面保持一致
+        {"driver": d, "pending": pending_qs, "accepted": accepted_qs},
+    )
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"driver_manage_{driver_id}",        # ←← 與 DriverManageConsumer.connect 的 group_name 一致
+        {"type": "manage_panels", "html": html}
     )
 
 def broadcast_manage_panels(driver_id: int):
@@ -276,8 +338,9 @@ def broadcast_manage_panels(driver_id: int):
         "Find/_manage_panels.html",
         {"driver": d, "pending": pending_qs, "accepted": accepted_qs},
     )
-
+    payload = {"type": "manage_panels", "html": html}
     channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(f"find_driver_{driver_id}", {"type": "send.json", "data": payload})
     async_to_sync(channel_layer.group_send)(
         f"driver_{driver_id}",
         {"type": "manage.panels", "html": html},
@@ -314,6 +377,7 @@ def pax_accept(request, pax_id: int):
     transaction.on_commit(lambda: (
         broadcast_driver_card(d.id),
         broadcast_manage_panels(d.id),
+        #transaction.on_commit(lambda: _broadcast_after_change(d.id))
     ))
     return JsonResponse({"ok": True, "remaining": max(0, d.seats_total - d.seats_filled)})
 
@@ -321,49 +385,53 @@ def pax_accept(request, pax_id: int):
 @require_POST
 @transaction.atomic(using=DB_ALIAS)
 def pax_reject(request, pax_id: int):
+    USING = "find_db"  # ← 改成你的實際 alias，務必和 .using() 一致
     """司機拒絕/取消乘客：若原本已接受需釋放座位，並從司機底下移除。"""
-    # 先鎖住乘客列，避免併發
     try:
-        p = (PassengerRequest.objects.using(DB_ALIAS)
-             .select_for_update()
-             .get(id=pax_id))
+        with transaction.atomic(using=USING):
+            # 鎖乘客
+            p = (PassengerRequest.objects.using(USING)
+                 .select_for_update()
+                 .get(id=pax_id))
+
+            d = None
+            if p.driver_id:
+                d = (DriverTrip.objects.using(USING)
+                     .select_for_update()
+                     .filter(id=p.driver_id)
+                     .first())
+
+                # 驗證司機身分（若需要）
+                if not _driver_authed(request, d):
+                    return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
+
+            # 已接受 → 回沖座位
+            if p.is_matched and d:
+                changed = ["seats_filled"]
+                d.seats_filled = max(0, (d.seats_filled or 0) - (p.seats_needed or 0))
+                if d.seats_filled < (d.seats_total or 0) and d.is_active is False:
+                    d.is_active = True
+                    changed.append("is_active")
+                d.save(using=USING, update_fields=changed)
+
+            # 刪除乘客
+            p.delete(using=USING)
+
+        # 交易提交後再廣播
+        def _after_commit():
+            if p.driver_id:
+                broadcast_driver_card(p.driver_id)
+                broadcast_manage_panels(p.driver_id)
+                #transaction.on_commit(lambda: _broadcast_after_change(d.id))
+            else:
+                broadcast_full_update()
+        transaction.on_commit(_after_commit)
+
+        return JsonResponse({"ok": True})
+
     except PassengerRequest.DoesNotExist:
         return JsonResponse({"ok": False, "error": "Passenger not found"}, status=404)
-    d = None
-    if p.driver_id:
-        # 讀取司機（若有綁）
-        d = (DriverTrip.objects.using(DB_ALIAS)
-             .select_for_update()
-             .filter(id=p.driver_id)
-             .first())
 
-    # 授權檢查（若有司機才需要）
-    if d and not _driver_authed(request, d):
-        return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
-
-    # 若乘客已被接受，釋放座位
-    if p.is_matched and d:
-        d.seats_filled = max(0, d.seats_filled - p.seats_needed)
-
-        #（可選）若座位釋放後不滿了、且你想自動重新上架：
-        if d.seats_filled < d.seats_total and d.is_active is False:
-            d.is_active = True
-
-        d.save(using=DB_ALIAS, update_fields=["seats_filled"])  # 若上面有改 is_active 記得加進 update_fields
-
-    # ✅ 只刪除這位乘客
-    p.delete(using=DB_ALIAS)
-    
-    # 交易提交後再廣播，避免 race
-    def _after_commit():
-        if d:
-            broadcast_driver_card(d.id)        # 單卡（首頁）
-            broadcast_manage_panels(d.id)      # 管理頁兩個 UL
-        else:
-            # 沒有司機（散客）：乘客列表要更新才能消失
-            broadcast_full_update()
-
-    transaction.on_commit(_after_commit)
 
 @require_POST
 def pax_memo(request, pax_id: int):
@@ -414,6 +482,7 @@ def pax_memo(request, pax_id: int):
     try:
         broadcast_driver_card(d.id)
         broadcast_manage_panels(p.driver_id)
+        #transaction.on_commit(lambda: _broadcast_after_change(d.id))
     except Exception:
         pass
 
@@ -533,9 +602,16 @@ def pax_auth(request, pid: int):
     request.session.modified = True
     return JsonResponse({"ok": True})
 
+def _is_ajax(request):
+    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
 def pax_get(request, pid: int):
-    """回傳乘客資料（需要先通過 pax_auth）。"""
+    # 1) 只允許 AJAX
+    if not _is_ajax(request):
+        # 用 404 假裝不存在，避免洩漏 API 端點
+        return HttpResponseNotFound()
     p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
+    
     if not _pax_authorized(request, pid):
         return JsonResponse({"ok": False, "error": "未授權"}, status=403)
 
@@ -553,10 +629,13 @@ def pax_get(request, pid: int):
         "return_date": p.return_date.isoformat() if p.return_date else "",
         "together_return": "" if p.together_return is None else ("true" if p.together_return else "false"),
         "note": p.note or "",
+        # ★ 新增這兩個，讓前端依 DB 決定開關狀態
+        "hide_contact": bool(p.hide_contact),
+        "auto_email_contact": bool(getattr(p, "auto_email_contact", False)),
     }
     return JsonResponse({"ok": True, "p": data})
 
-# 取得單一乘客資料（給編輯 Modal 預填）
+
 def passenger_json(request, pid: int):
     p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
     data = {
@@ -575,8 +654,13 @@ def passenger_json(request, pid: int):
         "note": p.note or "",
         "driver_id": p.driver_id,
         "is_matched": p.is_matched,
+        # ★ 新增
+        "hide_contact": bool(p.hide_contact),
+        "auto_email_contact": bool(getattr(p, "auto_email_contact", False)),
     }
     return JsonResponse({"ok": True, "data": data})
+
+BOOL_TRUE = ("1", "true", "on", "yes")
 
 @require_POST
 @transaction.atomic(using=DB_ALIAS)
@@ -584,11 +668,10 @@ def pax_update(request, pid: int):
     """更新乘客資料（需要先通過 pax_auth）。"""
     p = get_object_or_404(PassengerRequest.objects.using(DB_ALIAS), id=pid)
 
-    # 授權（以 session 驗證乘客密碼）
     if not _pax_authorized(request, pid):
         return JsonResponse({"ok": False, "error": "未授權"}, status=403)
 
-    # ---- 基本欄位 ----
+    # ---------- 基本欄位 ----------
     name_in = request.POST.get("passenger_name")
     if name_in is not None:
         name_in = name_in.strip()
@@ -599,113 +682,178 @@ def pax_update(request, pid: int):
     if gender:
         p.gender = gender
 
-    # Email（允許空→None）
-    email = request.POST.get("email")
-    p.email = (email or None)
+    # Email（允許空 → None）
+    email = (request.POST.get("email") or "").strip() or None
+    p.email = email
 
     contact_in = request.POST.get("contact")
     if contact_in is not None:
-        p.contact = contact_in.strip()
+        p.contact = (contact_in or "").strip()
 
     # 座位數（容錯）
     seats_in = request.POST.get("seats_needed")
     if seats_in not in (None, ""):
         try:
-            p.seats_needed = int(seats_in)
+            p.seats_needed = max(1, int(seats_in))
         except (TypeError, ValueError):
-            pass
+            return JsonResponse({"ok": False, "error": "上車人數需為正整數"}, status=400)
 
-    # 願付（允許空→None；保留字串/數字皆可）
-    wpay = request.POST.get("willing_to_pay")
-    p.willing_to_pay = (wpay if wpay not in (None, "",) else None)
+    # 願付金額：空字串 → None；其餘轉 Decimal
+    wpay_raw = (request.POST.get("willing_to_pay") or "").strip()
+    if wpay_raw == "":
+        p.willing_to_pay = None
+    else:
+        try:
+            p.willing_to_pay = Decimal(wpay_raw)
+        except (InvalidOperation, ValueError):
+            return JsonResponse({"ok": False, "error": "願付金額需為數字"}, status=400)
 
     # 地點
     dep_in = request.POST.get("departure")
     if dep_in is not None:
-        p.departure = dep_in.strip() or p.departure
+        p.departure = (dep_in or "").strip()
 
     des_in = request.POST.get("destination")
     if des_in is not None:
-        p.destination = des_in.strip() or p.destination
+        p.destination = (des_in or "").strip()
 
-    # 日期
-    date_val = request.POST.get("date")
-    if date_val:
-        p.date = date_val
+    # 日期（字串 → date；空字串代表「不變」，回程允許清空）
+    date_raw = request.POST.get("date")
+    if date_raw is not None:
+        date_raw = date_raw.strip()
+        if date_raw == "":
+            # 不修改出發日（若你想允許清空，改成 p.date = None）
+            pass
+        else:
+            dt = parse_date(date_raw)
+            if not dt:
+                return JsonResponse({"ok": False, "error": "出發日期格式不正確"}, status=400)
+            p.date = dt
 
-    ret_val = request.POST.get("return_date")
-    p.return_date = (ret_val or None)
+    ret_raw = request.POST.get("return_date")
+    if ret_raw is not None:
+        ret_raw = ret_raw.strip()
+        if ret_raw == "":
+            p.return_date = None
+        else:
+            rdt = parse_date(ret_raw)
+            if not rdt:
+                return JsonResponse({"ok": False, "error": "回程日期格式不正確"}, status=400)
+            p.return_date = rdt
 
-    # 是否一起回程（"true"/"false"/""）
-    tr = request.POST.get("together_return")
+    # 是否一起回程（三態）
+    tr = (request.POST.get("together_return") or "").strip().lower()
     if tr == "true":
         p.together_return = True
     elif tr == "false":
         p.together_return = False
     elif tr == "":
-        p.together_return = None
-    # 其他值 -> 維持原值
+        p.together_return = None  # 未指定
+    # 其他值 → 維持原值
 
     # 備註
     note_in = request.POST.get("note")
     if note_in is not None:
-        p.note = note_in.strip()
+        p.note = (note_in or "").strip()
 
-    # ---- 隱私設定：需有 Email 才允許隱藏 ----
-    hide_raw = (request.POST.get("hide_contact") or "").lower()
-    want_hide = hide_raw in ("1", "true", "on", "yes")
-    p.hide_contact = (want_hide and bool(p.email))  # 沒 Email 一律 False
+    # ---------- 隱私 + 自動寄信 ----------
+    want_hide = (request.POST.get("hide_contact", "0").lower() in BOOL_TRUE)
+    want_auto = (request.POST.get("auto_email_contact", "0").lower() in BOOL_TRUE)
 
+    # 沒有 email 時，兩者一律 False；有 email 才看使用者勾選
+    p.hide_contact = bool(email) and want_hide
+    p.auto_email_contact = bool(email) and p.hide_contact and want_auto
 
-    # 寫入
+    # ---------- 驗證 & 儲存 ----------
+    try:
+        p.full_clean()
+    except ValidationError as e:
+        # 把具體原因回給前端（避免只看到 HTTP 400）
+        # e.message_dict 可能是 {'field': ['msg1', 'msg2'], ...}
+        msgs = []
+        for _, vs in e.message_dict.items():
+            msgs.extend(vs)
+        return JsonResponse({"ok": False, "error": "；".join(msgs) or "資料驗證失敗"}, status=400)
+
     p.save(using=DB_ALIAS)
 
-    # ---- 即時更新：在交易提交後廣播 ----
+    # ---------- 廣播 ----------
     driver_id = p.driver_id
-
     def _after_commit(d_id=driver_id):
         if d_id:
-            # 更新：司機卡片（首頁/清單）＋ 司機管理頁（左右兩欄）
             broadcast_driver_card(d_id)
             broadcast_manage_panels(d_id)
+            #transaction.on_commit(lambda: _broadcast_after_change(d_id))
         else:
-            # 沒綁司機：更新乘客列表（你的既有函式）
             _broadcast_lists()
-
     transaction.on_commit(_after_commit)
 
-    return JsonResponse({"ok": True})
+    return JsonResponse({
+        "ok": True,
+        "p": {
+            "id": p.id,
+            "passenger_name": p.passenger_name,
+            "gender": p.gender,
+            "email": p.email,
+            "contact": p.contact,
+            "seats_needed": p.seats_needed,
+            "willing_to_pay": str(p.willing_to_pay) if p.willing_to_pay is not None else "",
+            "departure": p.departure or "",
+            "destination": p.destination or "",
+            "date": p.date.isoformat() if p.date else "",
+            "return_date": p.return_date.isoformat() if p.return_date else "",
+            "together_return": None if p.together_return is None else bool(p.together_return),
+            "note": p.note or "",
+            "hide_contact": p.hide_contact,
+            "auto_email_contact": p.auto_email_contact,
+        }
+    })
 
 @require_POST
+@transaction.atomic(using=DB_ALIAS)
 def pax_delete(request, pid: int):
     """
     刪除乘客紀錄（需先授權）：
     - 若該乘客已被接受 (is_matched=True)，會回沖司機 seats_filled。
     """
-    p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
-    if not _pax_authorized(request, pid):
-        return JsonResponse({"ok": False, "error": "未授權"}, status=403)
+    try:
+        p = get_object_or_404(PassengerRequest.objects.using("find_db"), id=pid)
+        # 授權：乘客密碼已通過 (session) 或 司機管理已通過
+        if not (_pax_authorized(request, pid) or _driver_authed_by_pax(request, p)):
+            return JsonResponse({"ok": False, "error": "FORBIDDEN"}, status=403)
+        driver_id = p.driver_id  # 先記下來，避免之後刪掉就拿不到
 
-    # 若是已接受的乘客，回沖座位
-    if p.is_matched and p.driver_id:
-        try:
-            d = DriverTrip.objects.using("find_db").select_for_update().get(id=p.driver_id)
-            d.seats_filled = max(0, d.seats_filled - (p.seats_needed or 0))
-            # 回沖後座位未滿，可自動重新上架（看你需求；不想自動上架就註解掉）
-            if d.seats_filled < d.seats_total:
-                d.is_active = True
-            d.save(using="find_db")
-        except DriverTrip.DoesNotExist:
-            pass
+        # 已接受 → 回沖座位
+        if p.is_matched and driver_id:
+                try:
+                    d = (DriverTrip.objects.using("find_db")
+                        .select_for_update()
+                        .get(id=driver_id))
+                    d.seats_filled = max(0, (d.seats_filled or 0) - (p.seats_needed or 0))
+                    # 可選：釋放後未滿 → 自動上架
+                    if d.seats_filled < d.seats_total:
+                        d.is_active = True
+                    d.save(using="find_db", update_fields=["seats_filled", "is_active"])
+                except DriverTrip.DoesNotExist:
+                    return JsonResponse({"ok": False, "error": f"Server error: {e}"}, status=500)
 
-    p.delete(using="find_db")
-    driver_id = p.driver_id  # 廣播用
-    transaction.on_commit(lambda: broadcast_driver_card(driver_id))
-    if driver_id:
-        broadcast_driver_card(driver_id)
-    
-    return JsonResponse({"ok": True})
+        p.delete(using="find_db")
+        transaction.on_commit(lambda: broadcast_driver_card(driver_id))
+        if driver_id:
+            broadcast_manage_panels(driver_id)
+            #transaction.on_commit(lambda: _broadcast_after_change(driver_id))
+        
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        # 把例外吃住，回 JSON，避免前端解析 HTML 出錯
+        return JsonResponse({"ok": False, "error": f"Server error: {e}"}, status=500)
 
+def _driver_authed_by_pax(request, p: PassengerRequest) -> bool:
+    """若你已有司機管理授權的 session，就回 True；否則 False。"""
+    if not p.driver_id:
+        return False
+    sess_key = f"driver_auth_{p.driver_id}"
+    return bool(request.session.get(sess_key))
 
 @transaction.atomic(using="find_db")
 def delete_driver(request, driver_id: int):
@@ -945,7 +1093,8 @@ def driver_manage(request, driver_id: int):
             # 廣播（卡片 + 管理頁）
             transaction.on_commit(lambda: (
                 broadcast_driver_card(driver.id),
-                broadcast_manage_panels(driver.id)
+                broadcast_manage_panels(driver.id),
+                #_broadcast_after_change(driver.id)
             ))
 
         # === B) 批次接受乘客 ===
@@ -985,7 +1134,8 @@ def driver_manage(request, driver_id: int):
             matched_msg = "✅ 已成功媒合：" + "、".join(accepted_names) if accepted_names else "⚠️ 沒有可媒合的乘客或座位不足"
             transaction.on_commit(lambda: (
                 broadcast_driver_card(driver.id),
-                broadcast_manage_panels(driver.id)
+                broadcast_manage_panels(driver.id),
+                #_broadcast_after_change(driver.id)
             ))
 
         # …(其他分支照你的需求)
@@ -1632,18 +1782,26 @@ def passenger_manage(request, passenger_id):
     return render(request, "Find/passenger_manage.html", {"passenger": passenger})
 
 
-# -------------------
-# 乘客加入司機 (從 match_driver 頁面)
-# -------------------
+BOOL_TRUE = ("1", "true", "on", "yes")
 
 @require_POST
 def join_driver(request, driver_id: int):
     is_ajax = (request.headers.get("x-requested-with") == "XMLHttpRequest")
 
     # ===== 表單值 =====
+    passenger_name = (request.POST.get("passenger_name", "").strip() or "匿名")
+    gender         = (request.POST.get("gender", "X"))
+    email          = (request.POST.get("email") or "").strip() or None
+    contact        = (request.POST.get("contact", "").strip())
+
+    # 使用者表單勾選
+    want_hide = (request.POST.get("hide_contact") or "0").lower() in BOOL_TRUE
+    want_auto = (request.POST.get("auto_email_contact") or "0").lower() in BOOL_TRUE
+
     departure = (request.POST.get("departure") or
                  request.POST.get("custom_departure") or "").strip()
-    raw_pay   = (request.POST.get("willing_to_pay") or "待定或免費").strip()
+
+    raw_pay = (request.POST.get("willing_to_pay") or "待定或免費").strip()
     try:
         seats_needed = max(1, int(request.POST.get("seats_needed", "1") or 1))
     except (TypeError, ValueError):
@@ -1652,13 +1810,19 @@ def join_driver(request, driver_id: int):
     willing_to_pay = None
     if raw_pay:
         try:
+            from decimal import Decimal
             willing_to_pay = Decimal(raw_pay)
         except Exception:
             willing_to_pay = None
 
+    # 三態一起回程
+    tr_raw = (request.POST.get("together_return") or "").strip().lower()
+    if   tr_raw == "true":  together_return = True
+    elif tr_raw == "false": together_return = False
+    else:                   together_return = None
+
     # ===== 交易 + 鎖行避免搶位 =====
     with transaction.atomic(using="find_db"):
-        # 鎖住該司機（同時避免被接受時併發超載）
         d = get_object_or_404(
             DriverTrip.objects.using("find_db").select_for_update(), id=driver_id
         )
@@ -1672,31 +1836,55 @@ def join_driver(request, driver_id: int):
             msg = f"座位不足，剩餘 {remaining} 位"
             return JsonResponse({"ok": False, "error": msg}, status=400) if is_ajax else redirect("find_index")
 
-        # 建立「待確認」乘客（不佔位；司機接受時才會加 seats_filled）
-        PassengerRequest.objects.using("find_db").create(
-            passenger_name = (request.POST.get("passenger_name", "").strip() or "匿名"),
-            gender         = (request.POST.get("gender", "X")),
-            email          = (request.POST.get("email") or None),
-            contact        = (request.POST.get("contact", "").strip()),
-            seats_needed   = seats_needed,
-            willing_to_pay = willing_to_pay,
-            departure      = departure,
-            destination    = (request.POST.get("destination", "").strip()),
-            date           = (request.POST.get("date") or d.date),
-            return_date    = (request.POST.get("return_date") or None),
-            note           = (request.POST.get("note", "").strip()),
-            password       = (request.POST.get("password", "0000").strip() or "0000"),
-            driver         = d,
-            is_matched     = False,
+        # --- 新規則：若司機關閉自動發信，乘客端必須強制開啟 ---
+        driver_auto = bool(getattr(d, "auto_email_contact", False))
+
+        if not driver_auto:
+            # 司機關閉 → 乘客必須提供 Email，且強制開啟 隱藏+自動寄信
+            if not email:
+                msg = "司機未啟用自動寄信，乘客需提供 Email 並啟用自動寄信。"
+                return JsonResponse({"ok": False, "error": msg}, status=400) if is_ajax else redirect("find_index")
+            hide_contact_final       = True
+            auto_email_contact_final = True
+        else:
+            # 司機有自動寄信 → 依照乘客自己的選擇與原有規則
+            if want_hide and not email:
+                msg = "要隱藏個資，請先填 Email"
+                return JsonResponse({"ok": False, "error": msg}, status=400) if is_ajax else redirect("find_index")
+            if want_auto and not (email and want_hide):
+                msg = "要啟用自動寄信，需先填 Email 並勾選隱藏個資"
+                return JsonResponse({"ok": False, "error": msg}, status=400) if is_ajax else redirect("find_index")
+
+            hide_contact_final       = bool(email) and want_hide
+            auto_email_contact_final = bool(email) and hide_contact_final and want_auto
+
+        # 建立「待確認」乘客
+        p = PassengerRequest.objects.using("find_db").create(
+            passenger_name   = passenger_name,
+            gender           = gender,
+            email            = email,
+            contact          = contact,
+            seats_needed     = seats_needed,
+            willing_to_pay   = willing_to_pay,
+            departure        = departure,
+            destination      = (request.POST.get("destination", "").strip()),
+            date             = (request.POST.get("date") or d.date),
+            return_date      = (request.POST.get("return_date") or None),
+            together_return  = together_return,
+            note             = (request.POST.get("note", "").strip()),
+            password         = (request.POST.get("password", "0000").strip() or "0000"),
+            driver           = d,
+            is_matched       = False,
+            hide_contact       = hide_contact_final,        # ← 入庫
+            auto_email_contact = auto_email_contact_final,  # ← 入庫
         )
 
-    # ===== 交易提交後再重新渲染片段並廣播（避免競態）=====
+    # ===== 提交後廣播 =====
     channel_layer = get_channel_layer()
 
     pending_qs  = PassengerRequest.objects.using("find_db").filter(is_matched=False).order_by("-id")
     accepted_qs = PassengerRequest.objects.using("find_db").filter(is_matched=True ).order_by("-id")
 
-    # ★ to_attr 改成 pending_list / accepted_list，與模板一致
     drivers_qs = (
         DriverTrip.objects.using("find_db")
         .filter(is_active=True)
@@ -1705,7 +1893,6 @@ def join_driver(request, driver_id: int):
             Prefetch("passengers", queryset=accepted_qs, to_attr="accepted_list"),
         )
     )
-    # materialize（可選，但穩）
     drivers = list(drivers_qs)
 
     passengers = (
@@ -1717,26 +1904,24 @@ def join_driver(request, driver_id: int):
     drivers_html    = render_to_string("Find/_driver_list.html", {"drivers": drivers})
     passengers_html = render_to_string("Find/_passenger_list.html", {"passengers": passengers})
 
-    # 全局廣播（其他使用者）
     async_to_sync(channel_layer.group_send)(
         "find_group",
-        {
-            "type": "send.update",
-            "drivers_html": drivers_html,
-            "passengers_html": passengers_html,
-        },
+        {"type": "send.update", "drivers_html": drivers_html, "passengers_html": passengers_html},
     )
-
-    # 單卡片重繪（自己與他人都會收到 WS，保險再發一次）
+    # ✅ 交易提交後再寄信（綁定 *單筆* 乘客物件 p）
+    #transaction.on_commit(lambda d_id=d.id, p_id=p.id: _notify_join_by_ids(d_id, p_id))
+    transaction.on_commit(lambda d_id=d.id, p_id=p.id: enqueue_join_emails_after_commit(d_id, p_id))
     try:
         broadcast_driver_card(driver_id)
+        broadcast_manage_panels(driver_id)
+        #transaction.on_commit(lambda: _broadcast_after_change(driver_id))
     except Exception:
         pass
 
-    # AJAX 就回 {"ok":true}（若你要「自己」立刻替換，也可以把片段一起回）
     if is_ajax:
         return JsonResponse({"ok": True})
     return redirect("find_index")
+
 
 def attach_passenger_lists(driver: DriverTrip):
     """
@@ -1747,3 +1932,129 @@ def attach_passenger_lists(driver: DriverTrip):
     driver.pending  = [p for p in plist if not p.is_matched]
     driver.accepted = [p for p in plist if p.is_matched]
     return driver.pending, driver.accepted
+
+
+def _fmt_driver_contact(d):
+    lines = [
+        f"司機暱稱：{d.driver_name}",
+        f"行程：{d.departure} → {d.destination}",
+        f"出發日期：{getattr(d, 'date', '') or '未定'}",
+    ]
+    if getattr(d, "return_date", None):
+        lines.append(f"回程日期：{d.return_date}")
+    if getattr(d, "contact", ""):
+        lines.append(f"司機聯絡方式：{d.contact}")
+    return "\n".join(lines)
+
+def _fmt_passenger_info(p):
+    lines = [
+        f"乘客暱稱：{p.passenger_name}",
+        f"性別：{p.get_gender_display() if hasattr(p, 'get_gender_display') else p.gender}",
+        f"上車地點：{p.departure or '未填'}",
+        f"目的地：{p.destination or '未填'}",
+        f"人數：{p.seats_needed}",
+        f"出發日期：{p.date or '未填'}",
+    ]
+    if getattr(p, "return_date", None):
+        lines.append(f"回程日期：{p.return_date}")
+    if getattr(p, "willing_to_pay", None):
+        lines.append(f"願付金額：NT$ {p.willing_to_pay}")
+    # 乘客聯絡方式（只有在要寄出的幾種情境才會包含；這裡先備好）
+    if getattr(p, "contact", ""):
+        lines.append(f"乘客聯絡方式：{p.contact}")
+    return "\n".join(lines)
+
+def _send_mail(subject, body_text, to, reply_to=None):
+    """
+    輕量寄信工具：同時送純文字與簡單 HTML（防止信件過白）。
+    `to` 可放單一 email 字串或 list。
+    """
+    if not to:
+        return
+    to_list = [to] if isinstance(to, str) else list(to)
+    html_body = "<pre style='font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; white-space:pre-wrap; line-height:1.5'>" + body_text + "</pre>"
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=strip_tags(html_body),  # 純文字
+        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+        to=to_list,
+        reply_to=[reply_to] if reply_to else None,
+    )
+    msg.attach_alternative(html_body, "text/html")
+    msg.send(fail_silently=True)
+
+def notify_on_passenger_join(driver, passenger):
+    """
+    乘客報名完成後的通知邏輯（對司機、對乘客）
+    覆蓋六種情境；需要模型欄位：
+      - driver.email / driver.hide_contact / driver.auto_email_contact
+      - passenger.email / passenger.hide_contact / passenger.auto_email_contact
+      - passenger.contact（乘客的聯絡方式）
+    """
+    # 資料存在與否
+    drv_email = bool(getattr(driver, "email", None))
+    pax_email = bool(getattr(passenger, "email", None))
+
+    drv_hide  = bool(getattr(driver, "hide_contact", False))
+    drv_auto  = bool(getattr(driver, "auto_email_contact", False))  # 你有加這欄位
+
+    pax_hide  = bool(getattr(passenger, "hide_contact", False))
+    pax_auto  = bool(getattr(passenger, "auto_email_contact", False))
+
+    # ---------- 通知司機（來自乘客報名） ----------
+    # 規則 1：乘客隱藏 + 自動寄信 + 司機有 Email → 寄「乘客完整報名資料（含乘客聯絡方式）」給司機
+    if pax_hide and pax_auto and drv_email:
+        subject = f"【新報名】{passenger.passenger_name} 報名了你的行程（含乘客聯絡方式）"
+        body = "\n".join([
+            "乘客已選擇隱藏個資，且開啟自動寄信功能。",
+            "以下為乘客報名資料：",
+            "",
+            _fmt_passenger_info(passenger),
+            "",
+            "（本信含乘客聯絡方式，請勿轉傳給第三方）",
+        ])
+        _send_mail(subject, body, to=driver.email, reply_to=passenger.email if pax_email else None)
+
+    # 規則 2：乘客隱藏 + 關閉自動寄信 → 只寄「報名通知（不含乘客聯絡方式）」給司機（需司機有 Email）
+    elif pax_hide and not pax_auto and drv_email:
+        subject = f"【新報名】{passenger.passenger_name} 報名了你的行程"
+        # 不放乘客聯絡方式
+        base = _fmt_passenger_info(passenger).splitlines()
+        base = [line for line in base if not line.startswith("乘客聯絡方式：")]
+        body = "\n".join([
+            "乘客已選擇隱藏個資，且關閉自動寄信。",
+            "目前僅通知你有人報名；乘客聯絡方式將在你接受後由系統再行通知（或請在系統內聯絡）。",
+            "",
+            "\n".join(base),
+        ])
+        _send_mail(subject, body, to=driver.email)
+
+    # 規則 3：乘客未隱藏 → 直接把「乘客完整報名資料」寄給司機（需司機有 Email）
+    elif not pax_hide and drv_email:
+        subject = f"【新報名】{passenger.passenger_name} 報名了你的行程（含聯絡方式）"
+        body = "\n".join([
+            "以下為乘客報名資料：",
+            "",
+            _fmt_passenger_info(passenger),
+        ])
+        _send_mail(subject, body, to=driver.email, reply_to=passenger.email if pax_email else None)
+
+    # 沒司機 Email → 無法寄給司機，直接略過（或你要 log 也可）
+
+    # ---------- 通知乘客（來自司機設定） ----------
+    # 規則 4：司機隱藏 + 開啟自動寄信 + 乘客有 Email → 寄「司機聯絡方式」給乘客
+    if drv_hide and drv_auto and pax_email:
+        subject = f"【聯絡方式】你報名的司機（{driver.driver_name}）聯絡資料"
+        body = "\n".join([
+            "司機目前隱藏聯絡方式，已啟用自動寄信功能。",
+            "以下為司機聯絡資訊：",
+            "",
+            _fmt_driver_contact(driver),
+            "",
+            "（請妥善保存，不要公開轉傳）",
+        ])
+        _send_mail(subject, body, to=passenger.email, reply_to=driver.email if drv_email else None)
+
+    # 規則 5：司機隱藏 + 關閉自動寄信 → 不動作
+    # 規則 6：司機未隱藏 → 不動作（聯絡方式已公開在卡片
+

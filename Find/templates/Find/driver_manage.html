@@ -268,7 +268,7 @@ textarea{min-height:80px;resize:vertical}
       <div class="pref-row">
         <label class="switch">
           <input type="checkbox" id="hide_contact" name="hide_contact"
-                {% if prefill.hide_contact is not defined or prefill.hide_contact %}checked{% endif %}>
+                {% if driver.hide_contact %}checked{% endif %}>>
           <span class="slider"></span>
         </label>
         <div class="pref-text">
@@ -280,7 +280,7 @@ textarea{min-height:80px;resize:vertical}
       <div id="autoEmailWrap" class="pref-row sub" style="display:none;">
         <label class="switch">
           <input type="checkbox" id="auto_email_contact" name="auto_email_contact"
-                {% if prefill.auto_email_contact %}checked{% endif %}>
+                {% if driver.auto_email_contact %}checked{% endif %} {% if not driver.hide_contact %}disabled{% endif %}>
           <span class="slider"></span>
         </label>
         <div class="pref-text">
@@ -414,6 +414,54 @@ textarea{min-height:80px;resize:vertical}
   </form>
 
   <script>
+    // 取 driverId（driver_manage.html 內放 <div id="driver-meta" data-driver-id="{{ driver.id }}">）
+function getDriverId(){
+  return document.getElementById('driver-meta')?.dataset?.driverId || '';
+}
+
+// 等待一次 manage_panels WS，超時就回 false
+function waitWSOnce(timeoutMs=800){
+  return new Promise(resolve=>{
+    let done = false;
+    const ws = window.__manageWS;
+    const t  = setTimeout(()=>{ if(!done){ done=true; resolve(false); } }, timeoutMs);
+    if(!ws || ws.readyState!==1){
+      clearTimeout(t); resolve(false); return;
+    }
+    const origOnMsg = ws.onmessage;
+    ws.onmessage = (ev)=>{
+      try{
+        const msg = JSON.parse(ev.data||'{}');
+        if(msg.type==='manage_panels' && typeof msg.html==='string'){
+          // 直接套用（若你的 onmessage 也會處理沒關係，這邊套用一次也安全）
+          const box = document.getElementById('manage-panels');
+          if (box) box.innerHTML = msg.html;
+          if(!done){ done=true; clearTimeout(t); resolve(true); }
+        }
+      }catch(_){} 
+      // 繼續讓原有 handler 收其他訊息
+      if (typeof origOnMsg === 'function') origOnMsg(ev);
+    };
+  });
+}
+
+// 手動刷新 panels（建議在後端加一條局部 view: GET /find/driver/<id>/manage/panels/ 回傳 html）
+// 如果你暫時沒有這條路由，最後會 fallback reload。
+async function refreshManagePanels(){
+  const driverId = getDriverId();
+  if(!driverId){ location.reload(); return; }
+  try{
+    const url = `/find/driver/${driverId}/manage/panels/`;
+    const res = await fetch(url, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+    if(!res.ok){ location.reload(); return; }
+    const html = await res.text();
+    if(!html || !html.trim()){ location.reload(); return; }
+    const box = document.getElementById('manage-panels');
+    if (box) box.innerHTML = html;
+  }catch(_){
+    location.reload();
+  }
+}
     const driverId = "{{ driver.id }}";
     const proto = location.protocol === "https:" ? "wss" : "ws";
     // 出發/目的自填顯示（原樣）
@@ -465,76 +513,63 @@ textarea{min-height:80px;resize:vertical}
   }
 
     // ✅ 隱私開關：需要 Email 才能啟用
-(function(){
-  const email = document.getElementById('email');
-  const hide  = document.getElementById('hide_contact');
-  const auto  = document.getElementById('auto_email_contact');
-  const wrap  = document.getElementById('autoEmailWrap');
-  const hint  = document.getElementById('privacyHint');
+    (function(){
+      // 僅用於「管理頁」，不去改變初始化的 checked（由後端 DB 決定）
+      const email = document.getElementById('email');               // 司機的 Email 輸入
+      const hide  = document.getElementById('hide_contact');        // 隱藏個資
+      const auto  = document.getElementById('auto_email_contact');  // 自動寄信
+      const wrap  = document.getElementById('autoEmailWrap');       // 自動寄信那一列
+      const hint  = document.getElementById('privacyHint');
 
-  // 記錄使用者是否主動改動過，避免我們的「預設值」蓋掉使用者選擇
-  let touchedHide = false;
-  let touchedAuto = false;
+      // 紀錄 DB 初始值（只讀一次，不要被我們的 UI 邏輯覆蓋）
+      const initialHide = hide ? hide.checked : false;
+      const initialAuto = auto ? auto.checked : false;
 
-  hide && hide.addEventListener('change', () => { touchedHide = true; syncUI(); });
-  auto && auto.addEventListener('change', () => { touchedAuto = true; syncUI(); });
+      function hasEmail(){
+        return !!(email && email.value && email.value.includes('@'));
+      }
 
-  function hasEmail(){
-    return !!(email && email.value && email.value.includes('@'));
-  }
+      function setHintLines(lines){
+        if (!hint) return;
+        hint.innerHTML = lines.map(s => s.replace(/\s+$/,'')).join('<br>');
+      }
 
-  function setHint(lines){
-    if (!hint) return;
-    // 你要的分段文字（多行）
-    hint.innerHTML = lines.map(line => line.replace(/\s+$/,'')).join('<br>');
-  }
+      function syncUI(){
+        const okEmail = hasEmail();
 
-  function syncUI(){
-    const ok = hasEmail();
+        if (!okEmail){
+          // 沒 Email：兩個都不可用，第二列隱藏，但「不改變 checked 值」
+          if (hide){ hide.disabled = true; }
+          if (auto){ auto.disabled = true; }
+          if (wrap){ wrap.style.display = 'none'; }
+          setHintLines([
+            '※ 尚未填寫 Email，無法隱藏聯絡方式。',
+            '填寫後即可啟用「隱藏個資」與「自動寄信」。'
+          ]);
+          return;
+        }
 
-    if (!ok){
-      // 沒 Email：都關、都鎖、隱藏第二顆開關
-      if (hide){ hide.checked = false; hide.disabled = true; }
-      if (auto){ auto.checked = false; auto.disabled = true; }
-      if (wrap){ wrap.style.display = 'none'; }
-      setHint([
-        '※ 尚未填寫 Email，無法隱藏聯絡方式。',
-        '填寫後即可啟用「隱藏個資」與「自動寄信」。'
-      ]);
-      return;
-    }
+        // 有 Email：根據目前 hide.checked 來決定 auto 的可用與顯示；不改變 checked 狀態
+        if (hide){ hide.disabled = false; }
 
-    // 有 Email：可以切
-    if (hide){ hide.disabled = false; }
+        const on = !!(hide && hide.checked);
+        if (wrap){ wrap.style.display = on ? '' : 'none'; }
+        if (auto){ auto.disabled = !on; if (!on) auto.checked = false; }
 
-    // 需求：輸入完 Email 時，「隱藏個資」預設關閉（除非使用者剛剛手動開過）
-    if (!touchedHide && hide && hide.checked !== false){
-      hide.checked = false;
-    }
+        setHintLines([
+          '※ Email 僅供系統通知，不會公開。',
+          '若關閉自動寄送 Email，則需等待乘客加入後，系統才會把乘客資料寄送至您的 Email。'
+        ]);
+      }
 
-    // 第二顆只在隱藏=開時才顯示可用
-    const on = !!(hide && hide.checked);
-    if (wrap){ wrap.style.display = on ? '' : 'none'; }
-    if (auto){ auto.disabled = !on; }
+      // 使用者操作只影響可用性與顯示，不覆寫 checked 預設
+      hide && hide.addEventListener('change', syncUI);
+      email && email.addEventListener('input', syncUI);
 
-    // 需求：當隱藏個資打開時，自動寄信預設「開啟」（除非使用者剛剛手動關過）
-    if (on && auto && !touchedAuto && !auto.checked){
-      auto.checked = true;
-    }
-    if (!on && auto){
-      auto.checked = false;
-    }
-
-    setHint([
-      '※ Email 僅供系統通知，不會公開。',
-      '若關閉自動寄送 Email，則需等待乘客加入後，系統才會把乘客資料寄送至您的 Email。'
-    ]);
-  }
-
-  email && email.addEventListener('input', syncUI);
-
-  // 初始狀態：依 template 的 checked 值 + email 內容，再套上述規則
-  syncUI();
+      // 初次進頁：直接用 DB 值渲染（不要動 checked）
+      if (hide) hide.checked = initialHide;
+      if (auto) auto.checked = initialAuto;
+      syncUI();
 })();
 
     // 是否開放 switch 鎖定（你原本的腳本保留）
@@ -660,154 +695,148 @@ function buildUrl(base, id, action) {
   return base.replace(pat, `/${id}/${action}/`);
 }
 
-document.addEventListener('click', async (e) => {
-  // ==== 接受 ====
-  const btnAccept = e.target.closest('button[data-action="accept"]');
-  if (btnAccept) {
-    e.preventDefault();
-    const pid  = btnAccept.dataset.id;
-    const base = btnAccept.dataset.urlBase; // 例如 /find/pax/0/accept/
-    if (!pid || !base) return;
-    const url  = buildUrl(base, pid, 'accept');
+// 後端若直接回傳單一 <li> HTML，用這個替換
+function patchPaxItemHTML(html, paxId){
+  if (!html || !paxId) return;
+  const li = document.querySelector(`.pax-item[data-pax="${paxId}"]`);
+  if (!li) return;
+  li.outerHTML = html;
+}
 
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCSRF(),
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        body: new URLSearchParams(),
-        credentials: 'same-origin',
-      });
 
-      let data;
-      try { data = await res.json(); }
-      catch { data = { ok:false, error: await res.text() || `HTTP ${res.status}` }; }
+// ---------- 單一事件委派：接受 / 拒絕 / 備忘錄 ----------
+  document.addEventListener('click', async (e) => {
+    // 1) 接受
+    const btnAccept = e.target.closest('button[data-action="accept"]');
+    if (btnAccept){
+      e.preventDefault();
+      const paxId = btnAccept.dataset.id;
+      const base  = btnAccept.dataset.urlBase; // 例如 /find/pax/0/accept/
+      if (!paxId || !base) return;
+      const url = buildUrl(base, paxId);
 
-      if (!res.ok || !data.ok) { alert(data.error || '接受失敗'); return; }
-      // 成功：等 WebSocket 廣播自動重繪
-    } catch (err) {
-      console.error(err); alert('網路錯誤，請稍後再試');
+      try{
+        const res  = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRF(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
+          body: new URLSearchParams(),
+          credentials: 'same-origin',
+        });
+        let data; try{ data = await res.json(); }catch{ data = {ok:false, error: await res.text() || `HTTP ${res.status}`} }
+        if (!res.ok || !data.ok) { alert(data.error || '接受失敗'); return; }
+        await refreshManagePanels(); // 沒來就自己抓一次
+        
+        // 成功後交給 WS 廣播重繪（後端會推 manage_panels），
+        // 若後端同時回傳了片段，可先行局部替換：
+        if (data.html) patchPaxItemHTML(data.html, paxId);
+        
+      }catch(err){
+        console.error(err); alert('網路錯誤，請稍後再試');
+      }
+      return;
     }
-  }
 
-  // ==== 拒絕 ====
-  const btnReject = e.target.closest('button[data-action="reject"]');
-  if (btnReject) {
-    e.preventDefault();
-    const pid  = btnReject.dataset.id;
-    const base = btnReject.dataset.urlBase; // 例如 /find/pax/0/reject/
-    if (!pid || !base) return;
-    const url  = buildUrl(base, pid, 'reject');
+    // 2) 拒絕 / 取消（已接受＆待確認都走這裡）
+    const btnReject = e.target.closest('button[data-action="reject"]');
+    if (btnReject){
+      e.preventDefault();
+      const paxId = btnReject.dataset.id;
+      const base  = btnReject.dataset.urlBase; // 例如 /find/pax/0/reject/
+      if (!paxId || !base) return;
+      if (!confirm('⚠️ 確定要拒絕/取消此乘客嗎？')) return;
+      const url = buildUrl(base, paxId);
 
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': getCSRF(),
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        body: new URLSearchParams(),
-        credentials: 'same-origin',
-      });
-
-      let data;
-      try { data = await res.json(); }
-      catch { data = { ok:false, error: await res.text() || `HTTP ${res.status}` }; }
-
-      if (!res.ok || !data.ok) { alert(data.error || '操作失敗'); return; }
-      // 成功：等 WebSocket 廣播自動重繪
-    } catch (err) {
-      console.error(err); alert('網路錯誤，請稍後再試');
+      try{
+        const res  = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRF(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
+          body: new URLSearchParams(),
+          credentials: 'same-origin',
+        });
+        let data; try{ data = await res.json(); }catch{ data = {ok:false, error: await res.text() || `HTTP ${res.status}`} }
+        if (!res.ok || !data.ok) { alert(data.error || '操作失敗'); return; }
+        await refreshManagePanels(); // 沒來就自己抓一次
+        // 同上：等 WS；若有片段先替
+        if (data.html) patchPaxItemHTML(data.html, paxId);
+      }catch(err){
+        console.error(err); alert('網路錯誤，請稍後再試');
+      }
+      return;
     }
-  }
-});
 
+    // 3) 司機備忘錄（prompt 版）
+    const btnMemo = e.target.closest('button[data-action="memo"]');
+    if (btnMemo){
+      e.preventDefault();
+      const paxId   = btnMemo.dataset.id;
+      const urlBase = btnMemo.dataset.urlBase; // /find/pax/0/memo/
+      const cur     = btnMemo.dataset.current || "";
+      if (!paxId || !urlBase) return;
+      const url     = urlBase.replace(/\/0\/memo\/?$/, `/${paxId}/memo/`);
 
-  // 司機備忘錄（prompt 版本）
-document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-action="memo"]');
-    if (!btn) return;
+      const memo = prompt('司機備忘錄（僅司機可見）', cur);
+      if (memo === null) return;
 
-    const paxId   = btn.dataset.id;
-    const urlBase = btn.dataset.urlBase; // 例如 /find/pax/0/memo/
-    const cur     = btn.dataset.current || "";
-    if (!paxId || !urlBase) return;
-    const url     = urlBase.replace(/\/0\/memo\/?$/, `/${paxId}/memo/`);
-
-    const memo = prompt('司機備忘錄（僅司機可見）', cur);
-    if (memo === null) return;
-
-    try{
-      const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-      const fd   = new FormData(); fd.append('memo', memo);
-      const res  = await fetch(url, { method:'POST', headers:{'X-CSRFToken': csrf}, body: fd });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error||'更新失敗');
-
-      patchPaxItem(data); // 直接用後端回來的新 li 替換
-      alert('已更新司機備忘錄');
-    }catch(err){
-      console.error(err); alert('更新失敗');
+      try{
+        const fd  = new FormData(); fd.append('memo', memo);
+        const res = await fetch(url, { method:'POST', headers:{'X-CSRFToken': getCSRF()}, body: fd, credentials:'same-origin' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error||'更新失敗');
+        // 後端若回 li 片段
+        await refreshManagePanels(); // 沒來就自己抓一次
+        if (data.html && data.pax_id) patchPaxItemHTML(data.html, data.pax_id);
+      }catch(err){
+        console.error(err); alert('更新失敗');
+      }
+      return;
     }
   });
 
-  // WebSocket：別處修改（如公開列表編輯）時即時同步
-  try{
-    const driverId = $('#driver-meta')?.dataset?.driverId || '{{ driver.id }}';
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws.onmessage = (evt) => {
-      try{
-        const data = JSON.parse(evt.data);
-        if (data && data.ok) patchPaxItem(data);
-      }catch(_e){}
-    };
-  }catch(_e){}
-})();
+// ---------- WebSocket：driver_manage panels 即時更新 ----------
+  (function initManageWS(){
+    const meta = document.getElementById('driver-meta');
+    if (!meta) return;
+    const driverId = meta.dataset.driverId;
+    if (!driverId) return;
 
-(function initManageWS(){
-  const meta = document.getElementById('driver-meta');
-  if (!meta) return;
-  const driverId = meta.dataset.driverId;
-  if (!driverId) return;
+    const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsUrl = proto + location.host + '/ws/find/';
+    const ws = new WebSocket(wsUrl);
+    ws.onopen = ()=> console.log('[WS] public open');
 
-  // ✅ 用 driver/<id> 這條路，或 manage/<id> 都可（因為路由都加了）
-  const proto = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-  const host  = location.host;
-  const wsUrl = `${proto}${host}/ws/find/driver/${driverId}/`;   // ←← 建議用這條
+    // 避免重複連線
+    if (window.__manageWS && window.__manageWS.readyState === 1) {
+      try { window.__manageWS.close(); } catch (_) {}
+    }
 
-  // 避免重複建立多條連線
-  if (window.__manageWS && window.__manageWS.readyState === 1) {
-    try { window.__manageWS.close(); } catch (_) {}
-  }
+    
+    window.__manageWS = ws;
 
-  const ws = new WebSocket(wsUrl);
-  window.__manageWS = ws;
+    ws.onopen  = () => console.log('[manageWS] connected:', wsUrl);
+    ws.onclose = (e) => console.log('[manageWS] closed', e.code, e.reason);
+    ws.onerror = (e) => console.error('[manageWS] error', e);
 
-  ws.onopen = () => console.log('[manageWS] connected:', wsUrl);
-  ws.onclose = (e) => console.log('[manageWS] closed', e.code, e.reason);
-  ws.onerror = (e) => console.error('[manageWS] error', e);
-
-  // 後端廣播 manage_panels 的 payload，要在這裡更新畫面
-  ws.onmessage = (ev) => {
-    try {
-      const msg = JSON.parse(ev.data);
-      if (msg.type === 'manage_panels' && typeof msg.html === 'string') {
-        const box = document.getElementById('manage-panels');
-        if (box) box.innerHTML = msg.html;
-      }
-      // 如果你有分單張卡片更新：
-      if (msg.type === 'replace_pax_item' && msg.pax_id && typeof msg.html === 'string') {
-        const li = document.querySelector(`.pax-item[data-pax="${msg.pax_id}"]`);
+    // 後端廣播 payload：
+    // - {type:'manage_panels', html:'...整個 manage-panels 片段...'}
+    // - {type:'replace_pax_item', pax_id: 123, html:'<li ...>...</li>'}
+    ws.onmessage = (ev)=>{
+    try{
+      const msg = JSON.parse(ev.data || '{}');
+      if (msg.type === 'replace_driver_card' && msg.driver_id && typeof msg.html === 'string'){
+        const li = document.querySelector(`.driver-card[data-driver="${msg.driver_id}"]`);
         if (li) li.outerHTML = msg.html;
       }
-    } catch (err) {
-      console.error('ws message parse error', err, ev.data);
-    }
+    }catch(e){ console.error('public ws parse', e, ev.data); }
   };
+  })();
 })();
 </script>
 <script>
@@ -853,7 +882,7 @@ async function handleDeleteDriverSubmit(e){
 </script>
 
 
-<script>
+<!-- <script>
 (function () {
   const meta = document.getElementById('driver-meta');
   if (!meta) return;
@@ -895,6 +924,6 @@ async function handleDeleteDriverSubmit(e){
     }
   };
 })();
-</script>
+</script> -->
 </body>
 </html>

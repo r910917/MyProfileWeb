@@ -379,7 +379,7 @@ form {
     <input type="date" name="return_date" id="driver-return" value="{{ prefill.return_date|default:'' }}" />
 
     <label for="note">備註</label>
-    <textarea name="note" id="note">{{ prefill.note|default:'' }}</textarea>
+    <textarea name="note" id="note" placeholder="出發時間(上午、下午、凌晨)，需要會開車(可以輪流開)......等">{{ prefill.note|default:'' }}</textarea>
 
     <button type="submit">✅ 送出</button>
     <div style="max-width:600px;margin:0 auto 8px;">

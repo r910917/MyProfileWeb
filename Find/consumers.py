@@ -132,6 +132,8 @@ class FindConsumer(AsyncWebsocketConsumer):
         payload = event.get("payload", {})
         await self.send(text_data=json.dumps(payload))
 
+    
+
 
      # ---- 將「同步 ORM 查詢」包成 async 可用 ----
     @database_sync_to_async

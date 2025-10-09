@@ -1,0 +1,47 @@
+{# templates/Find/_driver_manage_panels.html #}
+{# 需要變數：driver, pending, accepted #}
+
+<div class="details-grid3">
+  {# 左欄保留空白或放司機資訊；若你已有左欄就照原樣填 #}
+  <div class="details-col">
+    <div class="driver-info__title"><span class="emoji">🚗</span><span>司機資訊</span></div>
+    <div class="driver-kv">
+      <div class="k">暱稱</div><div class="v">{{ driver.driver_name }}</div>
+      <div class="k">出發日期</div><div class="v">{{ driver.date }}</div>
+      <div class="k">回程日期</div><div class="v">{{ driver.return_date|default:"未定" }}</div>
+      <div class="k">座位</div><div class="v">{{ driver.seats_filled }}/{{ driver.seats_total }}</div>
+    </div>
+  </div>
+
+  {# 中欄：待確認 #}
+  <div class="details-col">
+    <h4 class="pax-panel-title">🧍 待確認</h4>
+    <ul class="pax-list pending-scroll" id="manage-pending">
+      {% if pending %}
+        {% for p in pending %}
+          {% include "Find/_driver_manage_pax_item.html" with p=p only %}
+        {% empty %}
+          <li class="pax-empty">目前沒有待確認乘客</li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-empty">目前沒有待確認乘客</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  {# 右欄：已接受 #}
+  <div class="details-col">
+    <h4 class="pax-panel-title">✅ 已接受</h4>
+    <ul class="pax-list accepted-scroll" id="manage-accepted">
+      {% if accepted %}
+        {% for p in accepted %}
+          {% include "Find/_driver_manage_pax_item.html" with p=p only %}
+        {% empty %}
+          <li class="pax-empty">尚無已接受乘客</li>
+        {% endfor %}
+      {% else %}
+        <li class="pax-empty">尚無已接受乘客</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>

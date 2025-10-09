@@ -77,6 +77,7 @@ class PassengerRequest(models.Model):
     # ★ 新增：司機備忘（僅司機看得到）
     driver_memo = models.TextField(blank=True, null=True, default="")
     # ★ 新增：是否隱藏聯絡方式（需要 email）
+    hide_contact = models.BooleanField(default=False)
     auto_email_contact = models.BooleanField(
         default=False,
         help_text="（僅在隱藏個資為 True 時生效）自動將你的聯絡方式以 Email 通知司機"

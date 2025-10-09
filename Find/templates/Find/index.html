@@ -110,12 +110,13 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 /* 更貼左、較薄的卡片 */
 .card{
   display:flex;
-  align-items:left;
+  align-items:right;
+  overflow: hidden;
   justify-content:space-between;
   background:#fff;
   margin:3px;                 /* 取消奇怪的負邊距，左右不縮進 */
   padding:8px 12px 8px 24px;    /* 上下變薄、左邊多一點空間給色條 */
-  border-radius:8px;            /* 比 1px 好看許多 */
+  border-radius:10px;            /* 比 1px 好看許多 */
   box-shadow:0 2px 6px rgba(0,0,0,.08);
   position:relative;
   flex-wrap:wrap;
@@ -128,9 +129,9 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
   position:absolute;
   top:0;
   bottom:0;       /* 等同於 height:100% + 更穩定 */
-  left:10px;      /* 向左突出 8px，達到「貼左」效果 */
-  width:6px;
-  border-radius:6px 0 0 6px;
+  left:0px;      /* 向左突出 8px，達到「貼左」效果 */
+  width:10px;
+  border-radius:10px 0 0 20px;
 }
 
 .driver-card::before{ background:#2196f3; }
@@ -859,6 +860,31 @@ h2{ color:#00695c; margin:20px; font-size:20px; }
 /* ============================================================================
    Pax Edit Modal 美化（只影響 #paxEditModal）
    ========================================================================== */
+/* ===== 隱私設定卡片（scoped）===== */
+.pref-card{padding:10px;border-radius:10px;background:#f8fafc}
+.pref-row{display:flex;align-items:center;gap:12px;margin:10px 0}
+.pref-row.sub{padding-left:56px} /* 次級選項縮排 */
+.pref-title{font-weight:600;color:#111}
+.pref-hint{font-size:.85rem;color:#6b7280;margin-top:6px;line-height:1.5}
+.pref-hint p{margin:.2rem 0}
+
+/* 開關：只在隱私卡片內作用，避免全域 switch 衝突 */
+.pref-card .switch{position:relative;display:inline-flex;align-items:center}
+.pref-card .switch input[type="checkbox"]{
+  position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;
+}
+.pref-card .switch .slider{
+  width:48px;height:28px;border-radius:999px;background:#e5e7eb;
+  position:relative;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+  transition:background-color .2s ease;
+}
+.pref-card .switch .slider::before{
+  content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;
+  background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.15);
+  transition:left .22s cubic-bezier(.4,0,.2,1);
+}
+.pref-card .switch input:checked + .slider{background:#22c55e;}
+.pref-card .switch input:checked + .slider::before{left:23px;}
 
 /* 彈窗寬度與可卷動 */
 .modal .modal-content{ max-width:640px; }
@@ -1848,11 +1874,11 @@ input.ctl{ padding:.45rem .6rem; }
   z-index: 2000;
 "></div>
 
-<!-- 參加行程 Modal -->
+<!-- 參加行程 Modal（新版，版面同編輯乘客） -->
 <div id="joinModal" class="modal" style="display:none;">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>🧍 參加行程</h3>
+      <h3>🧍 報名共乘</h3>
       <button type="button" class="close" onclick="closeJoinModal()">×</button>
     </div>
 
@@ -1874,19 +1900,45 @@ input.ctl{ padding:.45rem .6rem; }
           </select>
         </div>
 
-        <div class="join-field">
-          <label>Email <span class="muted">(不公開，用於媒合通知)</span></label>
-          <input type="email" name="email" placeholder="選填">
+        <!-- Email：全寬 -->
+        <div class="join-field full">
+          <label>Email（不公開）</label>
+          <input type="email" id="joinEmail" name="email" placeholder="可空白">
+        </div>
+
+        <!-- 隱私設定：Switch（需 Email 才能啟用，與管理/編輯一致） -->
+        <div class="join-field full">
+          <label>隱私設定</label>
+          <div class="switch">
+            <input type="checkbox" id="joinHideContact" name="hide_contact">
+            <label class="toggle" for="joinHideContact"></label>
+            <label class="switch-text" for="joinHideContact">隱藏個資（聯絡方式）</label>
+          </div>
+
+          <!-- 子開關：只有「隱藏個資」= 開啟 才可用 -->
+          <div id="joinAutoEmailWrap" style="margin-top:.5rem; display:none;">
+            <div class="switch">
+              <input type="checkbox" id="joinAutoEmailContact" name="auto_email_contact">
+              <label class="toggle" for="joinAutoEmailContact"></label>
+              <label class="switch-text" for="joinAutoEmailContact">
+                隱藏時，自動把我的聯絡方式 Email 給司機
+              </label>
+            </div>
+          </div>
+
+          <small id="joinPrivacyHint" class="muted">
+            ※ Email 僅供系統通知，不會公開。<br>
+            若關閉自動寄送 Email，則需等待司機接受媒合後，系統才會把雙方資料寄送。
+          </small>
         </div>
 
         <div class="join-field">
-          <label>聯絡方式(選填,未填請自行連絡司機)</label>
-          <input type="text" name="contact" placeholder="LINE / IG / Phone 擇一">
+          <label>聯絡方式</label>
+          <input type="text" name="contact" placeholder="LINE / IG / Phone 擇一" required>
         </div>
 
         <div class="join-field">
           <label>上車人數</label>
-          <!-- 保留 input；JS 會視情況把它換成 select -->
           <input id="join-seats" type="number" name="seats_needed" min="1" value="1" required>
           <small id="seats-hint" class="muted"></small>
         </div>
@@ -1899,9 +1951,7 @@ input.ctl{ padding:.45rem .6rem; }
         <!-- 上車地點（縣市下拉 + 自填） -->
         <div class="join-field">
           <label for="join-pickup-select">上車地點</label>
-
-          <!-- 使用下拉做選擇（沒有 name，避免直接提交） -->
-          <select id="join-pickup-select">
+          <select id="join-pickup-select" required>
             <option value="">請選擇縣市</option>
             <option value="其他">其他</option>
             <option value="花蓮縣光復鄉">花蓮縣光復鄉</option>
@@ -1932,29 +1982,54 @@ input.ctl{ padding:.45rem .6rem; }
             <option value="金門縣">金門縣</option>
             <option value="連江縣">連江縣</option>
           </select>
-
-          <!-- 自填（選「其他」才顯示；無 name） -->
           <input type="text" id="join-pickup-custom" placeholder="輸入自訂上車地點" style="display:none;">
-
-          <!-- 真正提交用（有 name） -->
           <input type="hidden" id="join-pickup" name="departure">
         </div>
-        
-        
 
+        <!-- 目的地：改成下拉 + 自填 -->
         <div class="join-field">
-          <label>目的地</label>
-          <input type="text" name="destination">
+          <label for="join-dest-select">目的地</label>
+          <select id="join-dest-select" required>
+            <option value="">請選擇縣市</option>
+            <option value="其他">其他</option>
+            <option value="花蓮縣光復鄉">花蓮縣光復鄉</option>
+            <option value="花蓮縣光復車站以外火車站">花蓮縣光復車站以外火車站</option>
+            <option value="花蓮縣光復車站">花蓮縣光復車站</option>
+            <option value="光復鄉糖廠">光復鄉糖廠</option>
+            <option value="需清淤地區">需清淤地區</option>
+            <option value="台北市">台北市</option>
+            <option value="新北市">新北市</option>
+            <option value="基隆市">基隆市</option>
+            <option value="桃園市">桃園市</option>
+            <option value="新竹市">新竹市</option>
+            <option value="新竹縣">新竹縣</option>
+            <option value="苗栗縣">苗栗縣</option>
+            <option value="台中市">台中市</option>
+            <option value="彰化縣">彰化縣</option>
+            <option value="南投縣">南投縣</option>
+            <option value="雲林縣">雲林縣</option>
+            <option value="嘉義市">嘉義市</option>
+            <option value="嘉義縣">嘉義縣</option>
+            <option value="台南市">台南市</option>
+            <option value="高雄市">高雄市</option>
+            <option value="屏東縣">屏東縣</option>
+            <option value="宜蘭縣">宜蘭縣</option>
+            <option value="花蓮縣">花蓮縣</option>
+            <option value="台東縣">台東縣</option>
+            <option value="澎湖縣">澎湖縣</option>
+            <option value="金門縣">金門縣</option>
+            <option value="連江縣">連江縣</option>
+          </select>
+          <input type="text" id="join-dest-custom" placeholder="輸入自訂目的地" style="display:none;">
+          <input type="hidden" id="join-dest" name="destination">
         </div>
 
-
-
-        <!-- 出發日期（必填） -->
+        <!-- 出發 / 回程 -->
         <div class="join-field">
           <label for="join-date">出發日期</label>
           <input type="date" id="join-date" name="date" required>
         </div>
-        <!-- 是否一起回程 -->
+
         <div class="join-field">
           <label>是否一起回程？</label>
           <select name="together_return" id="join-together">
@@ -1963,20 +2038,19 @@ input.ctl{ padding:.45rem .6rem; }
             <option value="false">否</option>
           </select>
         </div>
-        <!-- 回程日期 -->
+
         <div class="join-field" id="returnField" style="display:none;">
           <label for="join-return">回程日期</label>
           <input type="date" id="join-return" name="return_date">
         </div>
 
-
         <div class="join-field">
           <label>管理密碼 <span class="muted">（建議 4 碼，供取消/編輯用，預設0000）</span></label>
-          <input type="password" name="password" placeholder="建議 4 碼" defaultValue="0000">
+          <input type="password" name="password" placeholder="建議 4 碼" value="0000">
         </div>
 
-        <div class="join-field">
-          <label>備註 <span class="muted">（可輸入同行人、具體需求…）</span></label>
+        <div class="join-field full">
+          <label>備註</label>
           <textarea name="note" rows="3" placeholder=""></textarea>
         </div>
       </form>
@@ -1988,6 +2062,7 @@ input.ctl{ padding:.45rem .6rem; }
     </div>
   </div>
 </div>
+
 
 <!-- 乘客編輯授權 Modal -->
 <div id="paxAuthModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="paxAuthTitle" style="display:none;">
@@ -2034,7 +2109,7 @@ input.ctl{ padding:.45rem .6rem; }
       <button class="close" onclick="closePaxEdit()">&times;</button>
     </div>
     <div class="modal-body">
-      <form id="paxEditForm">
+<form id="paxEditForm"  method="POST">
   {% csrf_token %}
   <input type="hidden" id="paxEditId" name="id">
 
@@ -2059,16 +2134,34 @@ input.ctl{ padding:.45rem .6rem; }
   </div>
 
   <!-- 隱私設定：Switch，需 Email 才能啟用（全寬） -->
-  <div class="join-field full">
     <label>隱私設定</label>
-    <div class="switch">
-  <input type="checkbox" id="paxHideContact" name="hide_contact">
-  <!-- 原本是 <span class="toggle"></span> -->
-  <label class="toggle" for="paxHideContact"></label>
-  <label class="switch-text" for="paxHideContact">隱藏個資（聯絡方式）</label>
-</div>
-<small id="paxPrivacyHint" class="muted">※ 需填寫 Email 才能隱藏；Email 僅供系統通知，不會公開。</small>
+    <section class="pref-card">
+          <div class="pref-row">
+            <div class="join-field full">
+  <div class="switch">
+    <input type="hidden" name="hide_contact" value="0">
+    <input type="checkbox" id="paxHideContact" name="hide_contact" value="1">
+    <label class="toggle" for="paxHideContact"></label>
+    <label class="switch-text" for="paxHideContact">隱藏個資（聯絡方式）</label>
   </div>
+
+  <!-- 只有勾了隱藏個資才顯示 -->
+  <div class="switch sub" id="paxAutoEmailWrap" style="display:none;">
+    <input type="hidden" name="auto_email_contact" value="0">
+    <input type="checkbox" id="paxAutoEmailContact" name="auto_email_contact" value="1">
+    <label class="toggle" for="paxAutoEmailContact"></label>
+    <label class="switch-text" for="paxAutoEmailContact">
+      隱藏時，自動把我的聯絡方式 Email 給司機
+    </label>
+  </div>
+
+  <small id="paxPrivacyHint" class="muted">
+    <p>※ Email 僅供系統通知，不會公開。</p>
+    <p>若關閉自動寄送 Email，則需等待司機接受報名後，系統才會把聯絡方式寄送到你的 Email。</p>
+  </small>
+</div>
+          
+    </section>
 
   <div class="join-field">
     <label>聯絡方式</label>
@@ -2085,10 +2178,43 @@ input.ctl{ padding:.45rem .6rem; }
     <input type="text" id="paxPay" name="willing_to_pay" placeholder="例如 300">
   </div>
 
-  <div class="join-field">
-    <label>上車地點</label>
-    <input type="text" id="paxDeparture" name="departure">
-  </div>
+  <!-- 上車地點：下拉＋自填 -->
+        <div class="join-field">
+          <label for="paxDepartureSel">上車地點</label>
+          <select id="paxDepartureSel">
+            <option value="">請選擇縣市</option>
+            <option value="其他">其他</option>
+            <option value="花蓮縣光復鄉">花蓮縣光復鄉</option>
+            <option value="花蓮縣光復車站以外火車站">花蓮縣光復車站以外火車站</option>
+            <option value="花蓮縣光復車站">花蓮縣光復車站</option>
+            <option value="光復鄉糖廠">光復鄉糖廠</option>
+            <option value="需清淤地區">需清淤地區</option>
+            <option value="台北市">台北市</option>
+            <option value="新北市">新北市</option>
+            <option value="基隆市">基隆市</option>
+            <option value="桃園市">桃園市</option>
+            <option value="新竹市">新竹市</option>
+            <option value="新竹縣">新竹縣</option>
+            <option value="苗栗縣">苗栗縣</option>
+            <option value="台中市">台中市</option>
+            <option value="彰化縣">彰化縣</option>
+            <option value="南投縣">南投縣</option>
+            <option value="雲林縣">雲林縣</option>
+            <option value="嘉義市">嘉義市</option>
+            <option value="嘉義縣">嘉義縣</option>
+            <option value="台南市">台南市</option>
+            <option value="高雄市">高雄市</option>
+            <option value="屏東縣">屏東縣</option>
+            <option value="宜蘭縣">宜蘭縣</option>
+            <option value="花蓮縣">花蓮縣</option>
+            <option value="台東縣">台東縣</option>
+            <option value="澎湖縣">澎湖縣</option>
+            <option value="金門縣">金門縣</option>
+            <option value="連江縣">連江縣</option>
+          </select>
+          <input type="text" id="paxDepartureCustom" placeholder="輸入自訂上車地點" style="display:none;">
+          <input type="hidden" id="paxDeparture" name="departure">
+        </div>
 
   <div class="join-field">
     <label>目的地</label>
@@ -2101,11 +2227,6 @@ input.ctl{ padding:.45rem .6rem; }
   </div>
 
   <div class="join-field">
-    <label>回程日期（選填）</label>
-    <input type="date" id="paxReturn" name="return_date">
-  </div>
-
-  <div class="join-field">
     <label>是否一起回程</label>
     <select id="paxTogether" name="together_return">
       <option value="">未指定</option>
@@ -2114,7 +2235,13 @@ input.ctl{ padding:.45rem .6rem; }
     </select>
   </div>
 
-  <!-- 備註：全寬 -->
+  <div class="join-field" id="paxReturnWrap">
+    <label>回程日期（選填）</label>
+    <input type="date" id="paxReturn" name="return_date">
+    <small id="paxReturnHint" class="muted"></small>
+  </div>
+
+  <!-- 備註 -->
   <div class="join-field full">
     <label>備註</label>
     <textarea id="paxNote" name="note" rows="3"></textarea>
@@ -2146,6 +2273,41 @@ input.ctl{ padding:.45rem .6rem; }
     </div>
   </div>
 </div>
+
+<!-- 混合授權 Modal：乘客密碼優先，失敗再試司機密碼 -->
+<div id="mixedAuthModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">🔐 授權確認</h3>
+      <button type="button" class="close" onclick="closeMixedAuth()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-desc">請輸入管理密碼以繼續</p>
+      <form id="mixedAuthForm" method="POST">
+        {% csrf_token %}
+        <input type="hidden" id="mixedAuthPaxId" name="pax_id">
+        <input type="hidden" id="mixedAuthDriverId" name="driver_id">
+        <input type="hidden" id="mixedAuthNextUrl" name="next_url">
+        <input type="hidden" id="mixedAuthAction" name="action">
+        <div class="form-group">
+          <label for="mixedAuthPassword">管理密碼</label>
+          <input id="mixedAuthPassword"
+                 type="password"
+                 required
+                 placeholder="輸入密碼"
+                 autocomplete="current-password">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" onclick="closeMixedAuth()">取消</button>
+          <button type="submit" class="btn primary">確認</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 
 <!-- ③ 說明 Modal（ID 保持 introModal） -->
 <div class="modal fade" id="introModal"
@@ -2392,7 +2554,7 @@ function setSort(val){
 </style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
   
   // 檢查 URL 中是否有 `auth_required` 參數
@@ -2402,7 +2564,6 @@ function setSort(val){
   }
 });
 document.addEventListener('DOMContentLoaded', function() {
-  // 假設你使用了 `showToastSafe` 函式來顯示錯誤訊息
   const params = new URLSearchParams(window.location.search);
   const error = params.get("error");
   
@@ -2663,13 +2824,7 @@ function setDetailsMaxHeight(li){
   details.style.overflow  = 'auto';
   details.style.webkitOverflowScrolling = 'touch';
 }
-
-// ---- 單一來源：卡片展開/收合（防重複）----
-(function () {
-  if (window.__BIND_CARD_TOGGLE__) return;
-  window.__BIND_CARD_TOGGLE__ = true;
-
-  // 可捲高度計算（跟你之前的一樣，這裡包成函式）
+// 可捲高度計算（跟你之前的一樣，這裡包成函式）
   function setDetailsMaxHeightByArrow(arrowEl){
     const li = arrowEl.closest('.driver-card');
     if (!li) return;
@@ -2687,53 +2842,6 @@ function setDetailsMaxHeight(li){
   }
 
   let lastToggleAt = 0;
-
-  document.addEventListener('click', function (e) {
-    const btn = e.target.closest('[data-action="toggle"]');
-    if (!btn) return;
-
-    // 防雙觸發：擋住後續同一輪 listener、也做個 150ms 節流
-    e.preventDefault();
-    e.stopPropagation();
-    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-    const now = Date.now();
-    if (now - lastToggleAt < 150) return;
-    lastToggleAt = now;
-
-    const driverId = btn.dataset.id;
-    const details  = document.getElementById('details-' + driverId);
-    const arrow    = document.getElementById('arrow-' + driverId) || btn;
-    if (!details) return;
-
-    // 改用「顯式狀態」避免 toggle 兩次相互抵銷
-    const willOpen = !details.classList.contains('open');
-    details.classList.toggle('open', willOpen);
-    details.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
-    if (arrow) {
-      arrow.classList.toggle('open', willOpen);
-      arrow.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    }
-
-    // 打開時設定可捲高度；關閉時清除高度
-    if (willOpen) {
-      setDetailsMaxHeightByArrow(arrow || details);
-      const li = details.closest('.driver-card');
-      if (li) centerCardInViewport(li);
-    } else {
-      details.style.maxHeight = '';
-      details.style.overflow  = '';
-    }
-  }, true); // 用捕獲階段，能先於其他 document click 處理並阻斷
-
-  // 旋轉/縮放時，重算所有打開中的
-  window.addEventListener('resize', () => {
-    document.querySelectorAll('#driver-list .driver-card .details.open')
-      .forEach(d => {
-        const arrow = d.closest('.driver-card')?.querySelector('.arrow');
-        if (arrow) setDetailsMaxHeightByArrow(arrow);
-      });
-  });
-})();
 
 function centerCardInViewport(li) {
   const rect = li.getBoundingClientRect();
@@ -2828,10 +2936,18 @@ function openJoinModal(driverId){
   f.action = `/find/driver/${driverId}/join/`;
   m.style.display = 'block';
   document.body.classList.add('body-modal-open');
+  const r = document.getElementById('join-return');
+  if (r) r.dataset.driverReturn = (ret || '');
+  // 若「是否一起回程」預設就是「是」，也可以順手填上：
+  const tog = document.getElementById('join-together');
+  if (tog && tog.value === 'true' && r) r.value = ret || '';
   setTimeout(() => {
     const first = f.querySelector('input,select,textarea');
     if (first) first.focus();
   }, 0);
+  // 叫一次，讓 UI 馬上正確（這兩個名稱就是上面掛去全域的）
+  if (window.handleTogetherChange) window.handleTogetherChange();
+  if (window.syncReturnMin)        window.syncReturnMin();
 }
 function closeJoinModal(){
   const m = $id('joinModal');
@@ -3042,45 +3158,6 @@ function openCancelModal(passengerId){
     syncReturnMin();
   };
 
-  // === 單一全域 click handler：計算 remaining 後呼叫 openJoinModal ===
-  if (!window.__BIND_JOIN_CLICK__) {
-    window.__BIND_JOIN_CLICK__ = true;
-
-    document.addEventListener('click', function (e) {
-      const btn = e.target.closest('[data-action="join"]');
-      if (!btn) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-
-      const id     = btn.dataset.id;
-      const date   = btn.dataset.date   || '';
-      const ret    = btn.dataset.return || '';
-      const total  = parseInt(btn.dataset.total  || '0', 10) || 0;
-      const filled = parseInt(btn.dataset.filled || '0', 10) || 0;
-      const remaining = Math.max(0, total - filled);
-
-      // 存一份到全域方便除錯
-      window.__lastJoinBtn = btn;
-      window.__lastRemaining = remaining;
-      // 建立「此次點擊」的序號並存到全域
-      const seq = Date.now() + Math.random();
-      window.__joinOpenSeq = seq;
-
-      // 也寫回 dataset（你在 Console 會看得到 data-remaining）
-      btn.dataset.remaining = String(remaining);
-
-      console.log('[join-click]', { id, remaining, total: btn.dataset.total, filled: btn.dataset.filled });
-
-      openJoinModal(id, date, ret, remaining,seq);
-    });
-
-    // 同步回程欄位的聯動
-    document.addEventListener("change", function (e) {
-      if (e.target && e.target.id === "join-together") handleTogetherChange();
-      if (e.target && e.target.id === "join-date")     syncReturnMin();
-    });
-  }
 })();
 </script>
 
@@ -3094,82 +3171,165 @@ function openCancelModal(passengerId){
  *      #join-pickup（hidden，真正送後端的 departure）
  *      #joinForm
  * ========================================================================= */
-(function pickupFieldBinding(){
-  if (window.__PICKUP_BIND__) return; // 防重複
-  window.__PICKUP_BIND__ = true;
+(function(){
+  // ===== 下拉 + 自填：上車地點 =====
+  const pickupSel = document.getElementById('join-pickup-select');
+  const pickupCus = document.getElementById('join-pickup-custom');
+  const pickupOut = document.getElementById('join-pickup');
 
-  const PICKUP_SELECT_ID = "join-pickup-select";
-  const PICKUP_CUSTOM_ID = "join-pickup-custom";
-  const PICKUP_HIDDEN_ID = "join-pickup";
-  const JOIN_FORM_ID     = "joinForm";
-
-  function getEls() {
-    return {
-      sel   : $id(PICKUP_SELECT_ID),
-      custom: $id(PICKUP_CUSTOM_ID),
-      hidden: $id(PICKUP_HIDDEN_ID),
-      form  : $id(JOIN_FORM_ID),
-    };
-  }
-  function applyPickupUI() {
-    const { sel, custom } = getEls();
-    if (!sel || !custom) return;
-    if (sel.value === "其他") {
-      custom.style.display = "block";
-    } else {
-      custom.style.display = "none";
-      custom.value = "";
+  function syncPickup(){
+    const v = pickupSel.value || '';
+    if (v === '其他'){
+      pickupCus.style.display = '';
+      pickupCus.required = true;
+      pickupOut.value = pickupCus.value.trim();
+    }else{
+      pickupCus.style.display = 'none';
+      pickupCus.required = false;
+      pickupOut.value = v;
     }
   }
-  function syncHidden() {
-    const { sel, custom, hidden } = getEls();
-    if (!sel || !custom || !hidden) return;
-    hidden.value = (sel.value === "其他") ? (custom.value || "").trim() : (sel.value || "");
+  pickupSel && pickupSel.addEventListener('change', syncPickup);
+  pickupCus && pickupCus.addEventListener('input', ()=>{ if (pickupSel.value==='其他') pickupOut.value = pickupCus.value.trim(); });
+  syncPickup();
+
+  // ===== 目的地下拉 + 自填 =====
+  const destSel = document.getElementById('join-dest-select');
+  const destCus = document.getElementById('join-dest-custom');
+  const destOut = document.getElementById('join-dest');
+
+  function syncDest(){
+    const v = destSel.value || '';
+    if (v === '其他'){
+      destCus.style.display = '';
+      destCus.required = true;
+      destOut.value = destCus.value.trim();
+    }else{
+      destCus.style.display = 'none';
+      destCus.required = false;
+      destOut.value = v;
+    }
+  }
+  destSel && destSel.addEventListener('change', syncDest);
+  destCus && destCus.addEventListener('input', ()=>{ if (destSel.value==='其他') destOut.value = destCus.value.trim(); });
+  syncDest();
+
+  // ===== 回程顯示切換 =====
+  const dep     = document.getElementById('join-date');
+  const together = document.getElementById('join-together');
+  const retWrap  = document.getElementById('returnField');
+  const retInput = document.getElementById('join-return');
+  function syncReturn(){
+    const need = together && together.value === 'true';
+    if (retWrap){ retWrap.style.display = need ? '' : 'none'; }
+    if (retInput){ retInput.required = !!need; if (!need) retInput.value = ''; }
+  }
+  together && together.addEventListener('change', syncReturn);
+  syncReturn();
+
+  // ===== 隱私開關（需 Email；隱藏=開才顯示自動寄信） =====
+  const email  = document.getElementById('joinEmail');
+  const hide   = document.getElementById('joinHideContact');
+  const autoW  = document.getElementById('joinAutoEmailWrap');
+  const auto   = document.getElementById('joinAutoEmailContact');
+  const hint   = document.getElementById('joinPrivacyHint');
+
+  function hasEmail(){ return !!(email && email.value && email.value.includes('@')); }
+  function setHint(lines){ if(hint) hint.innerHTML = lines.join('<br>'); }
+
+  function getDriverReturn(){
+    return retInput?.dataset?.driverReturn || '';
   }
 
-  // 事件委派一次搞定
-  document.addEventListener("change", (e) => {
-    if (e.target && e.target.id === PICKUP_SELECT_ID) {
-      applyPickupUI(); syncHidden();
+function syncReturnVisibility(){
+    // 「是」= 跟司機一起回程 → 隱藏欄位，值固定為司機回程日（沒有就清空）
+    if (together?.value === 'true'){
+      if (retWrap)  retWrap.style.display = 'none';
+      if (retInput){
+        retInput.value = getDriverReturn() || '';
+        // 不 disabled，避免瀏覽器不送值；但用 CSS 隱藏即可
+      }
+    }else{
+      // 「否」或「未指定」→ 顯示欄位（否：可填；未指定：也可填但不 required）
+      if (retWrap)  retWrap.style.display = '';
+      // 不要覆蓋使用者已選值
     }
-  });
-  document.addEventListener("input", (e) => {
-    if (e.target && e.target.id === PICKUP_CUSTOM_ID) syncHidden();
-  });
-  document.addEventListener("submit", (e) => {
-    const { form } = getEls();
-    if (form && e.target === form) syncHidden();
-  });
+    syncReturnMin();
+  }
 
-  // 對外重置（打開 Modal 時可用）
-  window.resetPickupField = function(){
-    const { sel, custom, hidden } = getEls();
-    if (!sel || !custom || !hidden) return;
-    sel.value = ""; custom.value = ""; custom.style.display = "none"; hidden.value = "";
-  };
+  function syncReturnMin(){
+    if (!dep || !retInput) return;
+    retInput.min = dep.value || '';
+    if (retInput.value && dep.value && retInput.value < dep.value){
+      retInput.value = '';
+    }
+  }
 
-  // 初始套用一次
-  setTimeout(() => { applyPickupUI(); syncHidden(); }, 0);
+  dep      && dep.addEventListener('change', syncReturnMin);
+  together && together.addEventListener('change', syncReturnVisibility);
+  syncReturnVisibility();
+  // （在 IIFE 結尾）
+window.handleTogetherChange = syncReturnVisibility; // 舊程式在呼叫它
+window.syncReturnMin        = syncReturnMin;        // 舊監聽器也會用到
+
+  function setHint(lines){ if(hint) hint.innerHTML = lines.map(s=>`<div>${s}</div>`).join(''); }
+  function hasEmail(){ return !!(email && email.value && email.value.includes('@')); }
+
+  function syncPrivacyUI(){
+    const okEmail = hasEmail();
+
+    if (!okEmail){
+      // 沒 email：兩顆都不能用、子列隱藏，但不改 checked
+      hide && (hide.disabled = true, hide.checked = false);
+      auto && (auto.disabled = true, auto.checked = false);
+      autoW && (autoW.style.display = 'none');
+      setHint(['※ 尚未填寫 Email，無法隱藏聯絡方式。','填寫後即可啟用「隱藏個資」與「自動寄信」。']);
+      return;
+    }
+
+    // 有 email：允許切換；當 hide 開時顯示 auto，且預設把 auto 開啟（你要的 UX）
+    hide && (hide.disabled = false);
+    if (hide && hide.checked){
+      autoW && (autoW.style.display = '');
+      if (auto){ auto.disabled = false; if (!auto.hasAttribute('data-touched')) auto.checked = true; }
+    }else{
+      autoW && (autoW.style.display = 'none');
+      if (auto){ auto.disabled = true; auto.checked = false; }
+    }
+    setHint(['※ Email 僅供系統通知，不會公開。','若關閉自動寄送 Email，則需等待司機接受媒合後，系統才會把雙方資料寄送。']);
+  }
+
+  hide && hide.addEventListener('change', syncPrivacyUI);
+  auto && auto.addEventListener('change', ()=> auto.setAttribute('data-touched','1'));
+  email && email.addEventListener('input', syncPrivacyUI);
+  syncPrivacyUI();
+
+  // ===== 出發/回程日期基本防呆（回程不可早於出發） =====
+  if (dep && retInput){
+    function syncMin(){
+      retInput.min = dep.value || '';
+      if (retInput.value && dep.value && retInput.value < dep.value) retInput.value = '';
+    }
+    dep.addEventListener('change', syncMin);
+    syncMin();
+  }
 })();
 
 /* =========================================================================
  * 7) 乘客：密碼驗證 →（編輯｜刪除）/ 編輯儲存 / 刪除
- *    - 事件委派： [data-pax-edit], [data-pax-del]
- *    - 可用 window.afterPaxChanged?.({action, id}) 作為更新鉤子
  * ========================================================================= */
-// Modal 開關
 function openPaxAuth (pid) {
-  const idEl  = $id('paxAuthId');
-  const pwdEl = $id('paxAuthPassword');
-  const modal = $id('paxAuthModal');
+  const idEl  = document.getElementById('paxAuthId');
+  const pwdEl = document.getElementById('paxAuthPassword');
+  const modal = document.getElementById('paxAuthModal');
   if (!idEl || !pwdEl || !modal) return;
   idEl.value = pid; pwdEl.value = '';
   modal.style.display = 'block';
   setTimeout(() => pwdEl.focus(), 0);
 }
-function closePaxAuth () { const m = $id('paxAuthModal'); if (m) m.style.display = 'none'; }
-function openPaxEdit ()  { const m = $id('paxEditModal'); if (m) m.style.display  = 'block'; }
-function closePaxEdit () { const m = $id('paxEditModal'); if (m) m.style.display  = 'none'; }
+function closePaxAuth () { const m = document.getElementById('paxAuthModal'); if (m) m.style.display = 'none'; }
+function openPaxEdit ()  { const m = document.getElementById('paxEditModal'); if (m) m.style.display  = 'block'; }
+function closePaxEdit () { const m = document.getElementById('paxEditModal'); if (m) m.style.display  = 'none'; }
 
 let __paxNextAction = null;
 
@@ -3181,31 +3341,17 @@ document.addEventListener('click', (e) => {
   if (delBtn){  e.preventDefault(); __paxNextAction = 'delete'; openPaxAuth(delBtn.dataset.id); return; }
 });
 
-async function driverManageAuth(driver_id, password) {
-  const csrf_token = getCSRF(); // 假設已經有方法取得 CSRF token
-  const res = await fetch(`/find/driver/${driver_id}/manage/auth/`, {
-    method: "POST",
-    headers: {
-      "X-CSRFToken": csrf_token, // 帶上 CSRF token
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-    },
-    body: new URLSearchParams({
-      password: password
-    }),
-  });
+// 綁 submit（避免只有點按鈕才會跑）
+document.getElementById('paxAuthForm')?.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  submitPaxAuth();
+});
 
-  const data = await res.json();
-  if (res.ok && data.ok) {
-    // 成功，跳轉到管理頁面
-    window.location.href = data.url;
-  } else {
-    alert(data.error || "登入失敗");
-  }
-}
+
 
 async function submitPaxAuth () {
-  const pid = $id('paxAuthId')?.value;
-  const pwd = $id('paxAuthPassword')?.value;
+  const pid = document.getElementById('paxAuthId')?.value;
+  const pwd = document.getElementById('paxAuthPassword')?.value;
   if (!pid || !pwd) { showToastSafe('請輸入密碼', 'error'); return; }
 
   try {
@@ -3220,17 +3366,105 @@ async function submitPaxAuth () {
     });
     if (!res.ok || !data.ok) { showToastSafe(data.error || '驗證失敗', 'error'); return; }
     closePaxAuth();
+    const action = __paxNextAction || 'edit';
+    if (action === 'reject') {
+      await doPaxDelete(pid);
+    }
     if (__paxNextAction === 'delete') { await doPaxDelete(pid); return; }
     if (__paxNextAction === 'edit')   { await loadPaxAndOpenEdit(pid); return; }
   } catch (err) {
     console.error(err);
-    showToastSafe('伺服器錯誤，稍後再試'+err, 'error');
+    showToastSafe('伺服器錯誤，稍後再試' + err, 'error');
   } finally {
     __paxNextAction = null;
   }
 }
 window.submitPaxAuth = submitPaxAuth;
 
+/* ---------- 編輯 Modal：初始化互動（下拉/自填、回程顯示、隱私＋自動寄信） ---------- */
+function initPaxEditModalUI () {
+  // 上車地點...
+  const sel    = document.getElementById('paxDepartureSel');
+  const custom = document.getElementById('paxDepartureCustom');
+  const hidden = document.getElementById('paxDeparture');
+  function syncDeparture(){
+    if (!sel || !custom || !hidden) return;
+    if (sel.value === '其他') {
+      custom.style.display = 'block';
+      hidden.value = custom.value.trim();
+    } else {
+      custom.style.display = 'none';
+      hidden.value = sel.value || '';
+      custom.value = '';
+    }
+  }
+  sel?.addEventListener('change', syncDeparture);
+  custom?.addEventListener('input', syncDeparture);
+  syncDeparture();
+
+  // 回程欄位顯示 & 最小日期
+  const dep   = document.getElementById('paxDate');
+  const tog   = document.getElementById('paxTogether');
+  const ret   = document.getElementById('paxReturn');
+  function syncRetMin(){ if (ret && dep){ ret.min = dep.value || ''; if (ret.value && dep.value && ret.value < dep.value) ret.value=''; } }
+  function syncReturn(){
+    if (!tog) return;
+    // 若你有外層容器再加顯示/隱藏；沒有就只處理值
+    if (tog.value !== 'true' && ret) ret.value = '';
+    syncRetMin();
+  }
+  dep?.addEventListener('change', syncRetMin);
+  tog?.addEventListener('change', syncReturn);
+  syncReturn();
+
+  // 隱私 + 自動寄信（需 Email）
+  const email = document.getElementById('paxEmail');
+  const hide  = document.getElementById('paxHideContact');
+  const hint  = document.getElementById('paxPrivacyHint');
+  const autoW = document.getElementById('paxAutoEmailWrap');
+  const auto  = document.getElementById('paxAutoEmailContact'); // ← 修正 ID
+
+  const HINT_HTML = `
+    <p>※ Email 僅供系統通知，不會公開。</p>
+    <p>若關閉自動寄送 Email，則需等待司機接受報名後，系統才會把聯絡方式寄送到你的 Email。</p>
+  `;
+  function syncHint(){ if (hint) hint.innerHTML = HINT_HTML; }
+
+  function syncPrivacy(){
+    const hasEmail = !!(email?.value && email.value.includes('@'));
+    if (hide){
+      hide.disabled = !hasEmail;
+      if (!hasEmail) hide.checked = false;
+    }
+    if (auto){
+      auto.disabled = !hasEmail;
+      if (!hasEmail) auto.checked = false;
+    }
+    if (autoW) autoW.style.display = (hide?.checked ? 'flex' : 'none');
+    syncHint();
+  }
+
+  // 事件：Email 變更 → 能不能開
+  email?.addEventListener('input', syncPrivacy);
+
+  // 事件：勾隱藏時顯示自動寄信；若 DB 原本為 0 且使用者尚未手動改過，預設開一次
+  hide?.addEventListener('change', ()=>{
+    if (hide.checked && auto && auto.dataset.init === '0' && auto.dataset.userToggled !== '1'){
+      auto.checked = true;
+    }
+    if (autoW) autoW.style.display = (hide.checked ? 'flex' : 'none');
+  });
+
+  // 使用者有動過自動寄信 → 標記，之後就不幫他預設改了
+  auto?.addEventListener('change', ()=>{ auto.dataset.userToggled = '1'; });
+
+  // 初始化（尊重 DB，**不要**強制打開）
+  syncPrivacy();
+}
+window.initPaxEditModalUI = initPaxEditModalUI;
+
+
+/* ---------- 讀取資料 → 開啟編輯 ---------- */
 async function loadPaxAndOpenEdit(pid) {
   const { res, data } = await jsonFetch(`/find/pax/${pid}/get/`, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -3241,51 +3475,190 @@ async function loadPaxAndOpenEdit(pid) {
   }
   const p = data.p || {};
 
+  // 基本欄位
   (document.getElementById('paxEditId')      || {}).value = p.id ?? '';
   (document.getElementById('paxName')        || {}).value = p.passenger_name ?? '';
   (document.getElementById('paxGender')      || {}).value = p.gender ?? 'X';
-  (document.getElementById('email')          || {}).value = p.email ?? '';           // ← 改這裡
+  (document.getElementById('paxEmail')       || {}).value = p.email ?? '';
   (document.getElementById('paxContact')     || {}).value = p.contact ?? '';
   (document.getElementById('paxSeats')       || {}).value = p.seats_needed ?? 1;
   (document.getElementById('paxPay')         || {}).value = p.willing_to_pay ?? '';
-  (document.getElementById('paxDeparture')   || {}).value = p.departure ?? '';
   (document.getElementById('paxDestination') || {}).value = p.destination ?? '';
   (document.getElementById('paxDate')        || {}).value = p.date ?? '';
   (document.getElementById('paxReturn')      || {}).value = p.return_date ?? '';
-  (document.getElementById('paxTogether')    || {}).value =
-    (p.together_return === true ? 'true' : p.together_return === false ? 'false' : '');
   (document.getElementById('paxNote')        || {}).value = p.note ?? '';
 
-  // 隱私 checkbox
-  const hideEl = document.getElementById('hide_contact');   // ← 改這裡
+   // together_return：後端可能回 "true"/"false"/""，也可能是布林；全都處理
+  const trRaw = p.together_return;
+  const togetherVal =
+    (trRaw === true || trRaw === 'true') ? 'true' :
+    (trRaw === false || trRaw === 'false') ? 'false' : '';
+  (document.getElementById('paxTogether') || {}).value = togetherVal;
+
+  // 上車地點：若不是下拉選項，就選「其他」並帶入自填
+  const depSel = document.getElementById('paxDepartureSel');
+  const depCus = document.getElementById('paxDepartureCustom');
+  const depHid = document.getElementById('paxDeparture');
+  if (depSel && depCus && depHid){
+    const val = p.departure || '';
+    const hasOption = !!Array.from(depSel.options).find(o => o.value === val);
+    depSel.value  = hasOption ? val : '其他';
+    depCus.value  = hasOption ? '' : val;
+    depHid.value  = val;
+  }
+
+  // === 隱私兩個開關：完全以 DB 值為準 ===
+  const hideEl = document.getElementById('paxHideContact');
+  const autoEl = document.getElementById('paxAutoEmailContact');  
   if (hideEl) {
-    hideEl.checked  = !!(p.hide_contact && p.email);        // 有填 email 才能為 true
-    hideEl.disabled = !p.email;                              // 沒 email 一律禁用
+    hideEl.checked  = !!(p.hide_contact && p.email); // 沒 email 就禁用且不勾
+    hideEl.disabled = !p.email;
+    hideEl.dataset.init = p.hide_contact ? '1' : '0';
+  }
+  if (autoEl) {
+    autoEl.checked  = !!p.auto_email_contact;
+    autoEl.disabled = !p.email;
+    autoEl.dataset.init = p.auto_email_contact ? '1' : '0';
   }
 
   openPaxEdit();
+// 初始化「回程」UI（與司機回程相同／顯示日期欄位 + min）
+  // 需要你已有的 setupPaxReturnUI(driverReturnDate)；若沒有我再補給你
+  setupPaxReturnUI && setupPaxReturnUI(p.driver_return_date || '');
 
-  // 讓開關腳本再跑一次（若你有那段 window.syncPrivacySwitch）
-  window.syncPrivacySwitch && window.syncPrivacySwitch();
+  // 其餘初始化（隱私、自動寄信、地點等）
+  initPaxEditModalUI && initPaxEditModalUI();
+  setupPaxPrivacySwitch && setupPaxPrivacySwitch();
+  window.syncPaxReturnOnce && window.syncPaxReturnOnce();
 }
 window.loadPaxAndOpenEdit = loadPaxAndOpenEdit;
 
+function setupPaxReturnUI(driverReturnISO) {
+  const tog   = document.getElementById('paxTogether');
+  const dep   = document.getElementById('paxDate');
+  const ret   = document.getElementById('paxReturn');
 
+  if (!tog || !ret) return;
 
-function openPaxEdit () {
-  const m = document.getElementById('paxEditModal');
-  if (m) m.style.display = 'block';
+  // 找一個外層容器（若你有 id="paxReturnWrap" 會優先用；沒有就抓最近的 .join-field）
+  let wrap = document.getElementById('paxReturnWrap');
+  if (!wrap) wrap = ret.closest('.join-field') || ret.parentElement;
+
+  // 準備一個說明小字（若不存在就動態建立）
+  let hint = document.getElementById('paxReturnHint');
+  if (!hint) {
+    hint = document.createElement('small');
+    hint.id = 'paxReturnHint';
+    hint.className = 'muted';
+    ret.after(hint);
+  }
+
+  function syncMin() {
+    if (!dep || !ret) return;
+    ret.min = dep.value || '';
+    // 若已選回程但小於出發日，就清掉
+    if (ret.value && dep.value && ret.value < dep.value) {
+      ret.value = '';
+    }
+  }
+
+  function render() {
+    const v = (tog.value || '').toLowerCase(); // 'true' | 'false' | ''
+    // 預設全顯示、清提示
+    hint.textContent = '';
+
+    if (v === 'true') {
+      // 與司機回程相同：隱藏輸入框、清空值（不送出 return_date），顯示提示
+      ret.value = '';
+      ret.disabled = true;
+      ret.style.display = 'none';
+      if (wrap) wrap.style.display = ''; // 外框可留著，內部把 input 隱藏
+
+      const dateText = driverReturnISO ? `：${driverReturnISO}` : '';
+      hint.textContent = `與司機回程相同${dateText}（不可更改）`;
+      hint.style.display = 'block';
+    } else if (v === 'false') {
+      // 顯示日期輸入，允許選擇；提示改成說明文字可省略
+      ret.disabled = false;
+      ret.style.display = '';
+      if (wrap) wrap.style.display = '';
+      hint.textContent = '請選擇你的回程日期（可留空）';
+      hint.style.display = 'block';
+      syncMin();
+    } else {
+      // 未指定：不顯示輸入與提示，不送出回程日期
+      ret.value = '';
+      ret.disabled = false; // 不禁用，避免切換回「否」時不能用
+      ret.style.display = 'none';
+      if (wrap) wrap.style.display = '';
+      hint.textContent = '';
+      hint.style.display = 'none';
+    }
+  }
+
+  // 綁事件
+  tog.addEventListener('change', render);
+  dep && dep.addEventListener('change', () => { syncMin(); });
+
+  // 初始同步
+  syncMin();
+  render();
 }
-window.openPaxEdit = openPaxEdit;
 
-function closePaxEdit () {
-  const m = document.getElementById('paxEditModal');
-  if (m) m.style.display = 'none';
+function setupPaxPrivacySwitch(){
+  const email = $id('paxEmail');                      // 乘客 email 欄位
+  const hide  = $id('paxHideContact');
+  const auto  = $id('paxAutoEmailContact');
+  const wrap  = $id('paxAutoEmailWrap');
+  const hint  = $id('paxPrivacyHint');
+
+  function showAutoRow(){
+    if (!wrap) return;
+    wrap.style.display = (hide && hide.checked) ? 'flex' : 'none';
+  }
+
+  function syncAbility(){
+    const hasEmail = !!(email && email.value && email.value.includes('@'));
+    if (hide){
+      hide.disabled = !hasEmail;
+      if (!hasEmail) hide.checked = false;
+    }
+    if (auto){
+      auto.disabled = !hasEmail;
+      if (!hasEmail) auto.checked = false;
+    }
+    showAutoRow();
+  }
+
+  // 初始化：尊重 DB（由 loadPaxAndOpenEdit 已經 set 好 checked / data-init）
+  syncAbility();
+
+  // 事件：Email 變更 → 能不能開
+  email && email.addEventListener('input', syncAbility);
+
+  // 事件：勾隱藏時顯示自動寄信；若 DB 原本為 0 且尚未手動改過，預設開一次
+  hide && hide.addEventListener('change', ()=>{
+    if (hide.checked && auto && auto.dataset.init === '0' && auto.dataset.userToggled !== '1'){
+      auto.checked = true;
+    }
+    showAutoRow();
+  });
+
+  // 使用者有動過自動寄信 → 標記，之後就不幫他預設改了
+  auto && auto.addEventListener('change', ()=>{ auto.dataset.userToggled = '1'; });
+
+  // 兩段式說明（保險）
+  if (hint){
+    hint.innerHTML = '<p>※ Email 僅供系統通知，不會公開。</p>'
+                   + '<p>若關閉自動寄送 Email，則需等待司機接受報名後，系統才會把聯絡方式寄送到你的 Email。</p>';
+  }
 }
-window.closePaxEdit = closePaxEdit;
+window.setupPaxPrivacySwitch = setupPaxPrivacySwitch;
 
+
+/* ---------- 刪除 ---------- */
 async function doPaxDelete (pid) {
-  if (!confirm('確定要刪除這位乘客嗎？此動作無法復原。')) return;
+  if (!confirm('確定要刪除嗎？此動作無法復原。')) return;
   try {
     const { res, data } = await jsonFetch(`/find/pax/${pid}/delete/`, {
       method: 'POST',
@@ -3296,75 +3669,179 @@ async function doPaxDelete (pid) {
       },
       body: new URLSearchParams()
     });
-    if (!res.ok || !data.ok) { showToastSafe(data.error || '刪除失敗', 'error'); return; }
+    if (!res.ok || !data.ok) {data.error || '刪除失敗', 'error'; return; }
     showToastSafe('🗑️ 已刪除乘客', 'success');
     window.afterPaxChanged && window.afterPaxChanged({ action: 'delete', id: Number(pid) });
   } catch (err) {
     console.error(err);
-    showToastSafe('伺服器錯誤，稍後再試'+err, 'error');
+    showToastSafe('伺服器錯誤，稍後再試' + err, 'error');
   }
 }
 
 /* =========================================================================
- * 8) 乘客編輯 Modal：together_return 與回程日期聯動
+ * 8) 乘客編輯 Modal：舊的 together_return 邏輯 → 交由上面 initPaxEditModalUI() 管
+ *    這段保留空殼避免其他地方呼叫錯誤
  * ========================================================================= */
-(function paxEditReturnLink(){
-  const togetherSel = document.getElementById('paxTogether');
-  const returnInput = document.getElementById('paxReturn');
-  function syncReturnState () {
-    if (!togetherSel || !returnInput) return;
-    const v = togetherSel.value;
-    if (v === 'true') {
-      returnInput.value = '';
-      returnInput.disabled = true;
-      returnInput.placeholder = '與司機回程日期相同';
-      returnInput.classList.add('is-disabled');
-    } else {
-      returnInput.disabled = false;
-      returnInput.placeholder = '';
-      returnInput.classList.remove('is-disabled');
-    }
-  }
-  if (togetherSel && returnInput) {
-    togetherSel.addEventListener('change', syncReturnState);
-  }
-  window.syncPaxReturnOnce = syncReturnState; // 可在打開編輯 Modal 後呼叫一次
-})();
+window.syncPaxReturnOnce = function(){};
 
 /* =========================================================================
  * 9) 頁面級事件委派：管理 / 參加 / 展開（避免動態內容失效）
  * ========================================================================= */
-document.addEventListener('click', function (e) {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-
-  const action = btn.dataset.action;
-  const driverId = btn.dataset.id;
-
-  if (!action || !driverId) return;
-
-  if (action === 'manage') {
-    e.preventDefault();
-    openDriverModal(driverId);
-    return;
+// ====== 單一全域 Click 事件委派（請移除其他重複的 click 監聽）======
+(function () {
+  let lastToggleAt = 0;
+  // 靜默授權：只建立 session，成功回 true，不會跳頁
+async function driverManageAuthSilent(driver_id, password) {
+  try {
+    const res = await fetch(`/find/driver/${driver_id}/manage/auth/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRF(),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: new URLSearchParams({ password })
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && data.ok === true;   // 成功建立授權 session
+  } catch {
+    return false;
   }
-  if (action === 'join') {
-    e.preventDefault();
-    openJoinModal(driverId, btn.dataset.date || "", btn.dataset.return || "");
-    return;
-  }
-  if (action === 'toggle') {
-    e.preventDefault();
-    const details = document.getElementById('details-' + driverId);
-    const arrow = document.getElementById('arrow-' + driverId) || btn;
-    if (!details) return;
-    const isOpen = details.classList.toggle('open');
-    arrow.classList.toggle('open', isOpen);
-    arrow.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    details.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-    return;
-  }
-});
+}
+  document.addEventListener('click', async function (e) {
+    
+    // ---------- B) 司機卡片上的通用 data-action ----------
+    const actBtn = e.target.closest('[data-action]');
+    if (actBtn) {
+      const action   = actBtn.dataset.action;
+      const driverId = actBtn.dataset.id;
+
+      // 這三個 action 一定會帶 data-id
+      if (['manage','join','toggle'].includes(action) && !driverId) return;
+
+      if (action === 'manage') {
+        e.preventDefault();
+        openDriverModal(driverId);
+        return;
+      }
+
+      if (action === 'join') {
+        e.preventDefault(); e.stopPropagation();
+        const date   = actBtn.dataset.date   || '';
+        const ret    = actBtn.dataset.return || '';
+        const total  = parseInt(actBtn.dataset.total  || '0', 10) || 0;
+        const filled = parseInt(actBtn.dataset.filled || '0', 10) || 0;
+        const remaining = Math.max(0, total - filled);
+
+        // 可供除錯
+        actBtn.dataset.remaining = String(remaining);
+        window.__lastJoinBtn = actBtn;
+        window.__lastRemaining = remaining;
+        window.__joinOpenSeq = Date.now() + Math.random();
+
+        openJoinModal(driverId, date, ret, remaining, window.__joinOpenSeq);
+        return;
+      }
+
+      if (action === 'toggle') {
+        e.preventDefault();
+        const details = document.getElementById('details-' + driverId);
+        const arrow   = document.getElementById('arrow-' + driverId) || actBtn;
+        if (!details) return;
+
+        // 150ms 節流 + 顯式狀態
+        const now = Date.now();
+        if (now - lastToggleAt < 150) return;
+        lastToggleAt = now;
+
+        const willOpen = !details.classList.contains('open');
+        details.classList.toggle('open', willOpen);
+        details.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+        if (arrow) {
+          arrow.classList.toggle('open', willOpen);
+          arrow.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        }
+        if (willOpen) {
+          setDetailsMaxHeightByArrow(arrow || details);
+          const li = details.closest('.driver-card');
+          if (li) centerCardInViewport(li);
+        } else {
+          details.style.maxHeight = '';
+          details.style.overflow  = '';
+        }
+        return;
+      }
+
+      // 乘客動作：拒絕（取消）→ 一律走 /find/pax/{id}/delete/
+      if (action === 'reject') {
+        e.preventDefault();
+
+        const paxId    = actBtn.dataset.id;
+        const driverId = actBtn.dataset.driver || (actBtn.closest('[data-driver]')?.dataset.driver) || '';
+        const isAccepted = !!actBtn.closest('.pax-accepted'); // 在「已接受」欄位嗎？
+
+        // 真正執行刪除
+        const tryDelete = async () => {
+          try {
+            const { res, data } = await jsonFetch(`/find/pax/${paxId}/delete/`, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': getCSRF(),
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+              },
+              body: new URLSearchParams()
+            });
+            if (!res.ok || !data?.ok) {
+              showToastSafe(data?.error || '刪除失敗', 'error');
+              return false;
+            }
+            showToastSafe('🗑 已取消/刪除乘客', 'success');
+            // 讓外層有需要時能刷新
+            window.afterPaxChanged && window.afterPaxChanged({ action: 'delete', id: Number(paxId) });
+            return true;
+          } catch (err) {
+            console.error(err);
+            showToastSafe('伺服器錯誤，稍後再試', 'error');
+            return false;
+          }
+        };
+
+        // 先一般嘗試；403 再要求授權
+        const doFlow = async () => {
+          // 已接受 → 先開混合授權，成功後再刪
+          if (isAccepted) {
+            openMixedAuth(driverId, paxId, /* nextUrl not used */ '', async () => {
+              await tryDelete();
+            });
+            return;
+          }
+          // 待確認 → 直接刪，若 403 再開混合授權
+          const ok = await tryDelete();
+          if (!ok) {
+            // 這裡可能是 403（未授權），補跑混合授權再重試
+            openMixedAuth(driverId, paxId, '', async () => {
+              await tryDelete();
+            });
+          }
+        };
+
+        // 二次確認
+        if (!confirm('確定要取消/拒絕這位乘客嗎？此動作可能會釋放座位。')) return;
+        doFlow();
+        return;
+      }
+
+    }
+  });
+
+  // ====== join modal 的兩個 change 聯動（保持一份）======
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'join-together') handleTogetherChange();
+    if (e.target && e.target.id === 'join-date')     syncReturnMin();
+  });
+})();
+
 
 /* =========================================================================
  * 10) 其他：後端事件（可選）。例：透過 WS 主動告知「管理某司機」
@@ -3433,6 +3910,96 @@ function bindDateGuard({ depart, ret, form, msg }){
   });
 });
 }
+
+let __mixedRetry = null;
+
+function openMixedAuth(driverId, paxId, nextUrl, retryFn){
+  const m  = document.getElementById('mixedAuthModal');
+  if (!m) return;
+  document.getElementById('mixedAuthDriverId').value = driverId || '';
+  document.getElementById('mixedAuthPaxId').value    = paxId    || '';
+  document.getElementById('mixedAuthNextUrl').value  = nextUrl  || '';
+  document.getElementById('mixedAuthPassword').value = '';
+  __mixedRetry = (typeof retryFn === 'function') ? retryFn : null;
+  m.style.display = 'block';
+  setTimeout(()=> document.getElementById('mixedAuthPassword').focus(), 0);
+}
+function closeMixedAuth(){
+  const m = document.getElementById('mixedAuthModal');
+  if (m) m.style.display = 'none';
+  __mixedRetry = null;
+}
+
+// 綁 submit（Enter/按鈕都會觸發）
+document.getElementById('mixedAuthForm')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  await submitMixedAuth();
+});
+
+let __mixedSubmitting = false;
+async function submitMixedAuth(){
+  
+  if (__mixedSubmitting) return;
+  __mixedSubmitting = true;
+
+  const driverId = document.getElementById('mixedAuthDriverId')?.value;
+  const paxId    = document.getElementById('mixedAuthPaxId')?.value;
+  const pwd      = document.getElementById('mixedAuthPassword')?.value || '';
+  
+  if (!pwd) { showToastSafe('請輸入密碼', 'error'); __mixedSubmitting = false; return; }
+
+  try {
+    // 1) 先嘗試「司機管理授權」
+    let ok = false, lastErr = null;
+
+    if (driverId) {
+      try {
+        const { res, data } = await jsonFetch(`/find/driver/${driverId}/manage/auth/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRF(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
+          body: new URLSearchParams({ password: pwd })
+        });
+        if (res.ok && data?.ok) ok = true;
+        else lastErr = data?.error || '司機授權失敗';
+      } catch(e){ lastErr = '司機授權錯誤'; }
+    }
+
+    // 2) 若司機授權沒過，嘗試「乘客授權」
+    if (!ok && paxId) {
+      try {
+        const { res, data } = await jsonFetch(`/find/pax/${paxId}/auth/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRF(),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
+          body: new URLSearchParams({ password: pwd })
+        });
+        if (res.ok && data?.ok) ok = true;
+        else lastErr = data?.error || '乘客授權失敗';
+      } catch(e){ lastErr = '乘客授權錯誤'; }
+    }
+
+    if (!ok) {
+      showToastSafe(lastErr || '授權失敗', 'error');
+      return;
+    }
+    await doPaxDelete(paxId);
+    closeMixedAuth();
+    if (typeof __mixedRetry === 'function') {
+      await __mixedRetry();
+    }
+  } finally {
+    __mixedSubmitting = false;
+  }
+}
+
+
 
 </script>
 <script>
@@ -3564,9 +4131,12 @@ function bindDateGuard({ depart, ret, form, msg }){
 
 
 async function submitPaxEdit() {
+  
   try {
     const form = document.getElementById('paxEditForm');
+    const pid  = document.getElementById('paxEditId')?.value;
     const fd   = new FormData(form);
+    if (!form || !pid) return;
 
     // 後端會用 on/true/1/yes 判斷，checkbox 未勾不會出現在 FormData → 不用特別處理
     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || "";
@@ -3591,6 +4161,7 @@ async function submitPaxEdit() {
       return;
     }
 
+    window.afterPaxChanged && window.afterPaxChanged({ action: 'update', id: Number(pid) });
     // 成功：關掉 modal，等 WebSocket 廣播把列表與管理頁兩側刷新
     closePaxEdit();
   } catch (e) {

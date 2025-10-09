@@ -49,7 +49,7 @@
                 class="btn-mini memo"
                 data-action="memo"
                 data-id="{{ p.id }}"
-                data-url-base="{% url 'pax_memo' 0 %}"
+                data-url-base="{% url 'pax_memo' p.id %}"
                 data-current="{{ p.driver_memo|default_if_none:'' }}">
         編輯司機備忘錄
         </button>
@@ -59,11 +59,13 @@
     <div class="pax-actions">
       {% if p.is_matched %}
         {# 已接受：只有取消 #}
-        <button type="button"
-                class="btn-mini danger"
-                data-action="reject"
-                data-id="{{ p.id }}"
-                data-url="{% url 'pax_reject' p.id %}">
+        <button
+          type="button"
+          class="btn-mini danger"
+          data-action="reject"
+          data-id="{{ p.id }}"
+          data-driver="{{ d.id }}"
+          data-url-base="{% url 'pax_reject' p.id %}">
           取消
         </button>
       {% else %}
@@ -73,7 +75,7 @@
   class="btn-mini ok"
   data-action="accept"
   data-id="{{ p.id }}"
-  data-url-base="{% url 'pax_accept' 0 %}">
+  data-url-base="{% url 'pax_accept' p.id %}">
   接受
 </button>
         <button
@@ -81,7 +83,7 @@
   class="btn-mini danger"
   data-action="reject"
   data-id="{{ p.id }}"
-  data-url-base="{% url 'pax_reject' 0 %}">
+  data-url-base="{% url 'pax_reject' p.id %}">
   拒絕
 </button>
       {% endif %}

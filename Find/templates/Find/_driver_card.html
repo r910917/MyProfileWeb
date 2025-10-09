@@ -34,7 +34,7 @@
   data-filled="{{ d.seats_filled }}"
   data-remaining="{{ d.available|default_if_none:0 }}"
 >
-  參加
+  報名
 </button>
       <button
         id="arrow-{{ d.id }}"
@@ -132,7 +132,15 @@
               </div>
               <div class="pax-actions">
                 <button type="button" class="btn-mini" data-pax-edit data-id="{{ p.id }}">編輯</button>
-                <button type="button" class="btn-mini danger" data-pax-del data-id="{{ p.id }}">刪除</button>
+                <button
+                  type="button"
+                  class="btn-mini danger"
+                  data-action="reject"
+                  data-id="{{ p.id }}"
+                  data-driver="{{ d.id }}"
+                  >
+                  取消
+                </button>
               </div>
             </div>
           </li>
